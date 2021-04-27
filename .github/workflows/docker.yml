@@ -36,6 +36,6 @@ jobs:
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           export DOCKER_REGISTRY=docker.io
-          export IMAGE_TAG=nightly
+          export IMAGE_TAG=latest
           make docker-push
         working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}

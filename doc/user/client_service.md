@@ -19,7 +19,7 @@ $ kubectl run --rm -ti --image vesoft/nebula-console:v2 --restart=Never -- /bin/
 / # nebula-console -u user -p password --address=nebula-graphd-svc --port=9669
 2021/04/12 08:16:30 [INFO] connection pool is initialized successfully
 
-Welcome to Nebula Graph v2.0.0-rc1!
+Welcome to Nebula Graph!
 (user@nebula) [(none)]> 
 ```
 
@@ -81,6 +81,6 @@ The graphd client API should now be accessible from outside the Kubernetes clust
 / # nebula-console -u user -p password --address=192.168.8.26 --port=9669
 2021/04/12 08:50:32 [INFO] connection pool is initialized successfully
 
-Welcome to Nebula Graph v2.0.0-rc1!
+Welcome to Nebula Graph!
 (user@nebula) [(none)]> 
 ```

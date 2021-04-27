@@ -1,6 +1,6 @@
 - Does Nebula Operator support v1.x ?
 
-V1.x does not support DNS and Nebula Operator requires this feature, it's not compatible.
+v1.x does not support DNS and Nebula Operator requires this feature, it's not compatible.
 
 - When to support upgrading feature ?
 

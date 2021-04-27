@@ -1,0 +1,58 @@
+{{- if .Values.controllerManager.create }}
+{{- if .Values.scheduler.create }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "scheduler.name" . }}-deployment
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "scheduler.labels" . | nindent 4 }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.scheduler.replicas }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+    {{- include "scheduler.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "scheduler.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ template "scheduler.name" . }}-sa
+      {{- include "nebula-operator.imagePullSecrets" . | indent 6 }}
+      containers:
+        - name: scheduler
+          image: {{ .Values.image.nebulaOperator.image }}
+          imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
+          command:
+            - /usr/local/bin/scheduler
+          resources:
+          {{- toYaml .Values.scheduler.resources | nindent 12 }}
+        - name: kube-scheduler
+          image: {{ .Values.image.kubeScheduler.image }}
+          imagePullPolicy: {{ .Values.image.kubeScheduler.imagePullPolicy }}
+          command:
+            - kube-scheduler
+            - --secure-port=10261
+            - --leader-elect=true
+            - --scheduler-name={{ .Values.scheduler.schedulerName }}
+            - --leader-elect-resource-lock=endpoints
+            - --leader-elect-resource-name={{ template "scheduler.name" . }}-elect-lock
+            - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
+            - --policy-configmap={{ template "scheduler.name" . }}-policy
+            - --policy-configmap-namespace={{ template "nebula-operator.namespace" . }}
+            - --v=2
+          resources:
+            limits:
+              cpu: 100m
+              memory: 30Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+{{- end }}
+{{- end }}

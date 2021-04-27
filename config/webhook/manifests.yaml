@@ -1,0 +1,98 @@
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /apis/admission.nebula-graph.io/v1alpha1/statefulsetmutating
+  failurePolicy: Fail
+  name: statefulsetmutating.nebula-graph.io
+  rules:
+  - apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - statefulsets
+  sideEffects: None
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /apis/admission.nebula-graph.io/v1alpha1/nebulaclustervalidating
+  failurePolicy: Fail
+  name: nebulaclustervalidating.nebula-graph.io
+  rules:
+  - apiGroups:
+    - apps.nebula-graph.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - nebulaclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /apis/admission.nebula-graph.io/v1alpha1/statefulsetvalidating
+  failurePolicy: Fail
+  name: statefulsetvalidating.nebula-graph.io
+  rules:
+  - apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - statefulsets
+    - statefulsets/scale
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /apis/admission.nebula-graph.io/v1alpha1/statefulsetvalidating
+  failurePolicy: Fail
+  name: kruisestatefulsetvalidating.nebula-graph.io
+  rules:
+  - apiGroups:
+    - apps.kruise.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - statefulsets
+    - statefulsets/scale
+  sideEffects: None

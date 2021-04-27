@@ -1,0 +1,190 @@
+package nebulacluster
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/pkg/controller/component"
+	"github.com/vesoft-inc/nebula-operator/pkg/controller/component/reclaimer"
+	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+)
+
+func Test_defaultNebulaClusterControl_UpdateNebulaCluster(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	type testcase struct {
+		name                 string
+		reconcileGraphdErr   bool
+		reconcileMetadErr    bool
+		reconcileStoragedErr bool
+		metaReconcileErr     bool
+		pvcReclaimErr        bool
+		errExpectFn          func(*GomegaWithT, error)
+	}
+
+	testFn := func(test *testcase, t *testing.T) {
+		t.Log(test.name)
+
+		nc := newNebulaCluster()
+
+		control, graphdCluster, metadCluster, storagedCluster, metaReconciler, pvcReclaimer := newFakeNebulaClusterControl()
+
+		if test.reconcileGraphdErr {
+			graphdCluster.SetReconcileError(fmt.Errorf("reconcile graphd cluster failed"))
+		}
+		if test.reconcileMetadErr {
+			metadCluster.SetReconcileError(fmt.Errorf("reconcile metad cluster failed"))
+		}
+		if test.reconcileStoragedErr {
+			storagedCluster.SetReconcileError(fmt.Errorf("reconcile storaged cluster failed"))
+		}
+		if test.metaReconcileErr {
+			metaReconciler.SetReconcileError(fmt.Errorf("reconcile meta info failed"))
+		}
+		if test.pvcReclaimErr {
+			pvcReclaimer.SetReclaimError(fmt.Errorf("reclaim pvc failed"))
+		}
+
+		err := control.UpdateNebulaCluster(nc)
+		if test.errExpectFn != nil {
+			test.errExpectFn(g, err)
+		}
+	}
+
+	tests := []testcase{
+		{
+			name:               "reconcile graphd cluster failed",
+			reconcileGraphdErr: true,
+			errExpectFn: func(g *GomegaWithT, err error) {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(strings.Contains(err.Error(), "reconcile graphd cluster failed")).To(Equal(true))
+			},
+		},
+		{
+			name:              "reconcile metad cluster failed",
+			reconcileMetadErr: true,
+			errExpectFn: func(g *GomegaWithT, err error) {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(strings.Contains(err.Error(), "reconcile metad cluster failed")).To(Equal(true))
+			},
+		},
+		{
+			name:                 "reconcile storaged cluster failed",
+			reconcileStoragedErr: true,
+			errExpectFn: func(g *GomegaWithT, err error) {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(strings.Contains(err.Error(), "reconcile storaged cluster failed")).To(Equal(true))
+			},
+		},
+		{
+			name:             "reconcile info failed",
+			metaReconcileErr: true,
+			errExpectFn: func(g *GomegaWithT, err error) {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(strings.Contains(err.Error(), "reconcile meta info failed")).To(Equal(true))
+			},
+		},
+		{
+			name:          "reclaim pvc failed",
+			pvcReclaimErr: true,
+			errExpectFn: func(g *GomegaWithT, err error) {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(strings.Contains(err.Error(), "reclaim pvc failed")).To(Equal(true))
+			},
+		},
+	}
+
+	for i := range tests {
+		testFn(&tests[i], t)
+	}
+}
+
+func newFakeNebulaClusterControl() (
+	ControlInterface,
+	*component.FakeGraphdCluster,
+	*component.FakeMetadCluster,
+	*component.FakeStoragedCluster,
+	*reclaimer.FakeMetaReconciler,
+	*reclaimer.FakePVCReclaimer) {
+	cli := fake.NewClientBuilder().Build()
+	fakeNebulaClient := kube.NewFakeNebulaCluster(cli)
+	graphdCluster := component.NewFakeGraphdCluster()
+	metadCluster := component.NewFakeMetadCluster()
+	storagedCluster := component.NewFakeStoragedCluster()
+	metaReconciler := reclaimer.NewFakeMetaReconciler()
+	pvcReclaimer := reclaimer.NewFakePVCReclaimer()
+	control := NewDefaultNebulaClusterControl(
+		fakeNebulaClient,
+		graphdCluster,
+		metadCluster,
+		storagedCluster,
+		metaReconciler,
+		pvcReclaimer,
+		&nebulaClusterConditionUpdater{})
+
+	return control, graphdCluster, metadCluster, storagedCluster, metaReconciler, pvcReclaimer
+}
+
+func newNebulaCluster() *v1alpha1.NebulaCluster {
+	return &v1alpha1.NebulaCluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "NebulaCluster",
+			APIVersion: "apps.nebula-graph.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nebula",
+			Namespace: corev1.NamespaceDefault,
+			UID:       "123456",
+		},
+		Spec: v1alpha1.NebulaClusterSpec{
+			Graphd: &v1alpha1.GraphdSpec{
+				PodSpec: v1alpha1.PodSpec{
+					Replicas: pointer.Int32Ptr(1),
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					Image:   "vesoft/graphd",
+					Version: "v2.0.0",
+				},
+			},
+			Metad: &v1alpha1.MetadSpec{
+				PodSpec: v1alpha1.PodSpec{
+					Replicas: pointer.Int32Ptr(1),
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					Image:   "vesoft/metad",
+					Version: "v2.0.0",
+				},
+			},
+			Storaged: &v1alpha1.StoragedSpec{
+				PodSpec: v1alpha1.PodSpec{
+					Replicas: pointer.Int32Ptr(1),
+					Resources: &corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					Image:   "vesoft/storaged",
+					Version: "v2.0.0",
+				},
+			},
+		},
+	}
+}

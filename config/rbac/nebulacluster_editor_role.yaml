@@ -1,0 +1,24 @@
+# permissions for end users to edit nebulaclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nebulacluster-editor-role
+rules:
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulaclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulaclusters/status
+  verbs:
+  - get

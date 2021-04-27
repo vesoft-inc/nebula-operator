@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    # modify the cluster name
+    app.kubernetes.io/cluster: "nebula"
+    app.kubernetes.io/component: graphd
+    app.kubernetes.io/managed-by: nebula-operator
+    app.kubernetes.io/name: nebula-graph
+  name: nebula-graphd-nodeport-svc
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - name: thrift
+    port: 9669
+    protocol: TCP
+    targetPort: 9669
+  - name: http
+    port: 19669
+    protocol: TCP
+    targetPort: 19669
+  selector:
+    # modify the cluster name
+    app.kubernetes.io/cluster: "nebula"
+    app.kubernetes.io/component: graphd
+    app.kubernetes.io/managed-by: nebula-operator
+    app.kubernetes.io/name: nebula-graph
+  type: NodePort

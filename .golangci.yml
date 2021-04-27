@@ -151,3 +151,4 @@ issues:
 
 run:
   skip-dirs: {}
+  timeout: 10m

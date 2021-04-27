@@ -1,0 +1,43 @@
+name: pull_request
+
+on:
+  pull_request:
+    types: [ synchronize, reopened, labeled ]
+    branches:
+      - master
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Test
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'ready-for-testing') && github.event.pull_request.merged != true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name : Set up go environment
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+        id: go
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          path: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+          fetch-depth: 2
+
+      - name: Test
+        run: |
+          export GOPATH=${GITHUB_WORKSPACE}/go
+          export PATH=$PATH:$GOPATH/bin
+          make test
+        working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+
+      - name: Auto commit atfer test
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: auto commit atfer make test
+          branch: ${{ github.head_ref }}
+          repository: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}

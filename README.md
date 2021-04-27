@@ -34,7 +34,7 @@ $ kubectl create -f config/samples/graphd-nodeport-service.yaml
 / # nebula-console -u user -p password --address=192.168.8.26 --port=32236
 2021/04/15 16:50:23 [INFO] connection pool is initialized successfully
 
-Welcome to Nebula Graph v2.0.0-rc1!
+Welcome to Nebula Graph!
 (user@nebula) [(none)]> 
 ```
 
@@ -145,13 +145,6 @@ nebula-storaged-0   1/1     Running   0          15m
 nebula-storaged-1   1/1     Running   0          15m
 nebula-storaged-2   1/1     Running   0          19s
 ```
-
-## Documentation
-
-You can see our documentation at NebulaGraph website for more in-depth installation and instructions for production:
-
-- [English](https://docs.nebula-graph.io/)
-- [简体中文](https://docs.nebula-graph.com.cn/)
 
 ## FAQ
 

@@ -1,0 +1,30 @@
+{{- if .Values.controllerManager.create }}
+{{- if .Values.admissionWebhook.create }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ template "admission-webhook.name" . }}-cert
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "admission-webhook.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+    - {{ template "admission-webhook.name" . }}-service.{{ template "nebula-operator.namespace" . }}.svc
+    - {{ template "admission-webhook.name" . }}-service.{{ template "nebula-operator.namespace" . }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ template "admission-webhook.name" . }}-issuer
+  secretName: {{ template "admission-webhook.name" . }}-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ template "admission-webhook.name" . }}-issuer
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "admission-webhook.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+{{- end }}
+{{- end }}

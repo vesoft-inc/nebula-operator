@@ -1,0 +1,675 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: nebulaclusters.apps.nebula-graph.io
+spec:
+  group: apps.nebula-graph.io
+  names:
+    kind: NebulaCluster
+    listKind: NebulaClusterList
+    plural: nebulaclusters
+    shortNames:
+    - nc
+    singular: nebulacluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The desired number of graphd pods.
+      jsonPath: .spec.graphd.replicas
+      name: GRAPHD-DESIRED
+      type: string
+    - description: The number of graphd pods ready.
+      jsonPath: .status.graphd.workload.readyReplicas
+      name: GRAPHD-READY
+      type: string
+    - description: The desired number of metad pods.
+      jsonPath: .spec.metad.replicas
+      name: METAD-DESIRED
+      type: string
+    - description: The number of metad pods ready.
+      jsonPath: .status.metad.workload.readyReplicas
+      name: METAD-READY
+      type: string
+    - description: The desired number of storaged pods.
+      jsonPath: .spec.storaged.replicas
+      name: STORAGED-DESIRED
+      type: string
+    - description: The number of storaged pods ready.
+      jsonPath: .status.storaged.workload.readyReplicas
+      name: STORAGED-READY
+      type: string
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created. It is represented in RFC3339 form and is in UTC.
+      jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              graphd:
+                properties:
+                  config:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: string
+                        valueFrom:
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  image:
+                    default: vesoft/graphd
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  podAnnotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  replicas:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  resources:
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
+                  service:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      clusterIP:
+                        type: string
+                      externalTrafficPolicy:
+                        type: string
+                      loadBalancerIP:
+                        type: string
+                      publishNotReadyAddresses:
+                        type: boolean
+                      selector:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      type:
+                        type: string
+                    type: object
+                  storageClaim:
+                    properties:
+                      resources:
+                        properties:
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            type: object
+                        type: object
+                      storageClassName:
+                        type: string
+                    type: object
+                  version:
+                    type: string
+                type: object
+              imagePullPolicy:
+                default: IfNotPresent
+                type: string
+              imagePullSecrets:
+                items:
+                  properties:
+                    name:
+                      type: string
+                  type: object
+                type: array
+              metad:
+                properties:
+                  config:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: string
+                        valueFrom:
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  image:
+                    default: vesoft/graphd
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  podAnnotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  replicas:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  resources:
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
+                  service:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      clusterIP:
+                        type: string
+                      publishNotReadyAddresses:
+                        type: boolean
+                      selector:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      type:
+                        type: string
+                    type: object
+                  storageClaim:
+                    properties:
+                      resources:
+                        properties:
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            type: object
+                        type: object
+                      storageClassName:
+                        type: string
+                    type: object
+                  version:
+                    type: string
+                type: object
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                type: object
+              reference:
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - name
+                type: object
+              schedulerName:
+                default: default-scheduler
+                type: string
+              storaged:
+                properties:
+                  config:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        value:
+                          type: string
+                        valueFrom:
+                          properties:
+                            configMapKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                            fieldRef:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                fieldPath:
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                            resourceFieldRef:
+                              properties:
+                                containerName:
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  type: string
+                                optional:
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  image:
+                    default: vesoft/graphd
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  podAnnotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  replicas:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  resources:
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
+                  service:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      clusterIP:
+                        type: string
+                      publishNotReadyAddresses:
+                        type: boolean
+                      selector:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      type:
+                        type: string
+                    type: object
+                  storageClaim:
+                    properties:
+                      resources:
+                        properties:
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            type: object
+                        type: object
+                      storageClassName:
+                        type: string
+                    type: object
+                  version:
+                    type: string
+                type: object
+              strategy:
+                type: string
+            required:
+            - graphd
+            - metad
+            - storaged
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              graphd:
+                properties:
+                  phase:
+                    type: string
+                  version:
+                    type: string
+                  workload:
+                    properties:
+                      collisionCount:
+                        format: int32
+                        type: integer
+                      currentRevision:
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        type: integer
+                      readyReplicas:
+                        format: int32
+                        type: integer
+                      replicas:
+                        format: int32
+                        type: integer
+                      updateRevision:
+                        type: string
+                      updatedReadyReplicas:
+                        format: int32
+                        type: integer
+                      updatedReplicas:
+                        format: int32
+                        type: integer
+                    required:
+                    - currentRevision
+                    - replicas
+                    - updatedReplicas
+                    type: object
+                type: object
+              metad:
+                properties:
+                  phase:
+                    type: string
+                  version:
+                    type: string
+                  workload:
+                    properties:
+                      collisionCount:
+                        format: int32
+                        type: integer
+                      currentRevision:
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        type: integer
+                      readyReplicas:
+                        format: int32
+                        type: integer
+                      replicas:
+                        format: int32
+                        type: integer
+                      updateRevision:
+                        type: string
+                      updatedReadyReplicas:
+                        format: int32
+                        type: integer
+                      updatedReplicas:
+                        format: int32
+                        type: integer
+                    required:
+                    - currentRevision
+                    - replicas
+                    - updatedReplicas
+                    type: object
+                type: object
+              storaged:
+                properties:
+                  phase:
+                    type: string
+                  version:
+                    type: string
+                  workload:
+                    properties:
+                      collisionCount:
+                        format: int32
+                        type: integer
+                      currentRevision:
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        type: integer
+                      readyReplicas:
+                        format: int32
+                        type: integer
+                      replicas:
+                        format: int32
+                        type: integer
+                      updateRevision:
+                        type: string
+                      updatedReadyReplicas:
+                        format: int32
+                        type: integer
+                      updatedReplicas:
+                        format: int32
+                        type: integer
+                    required:
+                    - currentRevision
+                    - replicas
+                    - updatedReplicas
+                    type: object
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

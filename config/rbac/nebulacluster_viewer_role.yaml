@@ -1,0 +1,20 @@
+# permissions for end users to view nebulaclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nebulacluster-viewer-role
+rules:
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulaclusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulaclusters/status
+  verbs:
+  - get

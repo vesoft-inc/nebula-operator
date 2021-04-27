@@ -1,0 +1,91 @@
+{{- if .Values.controllerManager.create }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "controller-manager.name" . }}-deployment
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "controller-manager.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.controllerManager.replicas }}
+  selector:
+    matchLabels:
+    {{- include "controller-manager.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "controller-manager.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ template "controller-manager.name" . }}-sa
+      {{- include "nebula-operator.imagePullSecrets" . | indent 6 }}
+      containers:
+        - name: controller-manager
+          image: {{ .Values.image.nebulaOperator.image }}
+          imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
+          command:
+            - /usr/local/bin/controller-manager
+          args:
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=127.0.0.1:8080
+            - --leader-elect
+            - --admission-webhook={{ .Values.admissionWebhook.create }}
+          {{- if .Values.admissionWebhook.create }}
+          ports:
+            - containerPort: 9443
+              name: webhook-server
+              protocol: TCP
+          {{- end }}
+          resources:
+          {{- toYaml .Values.controllerManager.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+          {{- if .Values.admissionWebhook.create }}
+          volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+          {{- end }}
+        - name: kube-rbac-proxy
+          image: {{ .Values.image.kubeRBACProxy.image }}
+          imagePullPolicy: {{ .Values.image.kubeRBACProxy.imagePullPolicy }}
+          args:
+            - --secure-listen-address=0.0.0.0:8443
+            - --upstream=http://127.0.0.1:8080/
+            - --logtostderr=true
+            - --v=2
+          ports:
+            - containerPort: 8443
+              name: https
+          resources:
+            limits:
+              cpu: 100m
+              memory: 30Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+      terminationGracePeriodSeconds: 10
+      {{- if .Values.admissionWebhook.create }}
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: {{ template "admission-webhook.name" . }}-secret
+      {{- end }}
+{{- end }}

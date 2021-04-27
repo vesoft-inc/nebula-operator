@@ -1,0 +1,47 @@
+{{- if .Values.controllerManager.create }}
+{{- if .Values.scheduler.create }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "scheduler.name" . }}-policy
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "scheduler.labels" . | nindent 4 }}
+data:
+  policy.cfg: |-
+    {
+      "kind" : "Policy",
+      "apiVersion" : "v1",
+      "predicates": [
+        {"name": "NoVolumeZoneConflict"},
+        {"name": "MaxEBSVolumeCount"},
+        {"name": "MaxAzureDiskVolumeCount"},
+        {"name": "NoDiskConflict"},
+        {"name": "GeneralPredicates"},
+        {"name": "PodToleratesNodeTaints"},
+        {"name": "CheckVolumeBinding"},
+        {"name": "MaxGCEPDVolumeCount"},
+        {"name": "MatchInterPodAffinity"},
+        {"name": "CheckVolumeBinding"}
+      ],
+      "priorities": [
+        {"name": "SelectorSpreadPriority", "weight": 1},
+        {"name": "InterPodAffinityPriority", "weight": 1},
+        {"name": "LeastRequestedPriority", "weight": 1},
+        {"name": "BalancedResourceAllocation", "weight": 1},
+        {"name": "NodePreferAvoidPodsPriority", "weight": 1},
+        {"name": "NodeAffinityPriority", "weight": 1},
+        {"name": "TaintTolerationPriority", "weight": 1}
+      ],
+      "extenders": [
+        {
+          "urlPrefix": "http://127.0.0.1:12021/nebula-scheduler",
+          "filterVerb": "filter",
+          "weight": 1,
+          "enableHttps": false
+        }
+      ]
+    }
+{{- end }}
+{{- end }}

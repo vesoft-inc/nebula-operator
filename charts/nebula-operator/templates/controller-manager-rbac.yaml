@@ -1,0 +1,211 @@
+{{- if .Values.controllerManager.create }}
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: {{ template "controller-manager.name" . }}-sa
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "controller-manager.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ template "controller-manager.name" . }}-election-role
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "controller-manager.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - ""
+      - coordination.k8s.io
+    resources:
+      - configmaps
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ template "controller-manager.name" . }}-election-rolebinding
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "controller-manager.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "controller-manager.name" . }}-election-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "controller-manager.name" . }}-sa
+    namespace: {{ template "nebula-operator.namespace" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: {{ template "controller-manager.name" . }}-role
+  labels:
+  {{- include "controller-manager.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - list
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.nebula-graph.io
+    resources:
+      - nebulaclusters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.nebula-graph.io
+    resources:
+      - nebulaclusters/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - apps.nebula-graph.io
+    resources:
+      - nebulaclusters/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "controller-manager.name" . }}-rolebinding
+  labels:
+  {{- include "controller-manager.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ template "controller-manager.name" . }}-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "controller-manager.name" . }}-sa
+    namespace: {{ template "nebula-operator.namespace" . }}
+---
+{{- end }}

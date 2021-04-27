@@ -1,0 +1,38 @@
+image:
+  nebulaOperator:
+    image: vesoft/nebula-operator:latest
+    imagePullPolicy: IfNotPresent
+  kubeRBACProxy:
+    image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+    imagePullPolicy: IfNotPresent
+  kubeScheduler:
+    image: k8s.gcr.io/kube-scheduler:v1.18.8
+    imagePullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+controllerManager:
+  create: true
+  replicas: 2
+  resources:
+    limits:
+      cpu: 100m
+      memory: 30Mi
+    requests:
+      cpu: 100m
+      memory: 20Mi
+
+admissionWebhook:
+  create: true
+
+scheduler:
+  create: true
+  schedulerName: nebula-scheduler
+  replicas: 2
+  resources:
+    limits:
+      cpu: 100m
+      memory: 30Mi
+    requests:
+      cpu: 100m
+      memory: 20Mi

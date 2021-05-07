@@ -10,6 +10,7 @@ Follow this guide to install Nebula Operator using Helm for in-depth evaluation.
 * [RBAC](https://kubernetes.io/docs/admin/authorization/rbac) enabled (optional)
 * [CoreDNS](https://github.com/coredns/coredns) >= 1.6.0
 * [CertManager](https://cert-manager.io) >= 1.2.0
+* [OpenKruise](https://openkruise.io) >= 0.8.0
 * [Helm](https://helm.sh) >= 3.2.0
 
 ## Add-ons

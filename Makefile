@@ -80,6 +80,10 @@ test: manifests generate check ## Run tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
+##@ e2e
+e2e: $(GOBIN)/ginkgo $(GOBIN)/kind helm
+	./hack/e2e.sh
+
 ##@ Build
 
 build: generate check ## Build binary.
@@ -122,7 +126,10 @@ tools: $(GOBIN)/goimports \
 	$(GOBIN)/gofumpt \
 	$(GOBIN)/golangci-lint \
 	$(GOBIN)/controller-gen \
-	$(GOBIN)/kustomize
+	$(GOBIN)/kustomize \
+	$(GOBIN)/ginkgo \
+	$(GOBIN)/kind \
+	helm
 
 $(GOBIN)/goimports:
 	$(call go-get-tool,$(GOBIN)/goimports,golang.org/x/tools/cmd/goimports)
@@ -147,6 +154,18 @@ $(GOBIN)/controller-gen:
 
 $(GOBIN)/kustomize:
 	$(call go-get-tool,$(GOBIN)/kustomize,sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+
+$(GOBIN)/ginkgo:
+	$(call go-get-tool,$(GOBIN)/kustomize,github.com/onsi/ginkgo/ginkgo@v1.16.2)
+
+$(GOBIN)/kind:
+	$(call go-get-tool,$(GOBIN)/kustomize,sigs.k8s.io/kind@v0.10.0)
+
+helm:
+	@[ -f /usr/local/bin/helm ] || { \
+	set -e ;\
+	curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash ;\
+	}
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool

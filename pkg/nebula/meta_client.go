@@ -43,7 +43,7 @@ type MetaInterface interface {
 	Balance(req *meta.BalanceReq) (*meta.BalanceResp, error)
 	BalanceStatus(id int64) error
 	BalanceLeader() error
-	BalanceData() (int64, error)
+	BalanceData() error
 	RemoveHost(endpoints []*nebula.HostAddr) error
 	BalanceStop(stop bool) error
 	Disconnect() error
@@ -243,44 +243,8 @@ func (m *metaClient) BalanceLeader() error {
 	return nil
 }
 
-func (m *metaClient) BalanceData() (int64, error) {
-	req := &meta.BalanceReq{}
+func (m *metaClient) balance(req *meta.BalanceReq) error {
 	resp, err := m.client.Balance(req)
-	if err != nil {
-		return 0, err
-	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
-		if resp.Code == meta.ErrorCode_E_LEADER_CHANGED {
-			klog.Infof("request should send to %v:%v", resp.Leader.Host, resp.Leader.Port)
-			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
-			if err := m.updateClient(leader); err != nil {
-				return 0, errors.Errorf("update client failed: %v", err)
-			}
-			resp, err := m.Balance(&meta.BalanceReq{})
-			if err != nil {
-				return 0, err
-			}
-			if resp.Code != meta.ErrorCode_SUCCEEDED {
-				return 0, errors.Errorf("Retry BalanceData code %d", resp.Code)
-			}
-			return resp.Id, nil
-		} else if resp.Code == meta.ErrorCode_E_NO_VALID_HOST {
-			return 0, errors.Errorf("The cluster no valid host to balance")
-		} else if resp.Code == meta.ErrorCode_E_BALANCED {
-			klog.Info("The cluster is balanced")
-			return resp.Id, nil
-		}
-		return 0, errors.Errorf("BalanceData code %d", resp.Code)
-	}
-	return resp.Id, nil
-}
-
-func (m *metaClient) RemoveHost(endpoints []*nebula.HostAddr) error {
-	req := &meta.BalanceReq{
-		HostDel: endpoints,
-	}
-	klog.Infof("balance data remove hosts: %v", endpoints)
-	resp, err := m.Balance(req)
 	if err != nil {
 		return err
 	}
@@ -292,38 +256,47 @@ func (m *metaClient) RemoveHost(endpoints []*nebula.HostAddr) error {
 			if err := m.updateClient(leader); err != nil {
 				return errors.Errorf("update client failed: %v", err)
 			}
-			_, err := m.Balance(&meta.BalanceReq{})
-			if err != nil {
-				return err
-			}
-			req := &meta.BalanceReq{
-				HostDel: endpoints,
-			}
-			resp, err = m.Balance(req)
+			resp, err := m.Balance(req)
 			if err != nil {
 				return err
 			}
 			if resp.Code != meta.ErrorCode_SUCCEEDED {
-				return errors.Errorf("Retry RemoveHost code %d", resp.Code)
+				return errors.Errorf("retry balance code %d", resp.Code)
 			}
-			klog.Infof("Balance plan %d running now", resp.Id)
+			klog.Infof("balance plan %d running now", resp.Id)
 			if err := m.BalanceStatus(resp.Id); err != nil {
 				return err
 			}
 			return nil
-		} else if resp.Code == meta.ErrorCode_E_BALANCED {
-			klog.Info("The cluster is balanced")
-			return nil
 		} else if resp.Code == meta.ErrorCode_E_NO_VALID_HOST {
-			return errors.Errorf("The cluster no valid host to balance")
+			return errors.Errorf("the cluster no valid host to balance")
+		} else if resp.Code == meta.ErrorCode_E_BALANCED {
+			klog.Info("the cluster is balanced")
+			return nil
+		} else if resp.Code == meta.ErrorCode_E_BALANCER_RUNNING {
+			return errors.Errorf("the cluster balance job is running")
 		}
-		return errors.Errorf("RemoveHost code %d", resp.Code)
+		return errors.Errorf("balance code %d", resp.Code)
 	}
-	klog.Infof("Balance plan %d running now", resp.Id)
+	klog.Infof("balance plan %d running now", resp.Id)
 	if err := m.BalanceStatus(resp.Id); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (m *metaClient) BalanceData() error {
+	req := &meta.BalanceReq{}
+
+	return m.balance(req)
+}
+
+func (m *metaClient) RemoveHost(endpoints []*nebula.HostAddr) error {
+	req := &meta.BalanceReq{
+		HostDel: endpoints,
+	}
+
+	return m.balance(req)
 }
 
 func (m *metaClient) Balance(req *meta.BalanceReq) (*meta.BalanceResp, error) {

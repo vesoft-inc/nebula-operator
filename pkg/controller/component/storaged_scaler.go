@@ -67,9 +67,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		}
 	}()
 
-	balanceID, err := metaClient.BalanceData()
-	klog.InfoS("balance data", "BalanceID", balanceID)
-	if err != nil {
+	if err := metaClient.BalanceData(); err != nil {
 		return err
 	}
 

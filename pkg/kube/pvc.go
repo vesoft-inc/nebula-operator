@@ -69,9 +69,7 @@ func (p *pvcClient) GetPVC(namespace, name string) (*corev1.PersistentVolumeClai
 func (p *pvcClient) ListPVCs(namespace string, selector labels.Selector) ([]corev1.PersistentVolumeClaim, error) {
 	pvcList := &corev1.PersistentVolumeClaimList{}
 	if err := p.kubecli.List(context.TODO(), pvcList, &client.ListOptions{LabelSelector: selector, Namespace: namespace}); err != nil {
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 	return pvcList.Items, nil
 }

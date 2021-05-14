@@ -16,6 +16,7 @@ limitations under the License.
 
 package maputil
 
+// IsSubMap indicates if the first map is a sub map of the second one
 func IsSubMap(first, second map[string]string) bool {
 	for k, v := range first {
 		if second == nil {

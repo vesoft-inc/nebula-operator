@@ -131,7 +131,7 @@ func validateNebulaClusterUpdateStoraged(nc, oldNC *v1alpha1.NebulaCluster) (all
 		"Phase = %s, Replicas %d -> %d",
 		nc.Status.Storaged.Phase,
 		*oldNC.Spec.Storaged.Replicas,
-		*nc.Spec.Storaged.Replicas ,
+		*nc.Spec.Storaged.Replicas,
 	)
 	if nc.Status.Storaged.Phase != v1alpha1.RunningPhase {
 		if *nc.Spec.Storaged.Replicas != *oldNC.Spec.Storaged.Replicas {

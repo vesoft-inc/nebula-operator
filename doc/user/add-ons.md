@@ -13,7 +13,7 @@ Consult the [cert-manager installation documentation](https://cert-manager.io/do
 
 ## openkruise
 **Note:**
-Only you need advanced features for StatefulSet when it is required.
+nebula-operator need advanced features for StatefulSet when it starts.
 
 [openkruise](https://openkruise.io/en-us/)  is a full set of standard extensions for Kubernetes. It works well with original Kubernetes and provides more powerful and efficient features for managing applications Pods, sidecar containers, and even images on Node.
 

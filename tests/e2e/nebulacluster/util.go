@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -208,23 +207,6 @@ func waitForNebulaClusterDeleted(
 	})
 }
 
-func updateNebulaCluster(
-	nc *v1alpha1.NebulaCluster,
-	runtimeClient client.Client,
-	updateFunc func() error,
-) error {
-	key := client.ObjectKeyFromObject(nc)
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := runtimeClient.Get(context.TODO(), key, nc); err != nil {
-			return err
-		}
-		if err := updateFunc(); err != nil {
-			return err
-		}
-		return runtimeClient.Update(context.TODO(), nc)
-	})
-}
-
 type nebulaLog struct{}
 
 func (l nebulaLog) Info(msg string)  { framework.Logf(msg) }
@@ -232,7 +214,6 @@ func (l nebulaLog) Warn(msg string)  { framework.Logf(msg) }
 func (l nebulaLog) Error(msg string) { framework.Logf(msg) }
 func (l nebulaLog) Fatal(msg string) { framework.Logf(msg) }
 
-// nolint: unparam
 func waitForExecuteNebulaSchema(
 	timeout, pollInterval time.Duration,
 	address string,

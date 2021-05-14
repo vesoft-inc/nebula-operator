@@ -35,7 +35,6 @@ import (
 	e2eframework "github.com/vesoft-inc/nebula-operator/tests/e2e/framework"
 )
 
-// nolint: dupl
 var _ = ginkgo.Describe("NebulaCluster", func() {
 	f := e2eframework.NewDefaultFramework("nebulacluster")
 

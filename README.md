@@ -155,10 +155,6 @@ Feel free to reach out if you have any questions. The maintainers of this projec
 
 - [Filing an issue](https://github.com/vesoft-inc/nebula-operator/issue) against this repo
 
-### Activity
-
-- 🆕  [Hello, Nebula Operator Chief Feature Officer](https://discuss.nebula-graph.com.cn/t/topic/3753)
-
 ## Contributing
 
 Contributions are welcome and greatly appreciated. 

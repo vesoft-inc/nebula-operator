@@ -46,7 +46,10 @@ manifests: $(GOBIN)/controller-gen ## Generate WebhookConfiguration, ClusterRole
 generate: $(GOBIN)/controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(GOBIN)/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-check: fmt vet imports lint
+check: tidy fmt vet imports lint
+
+tidy:
+	go mod tidy
 
 fmt: $(GOBIN)/gofumpt
 	# go fmt ./...

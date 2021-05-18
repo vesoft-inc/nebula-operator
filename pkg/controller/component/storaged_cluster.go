@@ -121,7 +121,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		nc.Status.Storaged.Workload = v1alpha1.WorkloadStatus{}
 		return utilerrors.ReconcileErrorf("waiting for storaged cluster %s running", newWorkload.GetName())
 	}
-	if nc.Status.Storaged.Phase == ""{
+	if nc.Status.Storaged.Phase == "" {
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	}
 	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {

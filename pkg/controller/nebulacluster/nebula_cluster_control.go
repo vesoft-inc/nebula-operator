@@ -124,6 +124,6 @@ func (f *FakeClusterControl) SetUpdateNebulaClusterError(err error) {
 	f.err = err
 }
 
-func (f *FakeClusterControl) UpdateNebualCluster(_ *v1alpha1.NebulaCluster) error {
+func (f *FakeClusterControl) UpdateNebulaCluster(_ *v1alpha1.NebulaCluster) error {
 	return f.err
 }

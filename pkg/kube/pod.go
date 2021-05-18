@@ -83,9 +83,7 @@ func (pd *podClient) DeletePod(namespace, name string) error {
 func (pd *podClient) ListPods(namespace string, selector labels.Selector) ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
 	if err := pd.kubecli.List(context.TODO(), podList, &client.ListOptions{LabelSelector: selector, Namespace: namespace}); err != nil {
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 	return podList.Items, nil
 }

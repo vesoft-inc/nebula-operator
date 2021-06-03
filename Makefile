@@ -82,7 +82,7 @@ test: manifests generate check ## Run tests.
 
 ##@ e2e
 e2e: $(GOBIN)/ginkgo $(GOBIN)/kind helm
-	./hack/e2e.sh
+	PATH="${GOBIN}:${PATH}" ./hack/e2e.sh
 
 ##@ Build
 

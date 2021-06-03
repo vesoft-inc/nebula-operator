@@ -25,12 +25,14 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
+	storageutil "k8s.io/kubernetes/pkg/apis/storage/util"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,12 +40,14 @@ import (
 	nebula "github.com/vesoft-inc/nebula-go"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	e2econfig "github.com/vesoft-inc/nebula-operator/tests/e2e/config"
 	e2eutil "github.com/vesoft-inc/nebula-operator/tests/e2e/util"
 )
 
-func getNebulaCluster(namespace, name string) *v1alpha1.NebulaCluster {
+func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1alpha1.NebulaCluster {
 	imagePullPolicy := corev1.PullIfNotPresent
-	storageClassName := "standard" // standard, fast-disks
+	storageClassName := getStorageClassName(runtimeClient)
+	nebulaVersion := e2econfig.TestConfig.NebulaVersion
 	return &v1alpha1.NebulaCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -54,7 +58,7 @@ func getNebulaCluster(namespace, name string) *v1alpha1.NebulaCluster {
 				PodSpec: v1alpha1.PodSpec{
 					Replicas: pointer.Int32Ptr(1),
 					Image:    "vesoft/nebula-graphd",
-					Version:  "v2-nightly",
+					Version:  nebulaVersion,
 				},
 				StorageClaim: &v1alpha1.StorageClaim{
 					StorageClassName: &storageClassName,
@@ -69,7 +73,7 @@ func getNebulaCluster(namespace, name string) *v1alpha1.NebulaCluster {
 				PodSpec: v1alpha1.PodSpec{
 					Replicas: pointer.Int32Ptr(1),
 					Image:    "vesoft/nebula-metad",
-					Version:  "v2-nightly",
+					Version:  nebulaVersion,
 				},
 				StorageClaim: &v1alpha1.StorageClaim{
 					StorageClassName: &storageClassName,
@@ -84,7 +88,7 @@ func getNebulaCluster(namespace, name string) *v1alpha1.NebulaCluster {
 				PodSpec: v1alpha1.PodSpec{
 					Replicas: pointer.Int32Ptr(1),
 					Image:    "vesoft/nebula-storaged",
-					Version:  "v2-nightly",
+					Version:  nebulaVersion,
 				},
 				StorageClaim: &v1alpha1.StorageClaim{
 					StorageClassName: &storageClassName,
@@ -103,6 +107,28 @@ func getNebulaCluster(namespace, name string) *v1alpha1.NebulaCluster {
 			ImagePullPolicy: &imagePullPolicy,
 		},
 	}
+}
+
+func getStorageClassName(runtimeClient client.Client) string {
+	if e2econfig.TestConfig.StorageClass != "" {
+		return e2econfig.TestConfig.StorageClass
+	}
+
+	var scList storagev1.StorageClassList
+	err := runtimeClient.List(context.TODO(), &scList)
+	framework.ExpectNoError(err, "failed to list StorageClass")
+	framework.ExpectNotEqual(len(scList.Items), 0, "don't find StorageClass")
+	var scName string
+	for i := range scList.Items {
+		sc := scList.Items[i]
+		if storageutil.IsDefaultAnnotation(sc.ObjectMeta) {
+			return sc.GetName()
+		}
+		if scName == "" {
+			scName = sc.GetName()
+		}
+	}
+	return scName
 }
 
 func waitForNebulaClusterReady(

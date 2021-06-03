@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-logr/logr v0.3.0
 	github.com/google/go-cmp v0.5.2
+	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/openkruise/kruise-api v0.8.0
 	github.com/pkg/errors v0.9.1

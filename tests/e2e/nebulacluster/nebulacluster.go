@@ -104,7 +104,7 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 
 					var err error
 					// init the NebulaCluster Resource for testing
-					nc := getNebulaCluster(ns, tc.Name)
+					nc := getNebulaCluster(runtimeClient, ns, tc.Name)
 					nc.Spec.Graphd.Replicas = pointer.Int32Ptr(tc.GraphdReplicas)
 					nc.Spec.Metad.Replicas = pointer.Int32Ptr(tc.MetadReplicas)
 					nc.Spec.Storaged.Replicas = pointer.Int32Ptr(tc.StoragedReplicas)
@@ -183,7 +183,7 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 		ginkgo.By("Deploy NebulaCluster")
 		var err error
 
-		nc := getNebulaCluster(ns, "test-recovery")
+		nc := getNebulaCluster(runtimeClient, ns, "test-recovery")
 		nc.Spec.Graphd.Replicas = pointer.Int32Ptr(2)
 		nc.Spec.Metad.Replicas = pointer.Int32Ptr(3)
 		nc.Spec.Storaged.Replicas = pointer.Int32Ptr(4)

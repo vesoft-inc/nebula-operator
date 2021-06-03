@@ -129,7 +129,7 @@ func setupCertManager() {
 		"--repo", "https://charts.jetstack.io",
 		"--namespace", helmNamespace,
 		"--create-namespace",
-		"--version", "v1.3.1",
+		"--version", e2econfig.TestConfig.InstallCertManagerVersion,
 		"--set", "installCRDs=true",
 	}
 	helmInstall(helmName, helmNamespace, workloadNamespaces, helmArgs...)
@@ -144,7 +144,7 @@ func setupKruise() {
 	workloadNamespaces := []string{"kruise-system"}
 	helmArgs := []string{
 		"install", helmName,
-		"https://github.com/openkruise/kruise/releases/download/v0.8.1/kruise-chart.tgz",
+		fmt.Sprintf("https://github.com/openkruise/kruise/releases/download/%s/kruise-chart.tgz", e2econfig.TestConfig.InstallKruiseVersion),
 	}
 	helmInstall(helmName, helmNamespace, workloadNamespaces, helmArgs...)
 }

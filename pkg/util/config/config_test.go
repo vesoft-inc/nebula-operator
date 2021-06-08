@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -16,23 +15,18 @@ const template = `
 `
 
 func TestAppendCustomConfig(t *testing.T) {
-	type args struct {
+	tests := []struct {
+		name   string
 		data   string
 		custom map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
+		want   string
 	}{
 		{
 			name: "custom parameter in template",
-			args: args{
-				data: template,
-				custom: map[string]string{
-					"enable_authorize": "true",
-					"auth_type":        "cloud",
-				},
+			data: template,
+			custom: map[string]string{
+				"enable_authorize": "true",
+				"auth_type":        "cloud",
 			},
 			want: `
 ########## authorization ##########
@@ -46,11 +40,9 @@ func TestAppendCustomConfig(t *testing.T) {
 		},
 		{
 			name: "custom parameter not in template",
-			args: args{
-				data: template,
-				custom: map[string]string{
-					"enable_optimizer": "true",
-				},
+			data: template,
+			custom: map[string]string{
+				"enable_optimizer": "true",
 			},
 			want: `
 ########## authorization ##########
@@ -67,12 +59,10 @@ func TestAppendCustomConfig(t *testing.T) {
 		},
 		{
 			name: "partial custom parameter in template",
-			args: args{
-				data: template,
-				custom: map[string]string{
-					"enable_authorize": "true",
-					"enable_optimizer": "true",
-				},
+			data: template,
+			custom: map[string]string{
+				"enable_authorize": "true",
+				"enable_optimizer": "true",
 			},
 			want: `
 ########## authorization ##########
@@ -90,8 +80,7 @@ func TestAppendCustomConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := AppendCustomConfig(tt.args.data, tt.args.custom); got != tt.want {
-				fmt.Println(got)
+			if got := AppendCustomConfig(tt.data, tt.custom); got != tt.want {
 				t.Errorf("AppendCustomConfig() = %v, want %v", got, tt.want)
 			}
 		})

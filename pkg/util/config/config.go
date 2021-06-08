@@ -29,6 +29,10 @@ import (
 var paramPattern = regexp.MustCompile(`--(\w+)=(.+)`)
 
 func AppendCustomConfig(data string, custom map[string]string) string {
+	if len(custom) == 0 {
+		return data
+	}
+
 	scanner := bufio.NewScanner(strings.NewReader(data))
 	scanner.Split(bufio.ScanLines)
 

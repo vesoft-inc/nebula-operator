@@ -38,7 +38,7 @@ type StatefulSetCreateUpdateHandler struct {
 var _ admission.Handler = &StatefulSetCreateUpdateHandler{}
 
 // Handle handles admission requests.
-func (h *StatefulSetCreateUpdateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (h *StatefulSetCreateUpdateHandler) Handle(_ context.Context, req admission.Request) admission.Response {
 	klog.Infof("mutating %s [%s/%s] on %s", req.Resource, req.Namespace, req.Name, req.Operation)
 	return admission.Patched("")
 }

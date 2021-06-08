@@ -54,10 +54,7 @@ func (c *nebulaClusterClient) GetNebulaCluster(namespace, name string) (*v1alpha
 
 func (c *nebulaClusterClient) UpdateNebulaClusterStatus(nc *v1alpha1.NebulaCluster) error {
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := c.cli.Status().Update(context.TODO(), nc); err != nil {
-			return err
-		}
-		return nil
+		return c.cli.Status().Update(context.TODO(), nc)
 	})
 	if err != nil {
 		return err

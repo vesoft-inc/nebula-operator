@@ -87,10 +87,7 @@ func (p *pvcClient) UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev
 
 func (p *pvcClient) UpdatePVC(pvc *corev1.PersistentVolumeClaim) error {
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := p.kubecli.Update(context.TODO(), pvc); err != nil {
-			return err
-		}
-		return nil
+		return p.kubecli.Update(context.TODO(), pvc)
 	})
 	if err != nil {
 		return err

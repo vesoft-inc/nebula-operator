@@ -72,10 +72,7 @@ func (p *pvClient) PatchPVReclaimPolicy(pv *corev1.PersistentVolume, reclaimPoli
 	patchBytes := []byte(fmt.Sprintf(`{"spec":{"persistentVolumeReclaimPolicy":"%s"}}`, reclaimPolicy))
 	patch := client.RawPatch(types.StrategicMergePatchType, patchBytes)
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := p.kubecli.Patch(context.TODO(), pv, patch); err != nil {
-			return err
-		}
-		return nil
+		return p.kubecli.Patch(context.TODO(), pv, patch)
 	})
 	if err != nil {
 		return err
@@ -129,10 +126,7 @@ func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolum
 
 func (p *pvClient) UpdatePersistentVolume(pv *corev1.PersistentVolume) error {
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := p.kubecli.Update(context.TODO(), pv); err != nil {
-			return err
-		}
-		return nil
+		return p.kubecli.Update(context.TODO(), pv)
 	})
 	if err != nil {
 		return err

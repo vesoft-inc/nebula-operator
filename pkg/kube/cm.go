@@ -72,10 +72,7 @@ func (c *cmClient) CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error {
 
 func (c *cmClient) updateConfigMap(cm *corev1.ConfigMap) error {
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := c.kubecli.Update(context.TODO(), cm); err != nil {
-			return err
-		}
-		return nil
+		return c.kubecli.Update(context.TODO(), cm)
 	})
 	if err != nil {
 		return err

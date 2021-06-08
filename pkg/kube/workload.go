@@ -71,11 +71,7 @@ func (w *workloadClient) CreateWorkload(obj *unstructured.Unstructured) error {
 
 func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := w.kubecli.Update(context.TODO(), obj); err != nil {
-			return err
-		}
-
-		return nil
+		return w.kubecli.Update(context.TODO(), obj)
 	})
 	if err != nil {
 		return fmt.Errorf("workload kind %s %s/%s update failed: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)

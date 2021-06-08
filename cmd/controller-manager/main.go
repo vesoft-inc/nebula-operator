@@ -86,7 +86,7 @@ func main() {
 	pflag.Parse()
 
 	if printVersion {
-		fmt.Printf("Nebula Operator Version: %#v\n", version.Version())
+		_, _ = fmt.Printf("Nebula Operator Version: %#v\n", version.Version())
 		os.Exit(0)
 	}
 	klog.Info("Welcome to Nebula Operator.")
@@ -113,7 +113,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := nebulaClusterReconciler.SetupWithManager(mgr, controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}); err != nil {
+	if err := nebulaClusterReconciler.SetupWithManager(mgr,
+		controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NebulaCluster")
 		os.Exit(1)
 	}

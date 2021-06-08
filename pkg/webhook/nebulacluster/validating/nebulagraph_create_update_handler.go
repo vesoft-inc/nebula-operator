@@ -44,7 +44,7 @@ type NebulaClusterCreateUpdateHandler struct {
 var _ admission.Handler = &NebulaClusterCreateUpdateHandler{}
 
 // Handle handles admission requests.
-func (h *NebulaClusterCreateUpdateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (h *NebulaClusterCreateUpdateHandler) Handle(_ context.Context, req admission.Request) admission.Response {
 	klog.Infof("validating %s [%s/%s] on %s", req.Resource, req.Namespace, req.Name, req.Operation)
 
 	obj := &v1alpha1.NebulaCluster{}

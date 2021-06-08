@@ -56,10 +56,7 @@ func (pd *podClient) GetPod(namespace, name string) (*corev1.Pod, error) {
 
 func (pd *podClient) UpdatePod(pod *corev1.Pod) error {
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := pd.kubecli.Update(context.TODO(), pod); err != nil {
-			return err
-		}
-		return nil
+		return pd.kubecli.Update(context.TODO(), pod)
 	})
 	if err != nil {
 		return err

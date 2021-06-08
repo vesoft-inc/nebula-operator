@@ -264,10 +264,7 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 				return errors.Errorf("retry balance code %d", resp.Code)
 			}
 			klog.Infof("balance plan %d running now", resp.Id)
-			if err := m.BalanceStatus(resp.Id); err != nil {
-				return err
-			}
-			return nil
+			return m.BalanceStatus(resp.Id)
 		} else if resp.Code == meta.ErrorCode_E_NO_VALID_HOST {
 			return errors.Errorf("the cluster no valid host to balance")
 		} else if resp.Code == meta.ErrorCode_E_BALANCED {
@@ -279,10 +276,7 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 		return errors.Errorf("balance code %d", resp.Code)
 	}
 	klog.Infof("balance plan %d running now", resp.Id)
-	if err := m.BalanceStatus(resp.Id); err != nil {
-		return err
-	}
-	return nil
+	return m.BalanceStatus(resp.Id)
 }
 
 func (m *metaClient) BalanceData() error {

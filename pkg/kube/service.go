@@ -64,10 +64,7 @@ func (s *serviceClient) GetService(namespace, name string) (*corev1.Service, err
 
 func (s *serviceClient) UpdateService(service *corev1.Service) error {
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := s.kubecli.Update(context.TODO(), service); err != nil {
-			return err
-		}
-		return nil
+		return s.kubecli.Update(context.TODO(), service)
 	})
 	if err != nil {
 		return err

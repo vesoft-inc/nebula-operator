@@ -260,7 +260,8 @@ func SetUpgradePartition(u UnstructuredExtender, obj *unstructured.Unstructured,
 		if err := u.SetSpecField(obj, "InPlaceIfPossible", "updateStrategy", "rollingUpdate", "podUpdatePolicy"); err != nil {
 			return err
 		}
-		if err := u.SetSpecField(obj, gracePeriod, "updateStrategy", "rollingUpdate", "inPlaceUpdateStrategy", "gracePeriodSeconds"); err != nil {
+		if err := u.SetSpecField(obj, gracePeriod,
+			"updateStrategy", "rollingUpdate", "inPlaceUpdateStrategy", "gracePeriodSeconds"); err != nil {
 			return err
 		}
 	}

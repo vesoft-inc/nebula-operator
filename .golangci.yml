@@ -28,6 +28,7 @@ linters-settings:
       - dupImport # https://github.com/go-critic/go-critic/issues/845
       - ifElseChain
       - octalLiteral
+      - tooManyResultsChecker
       - whyNoLint
       - wrapperFunc
   gocyclo:
@@ -54,6 +55,86 @@ linters-settings:
     allow-unused: false # report any unused nolint directives
     require-explanation: false # don't require an explanation for nolint directives
     require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+  revive:
+    ignore-generated-header: true
+    severity: error
+    rules:
+      - name: context-keys-type
+      - name: time-naming
+      - name: var-declaration
+      - name: unexported-return
+      - name: errorf
+      - name: blank-imports
+      - name: context-as-argument
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      # - name: exported # TODO: remove the comment exclude, and add comments
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+        arguments: [[],[]]
+      # - name: package-comments # TODO: remove the comment exclude, and add comments
+      - name: range
+      - name: receiver-naming
+      - name: indent-error-flow
+      - name: argument-limit
+        arguments: [5]
+      - name: cyclomatic
+        arguments: [20]
+      - name: max-public-structs
+        arguments: [5]
+      - name: file-header
+        arguments: ["/*\nCopyright 2021 Vesoft Inc."]
+      - name: empty-block
+      - name: superfluous-else
+      # - name: confusing-naming
+      - name: get-return
+      - name: modifies-parameter
+      - name: confusing-results
+      - name: deep-exit
+      - name: unused-parameter
+      - name: unreachable-code
+      # - name: add-constant
+      # - name: flag-parameter
+      - name: unnecessary-stmt
+      - name: struct-tag
+      - name: modifies-value-receiver
+      - name: constant-logical-expr
+      - name: bool-literal-in-expr
+      - name: redefines-builtin-id
+      - name: function-result-limit
+        arguments: [ 5 ]
+      - name: imports-blacklist
+        arguments: []
+      - name: range-val-in-closure
+      - name: range-val-address
+      - name: waitgroup-by-value
+      - name: atomic
+      - name: empty-lines
+      - name: line-length-limit
+        arguments: [ 140 ]
+      - name: call-to-gc
+      - name: duplicated-imports
+      # - name: import-shadowing
+      - name: bare-return
+      # - name: unused-receiver
+      - name: unhandled-error
+        arguments: []
+      - name: cognitive-complexity
+        arguments: [50]
+      - name: string-of-int
+#      - name: string-format
+#        arguments: []
+      - name: early-return
+      - name: unconditional-recursion
+      - name: identical-branches
+      - name: defer
+        arguments: [["call-chain","loop","method-call","recover", "return"]]
+      - name: unexported-naming
+      - name: function-length
+        arguments: [50, 100]
 
 linters:
   # please, do not use `enable-all`: it's deprecated and will be removed soon.
@@ -68,25 +149,22 @@ linters:
     - errcheck
     - exportloopref
     - exhaustive
-    - funlen
     - gochecknoinits
     - goconst
     - gocritic
-    - gocyclo
     - gofmt
     - gofumpt
     - goimports
-    - golint
     - goprintffuncname
     - gosec
     - gosimple
     - govet
     - ineffassign
-    - lll
     - misspell
     - nakedret
     - noctx
     - nolintlint
+    - revive
     - rowserrcheck
     - staticcheck
     - structcheck
@@ -100,19 +178,21 @@ linters:
 
   # don't enable:
   # - asciicheck
-  # - scopelint
+  # - funlen
   # - gochecknoglobals
   # - gocognit
+  # - gocyclo
   # - godot
   # - godox
   # - goerr113
   # - gomnd
   # - interfacer
+  # - lll
   # - maligned
   # - nestif
   # - prealloc
+  # - scopelint
   # - testpackage
-  # - revive
   # - wsl
 
 issues:
@@ -125,26 +205,39 @@ issues:
         - gomnd
         - funlen
         - dupl
+    - path: _test\.go
+      text: "function-length:"
+      linters:
+        - revive
+    - source: newFakeNebulaClusterControl # TODO: Optimize return parameters
+      text: "function-result-limit:"
+      linters:
+        - revive
+    - source: NewDefaultNebulaClusterControl # TODO: Optimize parameters
+      text: "argument-limit:"
+      linters:
+        - revive
     - path: _types\.go|cmd
       linters:
         - gochecknoinits
-    - source: "^//go:generate "
-      linters:
-        - lll
     - source: "^// *\\+kubebuilder"
       linters:
-        - lll
+        - revive
+    - path: _types\.go
+      text: "max-public-structs:"
+      linters:
+        - revive
+    - source: "`json:\",inline\"`"
+      text: "struct-tag: unknown option 'inline' in JSON tag"
+      linters:
+        - revive
     # https://github.com/go-critic/go-critic/issues/926
     - text: "unnecessaryDefer:"
       linters:
         - gocritic
-    - source: "Handle\\(ctx context.Context, req admission.Request\\) .*admission.Response.*{"
+    - source: "Handle\\(.* context.Context, req admission.Request\\) .*admission.Response.*{"
       linters:
         - gocritic
-    # TODO: remove the comment exclude, and add comments
-    - text: "should have( a package)? comment|package comment should be of the form"
-      linters:
-        - golint
     - text: "ST1000:"
       linters:
         - stylecheck

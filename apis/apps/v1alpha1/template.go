@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 const (
-	// nolint: lll,golint
+	// nolint: revive
 	GraphdConfigTemplate = `
 ########## basics ##########
 # Whether to run as a daemon process
@@ -94,7 +94,7 @@ const (
 # User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
 --auth_type=password
 `
-	// nolint: lll,golint
+	// nolint: revive
 	MetadhConfigTemplate = `
 ########## basics ##########
 # Whether to run as a daemon process
@@ -147,7 +147,7 @@ const (
 
 --heartbeat_interval_secs=10
 `
-	// nolint: lll,golint
+	// nolint: revive
 	StoragedConfigTemplate = `########## basics ##########
 # Whether to run as a daemon process
 --daemonize=true

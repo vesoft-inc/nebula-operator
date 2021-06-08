@@ -138,7 +138,12 @@ func (c *graphdCluster) syncGraphdService(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (c *graphdCluster) syncGraphdConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {
-	return syncConfigMap(nc.GraphdComponent(), c.clientSet.ConfigMap(), v1alpha1.GraphdConfigTemplate, nc.GraphdComponent().GetConfigMapKey())
+	return syncConfigMap(
+		nc.GraphdComponent(),
+		c.clientSet.ConfigMap(),
+		v1alpha1.GraphdConfigTemplate,
+		nc.GraphdComponent().GetConfigMapKey(),
+	)
 }
 
 type FakeGraphdCluster struct {

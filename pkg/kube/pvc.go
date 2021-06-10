@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -47,10 +46,11 @@ func NewPVC(kubecli client.Client) PersistentVolumeClaim {
 }
 
 func (p *pvcClient) CreatePVC(pvc *corev1.PersistentVolumeClaim) error {
+	log := getLog().WithValues("namespace", pvc.GetNamespace(), "name", pvc.GetName())
 	if err := p.kubecli.Create(context.TODO(), pvc); err != nil {
 		return err
 	}
-	klog.Infof("namespace %s pvc %s created", pvc.Namespace, pvc.Name)
+	log.Info("pvc created ")
 	return nil
 }
 
@@ -86,17 +86,19 @@ func (p *pvcClient) UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev
 }
 
 func (p *pvcClient) UpdatePVC(pvc *corev1.PersistentVolumeClaim) error {
+	log := getLog().WithValues("namespace", pvc.GetNamespace(), "name", pvc.GetName())
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return p.kubecli.Update(context.TODO(), pvc)
 	})
 	if err != nil {
 		return err
 	}
-	klog.V(4).Infof("namespace %s pvc %s updated", pvc.Namespace, pvc.Name)
+	log.V(4).Info("namespace updated")
 	return nil
 }
 
 func (p *pvcClient) DeletePVC(namespace, name string) error {
+	log := getLog().WithValues("namespace", namespace, "name", name)
 	pvc, err := p.GetPVC(namespace, name)
 	if err != nil {
 		return err
@@ -104,6 +106,6 @@ func (p *pvcClient) DeletePVC(namespace, name string) error {
 	if err := p.kubecli.Delete(context.TODO(), pvc); err != nil {
 		return err
 	}
-	klog.Infof("namespace %s pvc %s deleted", namespace, name)
+	log.Info("namespace deleted")
 	return nil
 }

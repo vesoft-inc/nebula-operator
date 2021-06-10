@@ -213,7 +213,7 @@ issues:
       text: "function-result-limit:"
       linters:
         - revive
-    - source: NewDefaultNebulaClusterControl # TODO: Optimize parameters
+    - source: "NewDefaultNebulaClusterControl|waitForExecuteNebulaSchema" # TODO: Optimize parameters
       text: "argument-limit:"
       linters:
         - revive

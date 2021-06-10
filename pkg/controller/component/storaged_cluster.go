@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -75,6 +74,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	namespace := nc.GetNamespace()
 	ncName := nc.GetName()
 	componentName := nc.StoragedComponent().GetName()
+	log := getLog().WithValues("namespace", namespace, "name", ncName, "componentName", componentName)
 
 	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
 	if err != nil {
@@ -83,7 +83,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	oldWorkloadTemp, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
 	if err != nil && !apierrors.IsNotFound(err) {
-		klog.Errorf("failed to get workload %s for cluster %s/%s, error: %s", componentName, namespace, ncName, err)
+		log.Error(err, "failed to get workload for cluster")
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
-		klog.Errorf("failed to sync %s/%s's status, error: %v", namespace, ncName, err)
+		log.Error(err, "failed to sync cluster status")
 		return err
 	}
 
@@ -102,7 +102,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	newWorkload, err := nc.StoragedComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
 	if err != nil {
-		klog.Errorf("generate workload template failed: %v", err)
+		log.Error(err, "generate workload template failed")
 		return err
 	}
 	if err := c.extender.SetTemplateAnnotations(
@@ -125,7 +125,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	}
 	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
-		klog.Errorf("failed to scale cluster %s/%s, error: %v", namespace, ncName, err)
+		log.Error(err, "failed to scale cluster ")
 		return err
 	}
 

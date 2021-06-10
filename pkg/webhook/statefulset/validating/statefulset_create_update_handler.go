@@ -27,7 +27,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -49,11 +48,12 @@ var _ admission.Handler = &StatefulSetCreateUpdateHandler{}
 
 // Handle handles admission requests.
 func (h *StatefulSetCreateUpdateHandler) Handle(ctx context.Context, req admission.Request) (resp admission.Response) {
-	klog.Infof("start validating %s [%s/%s] on %s",
-		req.Resource, req.Namespace, req.Name, req.Operation)
+	log := getLog().WithValues("resource", req.Resource,
+		"namespace", req.Namespace, "name", req.Name, "operation", req.Operation)
+	log.Info("start validating")
 	defer func() {
-		klog.Infof("end validating %s [%s/%s] on %s, {Allowed: %t, Reason: %s, Message: %s}",
-			req.Resource, req.Namespace, req.Name, req.Operation, resp.Allowed, resp.Result.Reason, resp.Result.Message)
+		log.Info("end validating", "allowed", resp.Allowed,
+			"reason", resp.Result.Reason, "message", resp.Result.Message)
 	}()
 
 	var obj client.Object = &appsv1.StatefulSet{}

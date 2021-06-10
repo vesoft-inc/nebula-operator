@@ -23,7 +23,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,6 +39,7 @@ func NewConfigMap(kubecli client.Client) ConfigMap {
 }
 
 func (c *cmClient) CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error {
+	log := getLog().WithValues("namespace", cm.Namespace, "name", cm.Name)
 	if err := c.kubecli.Create(context.TODO(), cm); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			merge := func(existing, desired *corev1.ConfigMap) error {
@@ -66,18 +66,19 @@ func (c *cmClient) CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error {
 			}
 		}
 	}
-	klog.V(1).Infof("namespace %s configMap %s created", cm.Namespace, cm.Name)
+	log.V(1).Info("configMap created")
 	return nil
 }
 
 func (c *cmClient) updateConfigMap(cm *corev1.ConfigMap) error {
+	log := getLog().WithValues("namespace", cm.Namespace, "name", cm.Name)
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return c.kubecli.Update(context.TODO(), cm)
 	})
 	if err != nil {
 		return err
 	}
-	klog.Infof("namespace %s configMap %s updated", cm.Namespace, cm.Name)
+	log.Info("configMap updated")
 	return nil
 }
 

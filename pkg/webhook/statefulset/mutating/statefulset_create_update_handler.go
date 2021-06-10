@@ -19,7 +19,6 @@ package mutating
 import (
 	"context"
 
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -39,7 +38,9 @@ var _ admission.Handler = &StatefulSetCreateUpdateHandler{}
 
 // Handle handles admission requests.
 func (h *StatefulSetCreateUpdateHandler) Handle(_ context.Context, req admission.Request) admission.Response {
-	klog.Infof("mutating %s [%s/%s] on %s", req.Resource, req.Namespace, req.Name, req.Operation)
+	log := getLog().WithValues("resource", req.Resource,
+		"namespace", req.Namespace, "name", req.Name, "operation", req.Operation)
+	log.Info("start mutating")
 	return admission.Patched("")
 }
 

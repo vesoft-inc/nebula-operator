@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -53,6 +52,7 @@ func PvcGc(cli client.Client, namespace, clusterName string) error {
 
 func PvcMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClusterComponentter, oldReplicas, newReplicas int32) error {
 	componentName := component.GetName()
+	log := getLog().WithValues("namespace", component.GetNamespace(), "name", componentName)
 	for i := oldReplicas - 1; i >= newReplicas; i-- {
 		pvcName := ordinalPVCName(component.Type(), componentName, i)
 		pvc, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
@@ -63,13 +63,14 @@ func PvcMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClus
 		if pvc.Annotations == nil {
 			pvc.Annotations = map[string]string{}
 		}
-		pvc.Annotations[annotation.AnnPVCDeferDeletingKey] = time.Now().Format(time.RFC3339)
-
+		now := time.Now().Format(time.RFC3339)
+		pvc.Annotations[annotation.AnnPVCDeferDeletingKey] = now
+		log := log.WithValues("key", annotation.AnnPVCDeferDeletingKey, now)
 		if err := pvcClient.UpdatePVC(pvc); err != nil {
-			klog.Errorf("failed to set pvc %s/%s annotation: %s", component.GetNamespace(), pvcName, annotation.AnnPVCDeferDeletingKey)
+			log.Error(err, "failed to set pvc annotation", "pvcName", pvcName)
 			return err
 		}
-		klog.Infof("set pvc %s/%s annotation: %s succeed", component.GetNamespace(), pvcName, annotation.AnnPVCDeferDeletingKey)
+		log.Info("set pvc annotation succeed", "pvcName", pvcName)
 	}
 	return nil
 }

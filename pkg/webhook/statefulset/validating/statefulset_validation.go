@@ -19,10 +19,10 @@ package validating
 import (
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/klog/v2"
 	appsvalidation "k8s.io/kubernetes/pkg/apis/apps/validation"
 	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
@@ -95,7 +95,10 @@ func validateStatefulSetCreate(statefulSet *appsv1.StatefulSet) (allErrs field.E
 	namespace := statefulSet.Namespace
 	l := label.Label(statefulSet.Labels)
 
-	klog.Infof("receive admission to %s StatefulSet[%s/%s]", "create", namespace, name)
+	log := getLog().WithValues("gvk", statefulSet.GroupVersionKind(),
+		"namespace", namespace, "name", name, "operation", admissionv1.Create)
+
+	log.Info("receive admission")
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(
 		&statefulSet.ObjectMeta,
@@ -153,7 +156,10 @@ func validateStatefulSetUpdate(statefulSet, oldStatefulSet *appsv1.StatefulSet) 
 	namespace := statefulSet.Namespace
 	l := label.Label(statefulSet.Labels)
 
-	klog.Infof("receive admission to %s StatefulSet[%s/%s]", "update", namespace, name)
+	log := getLog().WithValues("gvk", statefulSet.GroupVersionKind(),
+		"namespace", namespace, "name", name, "operation", admissionv1.Update)
+
+	log.Info("receive admission")
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(
 		&statefulSet.ObjectMeta,
@@ -215,13 +221,16 @@ func isManaged(statefulSet *appsv1.StatefulSet) bool {
 	namespace := statefulSet.Namespace
 	l := label.Label(statefulSet.Labels)
 
+	log := getLog().WithValues("gvk", statefulSet.GroupVersionKind(),
+		"namespace", namespace, "name", name, "operation", admissionv1.Create)
+
 	if !l.IsManagedByNebulaOperator() {
-		klog.Infof("StatefulSet[%s/%s] is not managed by Nebula Operator, admit", namespace, name)
+		log.Info("not managed by Nebula Operator, admit")
 		return false
 	}
 
 	if !(l.IsGraphd() || l.IsMetad() || l.IsStoraged()) {
-		klog.Infof("StatefulSet[%s/%s] is not Nebula component, admit", namespace, name)
+		log.Info("not Nebula component, admit")
 		return false
 	}
 

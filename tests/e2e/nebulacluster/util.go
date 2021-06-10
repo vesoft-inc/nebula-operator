@@ -269,7 +269,8 @@ func executeNebulaSchema(address string, port int, username, password, schema st
 
 	session, err := pool.GetSession(username, password)
 	if err != nil {
-		framework.Logf("failed to create a new session from connection pool, username: %s, password: %s, %s", username, password, err.Error())
+		framework.Logf("failed to create a new session from connection pool, username: %s, password: %s, %s",
+			username, password, err.Error())
 		return err
 	}
 	defer session.Release()
@@ -280,7 +281,8 @@ func executeNebulaSchema(address string, port int, username, password, schema st
 		return err
 	}
 	if !resultSet.IsSucceed() {
-		framework.Logf("failed to execute schema %s, ErrorCode: %v, ErrorMsg: %s", schema, resultSet.GetErrorCode(), resultSet.GetErrorMsg())
+		framework.Logf("failed to execute schema %s, ErrorCode: %v, ErrorMsg: %s",
+			schema, resultSet.GetErrorCode(), resultSet.GetErrorMsg())
 		return fmt.Errorf("execute schema ErrorCode: %v, ErrorMsg: %s", resultSet.GetErrorCode(), resultSet.GetErrorMsg())
 	}
 	return nil

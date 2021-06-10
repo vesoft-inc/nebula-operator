@@ -20,9 +20,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,11 +42,16 @@ func NewService(kubecli client.Client) Service {
 }
 
 func (s *serviceClient) CreateService(service *corev1.Service) error {
+	log := getLog().WithValues("namespace", service.Namespace, "name", service.Name)
 	if err := s.kubecli.Create(context.TODO(), service); err != nil {
-		klog.Errorf(" %s name %s already exists", service.Namespace, service.Name)
-		return nil
+		if apierrors.IsAlreadyExists(err) {
+			log.Info("service already exists")
+			return nil
+		}
+		log.Error(err, "service created failed")
+		return err
 	}
-	klog.Infof("namespace %s service %s created", service.Namespace, service.Name)
+	log.Info("service created")
 	return nil
 }
 
@@ -63,17 +68,19 @@ func (s *serviceClient) GetService(namespace, name string) (*corev1.Service, err
 }
 
 func (s *serviceClient) UpdateService(service *corev1.Service) error {
+	log := getLog().WithValues("namespace", service.Namespace, "name", service.Name)
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return s.kubecli.Update(context.TODO(), service)
 	})
 	if err != nil {
 		return err
 	}
-	klog.Infof("namespace %s service %s updated", service.Namespace, service.Name)
+	log.Info("service updated")
 	return nil
 }
 
 func (s *serviceClient) DeleteService(namespace, name string) error {
+	log := getLog().WithValues("namespace", namespace, "name", name)
 	service := &corev1.Service{}
 	err := s.kubecli.Get(context.TODO(), types.NamespacedName{
 		Name:      name,
@@ -82,6 +89,7 @@ func (s *serviceClient) DeleteService(namespace, name string) error {
 	if err != nil {
 		return err
 	}
-	klog.Infof("namespace %s service %s deleted", namespace, name)
+
+	log.Info("service deleted")
 	return s.kubecli.Delete(context.TODO(), service)
 }

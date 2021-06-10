@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -58,24 +57,26 @@ func (w *workloadClient) GetWorkload(namespace, name string, gvk schema.GroupVer
 }
 
 func (w *workloadClient) CreateWorkload(obj *unstructured.Unstructured) error {
+	log := getLog().WithValues("kind", obj.GetKind(), "namespace", obj.GetNamespace(), "name", obj.GetName())
 	if err := w.kubecli.Create(context.TODO(), obj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			klog.Errorf("workload kind %s namespace %s name %s already exists", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+			log.Error(err, "workload already exists")
 			return nil
 		}
 		return err
 	}
-	klog.Infof("workload kind %s namespace %s name %s created", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+	log.Info("workload created")
 	return nil
 }
 
 func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
+	log := getLog().WithValues("kind", obj.GetKind(), "namespace", obj.GetNamespace(), "name", obj.GetName())
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return w.kubecli.Update(context.TODO(), obj)
 	})
 	if err != nil {
 		return fmt.Errorf("workload kind %s %s/%s update failed: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
 	}
-	klog.Infof("workload kind %s namespace %s name %s updated", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+	log.Info("workload updated")
 	return nil
 }

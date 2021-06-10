@@ -131,7 +131,8 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 					graphLocalPort, stopCh, err = portForwardNebulaClusterGraphd(nc, graphLocalAddress, clientConfig)
 					framework.ExpectNoError(err, "failed to port forward for graphd of NebulaCluster %s/%s", ns, nc.Name)
 					defer close(stopCh)
-					framework.Logf("create port forward %s:%d for graphd of NebulaCluster %s/%s", graphLocalAddress, graphLocalPort, ns, nc.Name)
+					framework.Logf("create port forward %s:%d for graphd of NebulaCluster %s/%s",
+						graphLocalAddress, graphLocalPort, ns, nc.Name)
 
 					ginkgo.By("Init space and insert samples for NebulaCluster")
 					replicaFactor := 3
@@ -144,7 +145,8 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"USE e2e_test;" +
 						"CREATE TAG IF NOT EXISTS person(name string, age int);" +
 						"CREATE EDGE IF NOT EXISTS like(likeness double);"
-					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second, graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
+					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
+						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
 					framework.ExpectNoError(err, "failed to init space after deploy for NebulaCluster %s/%s", ns, nc.Name)
 					time.Sleep(10 * time.Second)
 
@@ -157,14 +159,16 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"'John':('John', 11);" +
 						"INSERT EDGE like(likeness) VALUES " +
 						"'Bob'->'Lily':(80.0);"
-					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second, graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
+					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
+						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
 					framework.ExpectNoError(err, "failed to insert samples after deploy for NebulaCluster %s/%s", ns, nc.Name)
 
 					ginkgo.By("Query from NebulaCluster")
 					time.Sleep(2 * time.Second)
 					executeSchema = "USE e2e_test;" +
 						"GO FROM 'Bob' OVER like YIELD $^.person.name, $^.person.age, like.likeness;"
-					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second, graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
+					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
+						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
 					framework.ExpectNoError(err, "failed to insert samples after scale out for NebulaCluster %s/%s", ns, nc.Name)
 
 					ginkgo.By("Delete NebulaCluster")

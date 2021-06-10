@@ -21,7 +21,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -53,13 +52,14 @@ func (c *nebulaClusterClient) GetNebulaCluster(namespace, name string) (*v1alpha
 }
 
 func (c *nebulaClusterClient) UpdateNebulaClusterStatus(nc *v1alpha1.NebulaCluster) error {
+	log := getLog().WithValues("namespace", nc.Namespace, "name", nc.Name)
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return c.cli.Status().Update(context.TODO(), nc)
 	})
 	if err != nil {
 		return err
 	}
-	klog.Infof("namespace %s nebulaCluster %s updated", nc.Namespace, nc.Name)
+	log.Info("nebulaCluster updated")
 	return nil
 }
 

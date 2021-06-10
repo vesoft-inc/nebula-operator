@@ -144,7 +144,8 @@ func setupKruise() {
 	workloadNamespaces := []string{"kruise-system"}
 	helmArgs := []string{
 		"install", helmName,
-		fmt.Sprintf("https://github.com/openkruise/kruise/releases/download/%s/kruise-chart.tgz", e2econfig.TestConfig.InstallKruiseVersion),
+		fmt.Sprintf("https://github.com/openkruise/kruise/releases/download/%s/kruise-chart.tgz",
+			e2econfig.TestConfig.InstallKruiseVersion),
 	}
 	helmInstall(helmName, helmNamespace, workloadNamespaces, helmArgs...)
 }
@@ -279,7 +280,8 @@ func waitForKubernetesWorkloadsReady(namespace string, timeout, pollInterval tim
 				success = false
 			}
 			if len(notReady) > 0 {
-				framework.Logf("there are not ready %q in %s: %v (%d seconds elapsed)", kind, nsStr, notReady, int(time.Since(start).Seconds()))
+				framework.Logf("there are not ready %q in %s: %v (%d seconds elapsed)",
+					kind, nsStr, notReady, int(time.Since(start).Seconds()))
 				success = false
 			}
 		}

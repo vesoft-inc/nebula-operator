@@ -24,7 +24,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
@@ -76,6 +75,7 @@ func setWorkloadStatus(
 }
 
 func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Service) error {
+	log := getLog().WithValues("namespace", component.GetNamespace(), "name", component.GetName())
 	newSvc := component.GenerateService()
 	if newSvc == nil {
 		return nil
@@ -89,7 +89,7 @@ func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Se
 		return svcClient.CreateService(newSvc)
 	}
 	if err != nil {
-		klog.Errorf("failed to get svc %s for cluster %s/%s, error: %s", newSvc.Name, newSvc.Namespace, component.GetClusterName(), err)
+		log.Error(err, "failed to get svc cluster", "svcName", newSvc.Name)
 		return err
 	}
 

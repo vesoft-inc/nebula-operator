@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -72,6 +71,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	namespace := nc.GetNamespace()
 	ncName := nc.GetName()
 	componentName := nc.MetadComponent().GetName()
+	log := getLog().WithValues("namespace", namespace, "name", ncName, "componentName", componentName)
 
 	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 
 	newWorkload, err := nc.MetadComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
 	if err != nil {
-		klog.Errorf("generate workload template failed: %v", err)
+		log.Error(err, "generate workload template failed")
 		return err
 	}
 	if err := c.extender.SetTemplateAnnotations(

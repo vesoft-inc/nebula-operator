@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -55,17 +54,19 @@ func (pd *podClient) GetPod(namespace, name string) (*corev1.Pod, error) {
 }
 
 func (pd *podClient) UpdatePod(pod *corev1.Pod) error {
+	log := getLog().WithValues("namespace", pod.GetNamespace(), "name", pod.GetName())
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return pd.kubecli.Update(context.TODO(), pod)
 	})
 	if err != nil {
 		return err
 	}
-	klog.Infof("namespace %s pod %s updated", pod.Namespace, pod.Name)
+	log.Info("pod updated")
 	return nil
 }
 
 func (pd *podClient) DeletePod(namespace, name string) error {
+	log := getLog().WithValues("namespace", namespace, "name", name)
 	pod := &corev1.Pod{}
 	if err := pd.kubecli.Get(context.TODO(), types.NamespacedName{
 		Namespace: namespace,
@@ -73,7 +74,7 @@ func (pd *podClient) DeletePod(namespace, name string) error {
 	}, pod); err != nil {
 		return err
 	}
-	klog.Infof("namespace %s pod %s deleted", pod.Namespace, pod.Name)
+	log.Info("namespace deleted")
 	return pd.kubecli.Delete(context.TODO(), pod)
 }
 

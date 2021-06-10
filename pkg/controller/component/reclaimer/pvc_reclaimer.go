@@ -21,7 +21,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -46,6 +45,7 @@ func (p *pvcReclaimer) Reclaim(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (p *pvcReclaimer) reclaimPV(nc *v1alpha1.NebulaCluster) error {
+	log := getLog().WithValues("namespace", nc.Namespace, "name", nc.Name)
 	namespace := nc.GetNamespace()
 	ncName := nc.GetName()
 
@@ -58,40 +58,34 @@ func (p *pvcReclaimer) reclaimPV(nc *v1alpha1.NebulaCluster) error {
 		pvc := pvcs[i]
 		pvcName := pvc.GetName()
 		if !label.Label(pvc.Labels).IsNebulaComponent() {
-			klog.V(4).Infof("pvc %s of cluster %s/%s skip reclaim, "+
-				"cause component type is not graphd, metad or storaged", pvcName, namespace, ncName)
+			log.V(4).Info("pvc of cluster skip reclaim for not nebula component", "pvcName", pvcName)
 			continue
 		}
 
 		if pvc.Status.Phase != corev1.ClaimBound {
-			klog.V(4).Infof("pvc %s of cluster %s/%s skip reclaim, "+
-				"cause pvc status is not bound", pvcName, namespace, ncName)
+			log.V(4).Info("pvc of cluster skip reclaim for pvc status is not bound", "pvcName", pvcName)
 			continue
 		}
 
 		if pvc.DeletionTimestamp != nil {
-			klog.V(4).Infof("pvc %s of cluster %s/%s skip reclaim, "+
-				"cause pvc has been deleted", pvcName, namespace, ncName)
+			log.V(4).Info("pvc of cluster skip reclaim for pvc has been deleted", "pvcName", pvcName)
 			continue
 		}
 
 		if pvc.Annotations[annotation.AnnPVCDeferDeletingKey] == "" {
-			klog.V(4).Infof("pvc %s of cluster %s/%s skip reclaim, "+
-				"cause pvc has not been marked as defer deleting pvc", pvcName, namespace, ncName)
+			log.V(4).Info("pvc of cluster skip reclaim for pvc has not been marked as defer deleting pvc", "pvcName", pvcName)
 			continue
 		}
 
 		podName, exist := pvc.Annotations[annotation.AnnPodNameKey]
 		if !exist {
-			klog.V(4).Infof("pvc %s of cluster %s/%s skip reclaim, "+
-				"cause pvc has no pod name annotation", pvcName, namespace, ncName)
+			log.V(4).Info("pvc of cluster skip reclaim for pvc has no pod name annotation", "pvcName", pvcName)
 			continue
 		}
 
 		_, err := p.clientSet.Pod().GetPod(namespace, podName)
 		if err == nil {
-			klog.V(4).Infof("pvc %s of cluster %s/%s skip reclaim, "+
-				"cause pvc is still referenced by a pod", pvcName, namespace, ncName)
+			log.V(4).Info("pvc of cluster skip reclaim for pvc is still referenced by a pod", "pvcName", pvcName)
 			continue
 		}
 		if !apierrors.IsNotFound(err) {
@@ -102,7 +96,7 @@ func (p *pvcReclaimer) reclaimPV(nc *v1alpha1.NebulaCluster) error {
 		if err := p.clientSet.PVC().DeletePVC(pvc.Namespace, pvcName); err != nil {
 			return fmt.Errorf("cluster %s/%s delete pvc %s failed: %v", namespace, ncName, pvcName, err)
 		}
-		klog.Infof("cluster %s/%s reclaim pv %s success, pvc %s", namespace, ncName, pvName, pvcName)
+		log.Info("cluster reclaim pv success", "pvcName", pvName, "pvcName", pvcName)
 	}
 	return nil
 }

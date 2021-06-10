@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -50,10 +49,11 @@ func NewPV(kubecli client.Client) PersistentVolume {
 }
 
 func (p *pvClient) CreatePersistentVolume(pv *corev1.PersistentVolume) error {
+	log := getLog().WithValues("namespace", pv.Namespace, "name", pv.Name)
 	if err := p.kubecli.Create(context.TODO(), pv); err != nil {
 		return err
 	}
-	klog.Infof("namespace %s pv %s created", pv.Namespace, pv.Name)
+	log.Info("namespace created")
 	return nil
 }
 
@@ -69,6 +69,7 @@ func (p *pvClient) GetPersistentVolume(name string) (*corev1.PersistentVolume, e
 }
 
 func (p *pvClient) PatchPVReclaimPolicy(pv *corev1.PersistentVolume, reclaimPolicy corev1.PersistentVolumeReclaimPolicy) error {
+	log := getLog().WithValues("namespace", pv.Namespace, "name", pv.Name)
 	patchBytes := []byte(fmt.Sprintf(`{"spec":{"persistentVolumeReclaimPolicy":"%s"}}`, reclaimPolicy))
 	patch := client.RawPatch(types.StrategicMergePatchType, patchBytes)
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
@@ -77,26 +78,27 @@ func (p *pvClient) PatchPVReclaimPolicy(pv *corev1.PersistentVolume, reclaimPoli
 	if err != nil {
 		return err
 	}
-	klog.Infof("namespace %s pv %s patched reclaim policy", pv.Namespace, pv.Name)
+	log.Info("namespace patched reclaim policy")
 	return nil
 }
 
 func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolume) error {
+	log := getLog().WithValues("name", pv.GetName())
 	metaObj, ok := obj.(metav1.Object)
 	if !ok {
 		return fmt.Errorf("%+v is not a runtime.Object", obj)
 	}
 	namespace := metaObj.GetNamespace()
+	log = log.WithValues("namespace", namespace)
 	if pv.Annotations == nil {
 		pv.Annotations = make(map[string]string)
 	}
 	if pv.Labels == nil {
 		pv.Labels = make(map[string]string)
 	}
-	pvName := pv.GetName()
 	pvcRef := pv.Spec.ClaimRef
 	if pvcRef == nil {
-		klog.Warningf("pv: %s doesn't have a ClaimRef, skipping", pvName)
+		log.Info("pv doesn't have a ClaimRef, skipping")
 		return nil
 	}
 
@@ -110,7 +112,7 @@ func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolum
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		klog.Warningf("pv: %s's pvc: %s/%s doesn't exist, skipping.", pvName, namespace, pvcName)
+		log.Info("pv: pvc doesn't exist, skipping", "pvcName", pvcName)
 		return nil
 	}
 	componentType := pvc.Labels[label.ComponentLabelKey]
@@ -125,12 +127,13 @@ func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolum
 }
 
 func (p *pvClient) UpdatePersistentVolume(pv *corev1.PersistentVolume) error {
+	log := getLog().WithValues("name", pv.GetName())
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return p.kubecli.Update(context.TODO(), pv)
 	})
 	if err != nil {
 		return err
 	}
-	klog.V(4).Infof("pv %s updated", pv.Name)
+	log.V(4).Info("pv updated")
 	return nil
 }

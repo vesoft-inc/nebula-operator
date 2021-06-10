@@ -19,8 +19,8 @@ package validating
 import (
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/klog/v2"
 	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -96,7 +96,10 @@ func validateNebulaClusterCreate(nc *v1alpha1.NebulaCluster) (allErrs field.Erro
 	name := nc.Name
 	namespace := nc.Namespace
 
-	klog.Infof("receive admission to %s NebulaCluster[%s/%s]", "create", namespace, name)
+	log := getLog().WithValues("gvk", nc.GroupVersionKind(),
+		"namespace", namespace, "name", name, "operation", admissionv1.Create)
+
+	log.Info("receive admission")
 
 	allErrs = append(allErrs, validateNebulaClusterCreateGraphd(nc)...)
 	allErrs = append(allErrs, validateNebulaClusterCreateMetad(nc)...)
@@ -127,12 +130,14 @@ func validateNebulaClusterUpdateMetad(nc, oldNC *v1alpha1.NebulaCluster) (allErr
 
 // validateNebulaClusterStoraged validates a NebulaCluster for Storaged on Update.
 func validateNebulaClusterUpdateStoraged(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
-	klog.Infof(
-		"Phase = %s, Replicas %d -> %d",
-		nc.Status.Storaged.Phase,
-		*oldNC.Spec.Storaged.Replicas,
-		*nc.Spec.Storaged.Replicas,
-	)
+	name := nc.Name
+	namespace := nc.Namespace
+	log := getLog().WithValues("gvk", nc.GroupVersionKind(),
+		"namespace", namespace, "name", name, "operation", admissionv1.Update)
+
+	log.Info("replicas conversion info", "phase", nc.Status.Storaged.Phase,
+		"old replicas", *oldNC.Spec.Storaged.Replicas, "new replicas", *nc.Spec.Storaged.Replicas)
+
 	if nc.Status.Storaged.Phase != v1alpha1.RunningPhase {
 		if *nc.Spec.Storaged.Replicas != *oldNC.Spec.Storaged.Replicas {
 			allErrs = append(allErrs, field.Invalid(
@@ -152,8 +157,10 @@ func validateNebulaClusterUpdateStoraged(nc, oldNC *v1alpha1.NebulaCluster) (all
 func validateNebulaClusterUpdate(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
 	name := nc.Name
 	namespace := nc.Namespace
+	log := getLog().WithValues("gvk", nc.GroupVersionKind(),
+		"namespace", namespace, "name", name, "operation", admissionv1.Update)
 
-	klog.Infof("receive admission to %s NebulaCluster[%s/%s]", "update", namespace, name)
+	log.Info("receive admission")
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(
 		&nc.ObjectMeta,

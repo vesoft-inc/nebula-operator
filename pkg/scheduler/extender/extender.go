@@ -17,12 +17,13 @@ limitations under the License.
 package extender
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog/v2"
 	extender "k8s.io/kube-scheduler/extender/v1"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
@@ -47,7 +48,9 @@ type scheduleExtender struct {
 func NewScheduleExtender(kubeCli kubernetes.Interface, predicate predicates.Predicate) ScheduleExtender {
 	eventBroadcaster := record.NewBroadcaster()
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "nebula-scheduler"})
-	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
+		getLog().Info(fmt.Sprintf(format, args...))
+	})
 	eventBroadcaster.StartRecordingToSink(
 		&typedcorev1.EventSinkImpl{
 			Interface: typedcorev1.New(kubeCli.CoreV1().RESTClient()).Events(""),
@@ -56,7 +59,8 @@ func NewScheduleExtender(kubeCli kubernetes.Interface, predicate predicates.Pred
 }
 
 func (se *scheduleExtender) Filter(args *extender.ExtenderArgs) *extender.ExtenderFilterResult {
-	klog.Infof("schedule pod: %s, namespace: %s", args.Pod.Name, args.Pod.Namespace)
+	log := getLog()
+	log.Info("schedule pod", "namespace", args.Pod.Namespace, "name", args.Pod.Name)
 
 	l := label.Label(args.Pod.Labels)
 

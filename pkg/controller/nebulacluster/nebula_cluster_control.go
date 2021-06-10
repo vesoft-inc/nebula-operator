@@ -19,7 +19,6 @@ package nebulacluster
 import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component"
@@ -84,28 +83,29 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 }
 
 func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaCluster) error {
+	log := getLog().WithValues("namespace", nc.Namespace, "name", nc.Name)
 	if err := c.metadCluster.Reconcile(nc); err != nil {
-		klog.Errorf("reconcile metad cluster failed: %v", err)
+		log.Error(err, "reconcile metad cluster failed")
 		return err
 	}
 
 	if err := c.storagedCluster.Reconcile(nc); err != nil {
-		klog.Errorf("reconcile storaged cluster failed: %v", err)
+		log.Error(err, "reconcile storaged cluster failed")
 		return err
 	}
 
 	if err := c.graphdCluster.Reconcile(nc); err != nil {
-		klog.Errorf("reconcile graphd cluster failed: %v", err)
+		log.Error(err, "reconcile graphd cluster failed")
 		return err
 	}
 
 	if err := c.metaReconciler.Reconcile(nc); err != nil {
-		klog.Errorf("reconcile pv and pvc metadata failed: %v", err)
+		log.Error(err, "reconcile pv and pvc metadata cluster failed")
 		return err
 	}
 
 	if err := c.pvcReclaimer.Reclaim(nc); err != nil {
-		klog.Errorf("reclaim pvc failed: %v", err)
+		log.Error(err, "reclaim pvc failed")
 		return err
 	}
 

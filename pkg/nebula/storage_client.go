@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-go/nebula"
 	"github.com/vesoft-inc/nebula-go/nebula/storage"
@@ -80,16 +79,18 @@ func (s *storageClient) updateClient(endpoint string, options ...Option) error {
 }
 
 func (s *storageClient) connect() error {
+	log := getLog()
 	if err := s.client.Transport.Open(); err != nil {
+		log.Error(err, "open transport failed")
 		return err
 	}
-	klog.Infof("storaged connection opened %v", s.client.Transport.IsOpen())
+	log.Info("storaged connection opened", "isOpen", s.client.Transport.IsOpen())
 	return nil
 }
 
 func (s *storageClient) disconnect() error {
 	if err := s.client.Close(); err != nil {
-		klog.Errorf("Fail to close transport, error: %s", err.Error())
+		getLog().Error(err, "close transport failed")
 	}
 	return nil
 }
@@ -106,25 +107,34 @@ func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.P
 		PartID:     partID,
 		NewLeader_: newLeader,
 	}
+	log := getLog().WithValues("req", req)
+	log.Info("start TransLeader")
 	resp, err := s.client.TransLeader(req)
 	if err != nil {
+		log.Error(err, "TransLeader failed")
 		return err
 	}
+	log.Info("TransLeader returned")
+
 	if len(resp.Result_.FailedParts) > 0 {
 		if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_PART_NOT_FOUND {
 			return errors.Errorf("part %d not found", partID)
 		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_SPACE_NOT_FOUND {
 			return errors.Errorf("space %d not found", partID)
 		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_TRANSFER_LEADER_FAILED {
-			klog.Infof("request should send to %v:%v", resp.Result_.FailedParts[0].Leader.Host, resp.Result_.FailedParts[0].Leader.Port)
+			log.Info("request leader changed",
+				"host", resp.Result_.FailedParts[0].Leader.Host,
+				"port", resp.Result_.FailedParts[0].Leader.Port)
 			leader := fmt.Sprintf("%s:%v", resp.Result_.FailedParts[0].Leader.Host, resp.Result_.FailedParts[0].Leader.Port)
 			if err := s.updateClient(leader); err != nil {
 				return err
 			}
 			resp, err := s.client.TransLeader(req)
 			if err != nil {
+				log.Error(err, "TransLeader failed")
 				return err
 			}
+			log.Info("TransLeader returned")
 			if len(resp.Result_.FailedParts) > 0 {
 				return errors.Errorf("Trans leader failed")
 			}

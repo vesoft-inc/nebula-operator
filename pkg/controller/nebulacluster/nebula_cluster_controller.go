@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
-	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -118,34 +117,34 @@ func NewClusterReconciler(mgr ctrl.Manager) (*ClusterReconciler, error) {
 // +kubebuilder:rbac:groups=apps.kruise.io,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
+	log := getLog().WithValues("namespace", req.Namespace, "name", req.Name)
 	var nebulaCluster v1alpha1.NebulaCluster
 	subCtx, cancel := context.WithTimeout(ctx, reconcileTimeOut)
 	defer cancel()
 
-	key := req.NamespacedName.String()
 	startTime := time.Now()
 	defer func() {
 		if retErr == nil {
 			if res.Requeue || res.RequeueAfter > 0 {
-				klog.Infof("Finished reconciling nebulaCluster %q (%v), result: %v", key, time.Since(startTime), res)
+				log.Info("Finished reconciling nebulaCluster", "spendTime", time.Since(startTime), "res", res)
 			} else {
-				klog.Infof("Finished reconcile nebulaCluster %q (%v)", key, time.Since(startTime))
+				log.Info("Finished reconcile nebulaCluster", "spendTime", time.Since(startTime))
 			}
 		} else {
-			klog.Errorf("Failed to reconcile nebulaCluster %q (%v), error: %v", key, time.Since(startTime), retErr)
+			log.Error(retErr, "Failed to reconcile nebulaCluster", "spendTime", time.Since(startTime))
 		}
 	}()
 
 	if err := r.Get(subCtx, req.NamespacedName, &nebulaCluster); err != nil {
 		if apierrors.IsNotFound(err) {
-			klog.InfoS("nebula cluster does not exist", "nebulaCluster", klog.KRef(req.Namespace, req.Name))
+			log.Info("nebula cluster does not exist")
 			if err := component.PvcGc(r.Client, req.Namespace, req.Name); err != nil {
 				return ctrl.Result{}, client.IgnoreNotFound(err)
 			}
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	klog.InfoS("Start to reconcile ", "nebula cluster", klog.KObj(&nebulaCluster))
+	log.Info("Start to reconcile")
 
 	if err := r.syncNebulaCluster(nebulaCluster.DeepCopy()); err != nil {
 		if strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
@@ -155,7 +154,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		isReconcileError := func(err error) (b bool) {
 			defer func() {
 				if b {
-					klog.Info(err)
+					log.Info("reconcile failed", "err", err)
 				}
 			}()
 			return errorsutil.IsReconcileError(err)
@@ -163,11 +162,10 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 		err := errorutils.FilterOut(err, isReconcileError, errorsutil.IsStatusError)
 		if err == nil {
-			klog.InfoS("nebula cluster need reconcile", "nebulaCluster", klog.KRef(req.Namespace, req.Name))
+			log.Info("nebula cluster need reconcile")
 			return ReconcileWaitResult, nil
 		}
-
-		klog.ErrorS(err, "reconcile nebula cluster failed", "nebulaCluster", klog.KRef(req.Namespace, req.Name))
+		log.Error(err, "reconcile nebula cluster failed")
 		return ReconcileWaitResult, nil
 	}
 	return ctrl.Result{}, nil

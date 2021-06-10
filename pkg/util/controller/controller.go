@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 )
@@ -44,7 +43,7 @@ func ServiceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
 	if lastAppliedConfig, ok := oldSvc.Annotations[annotation.AnnLastAppliedConfigKey]; ok {
 		err := json.Unmarshal([]byte(lastAppliedConfig), &oldSpec)
 		if err != nil {
-			klog.Errorf("unmarshal ServiceSpec: %s/%s's applied config failed,error: %v", oldSvc.GetNamespace(), oldSvc.GetName(), err)
+			log.Error(err, "failed to unmarshal ServiceSpec", "namespace", oldSvc.GetNamespace(), "name", oldSvc.GetName())
 			return false, err
 		}
 		return apiequality.Semantic.DeepEqual(oldSpec, newSvc.Spec), nil

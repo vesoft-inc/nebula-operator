@@ -22,7 +22,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -137,12 +136,12 @@ func templateEqual(oldTemplate, newTemplate map[string]interface{}) bool {
 	var newVal, oldVal interface{}
 	oldApply, _ := Encode(oldTemplate)
 	if err := json.Unmarshal([]byte(oldApply), &oldVal); err != nil {
-		klog.Errorf("unmarshal failed: %v", err)
+		log.Error(err, "unmarshal failed")
 		return false
 	}
 	newApply, _ := Encode(newTemplate)
 	if err := json.Unmarshal([]byte(newApply), &newVal); err != nil {
-		klog.Errorf("unmarshal failed: %v", err)
+		log.Error(err, "unmarshal failed")
 		return false
 	}
 	return apiequality.Semantic.DeepEqual(oldVal, newVal)
@@ -154,7 +153,9 @@ func PodTemplateEqual(u UnstructuredExtender, newUnstruct, oldUnstruct *unstruct
 	lastAppliedConfig, ok := oldUnstruct.GetAnnotations()[annotation.AnnLastAppliedConfigKey]
 	if ok {
 		if err := json.Unmarshal([]byte(lastAppliedConfig), &oldSpec); err != nil {
-			klog.Errorf("%s/%s's applied config failed, error: %v", oldUnstruct.GetNamespace(), oldUnstruct.GetName(), err)
+			log.Error(err, "applied config failed",
+				"namespace", oldUnstruct.GetNamespace(),
+				"name", oldUnstruct.GetName())
 			return false
 		}
 		oldPodTemplate, _, _ := unstructured.NestedMap(oldSpec, "template", "spec")
@@ -176,13 +177,10 @@ func ObjectEqual(u UnstructuredExtender, newUnstruct, oldUnstruct *unstructured.
 	oldSpec := make(map[string]interface{})
 	if lastAppliedConfig, ok := oldUnstruct.GetAnnotations()[annotation.AnnLastAppliedConfigKey]; ok {
 		if err := json.Unmarshal([]byte(lastAppliedConfig), &oldSpec); err != nil {
-			klog.Errorf(
-				"unmarshal %s: %s/%s's applied config failed: %v",
-				oldUnstruct.GetKind(),
-				oldUnstruct.GetNamespace(),
-				oldUnstruct.GetName(),
-				err,
-			)
+			log.Error(err, "unmarshal failed",
+				"kind", oldUnstruct.GetKind(),
+				"namespace", oldUnstruct.GetNamespace(),
+				"name", oldUnstruct.GetName())
 			return false
 		}
 		newSpec := u.GetSpec(newUnstruct)

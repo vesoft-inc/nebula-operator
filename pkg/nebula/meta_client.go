@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-go/nebula"
 	"github.com/vesoft-inc/nebula-go/nebula/meta"
@@ -91,16 +90,18 @@ func (m *metaClient) updateClient(endpoint string, options ...Option) error {
 }
 
 func (m *metaClient) connect() error {
+	log := getLog()
 	if err := m.client.Transport.Open(); err != nil {
+		log.Error(err, "open transport failed")
 		return err
 	}
-	klog.Infof("metad connection opened %v", m.client.Transport.IsOpen())
+	log.Info("metad connection opened", "isOpen", m.client.Transport.IsOpen())
 	return nil
 }
 
 func (m *metaClient) disconnect() error {
 	if err := m.client.Close(); err != nil {
-		klog.Errorf("Fail to close transport, error: %s", err.Error())
+		getLog().Error(err, "close transport failed")
 	}
 	return nil
 }
@@ -212,6 +213,7 @@ func (m *metaClient) GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, 
 }
 
 func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
+	log := getLog()
 	spaceItems, err := m.GetSpaceParts()
 	if err != nil {
 		return 0, err
@@ -223,7 +225,7 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 				continue
 			}
 			if partItem.Leader.Host == leaderHost {
-				klog.Infof("space %d partition %d still distribute this node", spaceID, partItem.PartID)
+				log.Info("space's partition still distribute this node", "space", spaceID, "partition", partItem.PartID)
 				count++
 			}
 		}
@@ -244,14 +246,18 @@ func (m *metaClient) BalanceLeader() error {
 }
 
 func (m *metaClient) balance(req *meta.BalanceReq) error {
+	log := getLog().WithValues("req", req)
+	log.Info("start balance")
 	resp, err := m.client.Balance(req)
 	if err != nil {
+		log.Info("balance failed")
 		return err
 	}
-	klog.Infof("balance Id: %v", resp.Id)
+	log = log.WithValues("balanceID", resp.Id)
+	log.Info("balance returned")
 	if resp.Code != meta.ErrorCode_SUCCEEDED {
 		if resp.Code == meta.ErrorCode_E_LEADER_CHANGED {
-			klog.Infof("request should send to %v:%v", resp.Leader.Host, resp.Leader.Port)
+			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
 			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
 			if err := m.updateClient(leader); err != nil {
 				return errors.Errorf("update client failed: %v", err)
@@ -263,19 +269,19 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 			if resp.Code != meta.ErrorCode_SUCCEEDED {
 				return errors.Errorf("retry balance code %d", resp.Code)
 			}
-			klog.Infof("balance plan %d running now", resp.Id)
+			log.Info("balance plan running now")
 			return m.BalanceStatus(resp.Id)
 		} else if resp.Code == meta.ErrorCode_E_NO_VALID_HOST {
 			return errors.Errorf("the cluster no valid host to balance")
 		} else if resp.Code == meta.ErrorCode_E_BALANCED {
-			klog.Info("the cluster is balanced")
+			log.Info("the cluster is balanced")
 			return nil
 		} else if resp.Code == meta.ErrorCode_E_BALANCER_RUNNING {
 			return errors.Errorf("the cluster balance job is running")
 		}
 		return errors.Errorf("balance code %d", resp.Code)
 	}
-	klog.Infof("balance plan %d running now", resp.Id)
+	log.Info("balance plan running now")
 	return m.BalanceStatus(resp.Id)
 }
 
@@ -305,8 +311,8 @@ func (m *metaClient) BalanceStatus(id int64) error {
 	if resp.Code != meta.ErrorCode_SUCCEEDED {
 		return errors.Errorf("BalanceStatus code %d", resp.Code)
 	}
-
-	klog.Infof("Get balance plan %d status", id)
+	log := getLog().WithValues("balanceID", id)
+	log.Info("Get balance plan status")
 	done := 0
 	for _, task := range resp.Tasks {
 		if task.Result_ == meta.TaskResult__SUCCEEDED {
@@ -318,7 +324,7 @@ func (m *metaClient) BalanceStatus(id int64) error {
 		}
 	}
 	if done == len(resp.Tasks) {
-		klog.Infof("Balance plan %d done!", id)
+		log.Info("Balance plan done!")
 		return nil
 	}
 	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("Balance plan %d still in progress", id)}

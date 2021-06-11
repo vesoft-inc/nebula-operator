@@ -1,0 +1,45 @@
+nebula:
+  version: v2.0.0
+  imagePullPolicy: IfNotPresent
+  storageClassName: gp2
+  schedulerName: default-scheduler # nebula-scheduler
+  reference:
+    name: statefulsets.apps
+    version: v1
+  graphd:
+    image: vesoft/nebula-graphd
+    replicas: 2
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+    storage: "1Gi"
+
+  metad:
+    image: vesoft/nebula-metad
+    replicas: 3
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+    storage: "1Gi"
+
+  storaged:
+    image: vesoft/nebula-storaged
+    replicas: 3
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+    storage: "1Gi"
+
+imagePullSecrets: []

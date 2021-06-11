@@ -120,6 +120,8 @@ nebula-storaged-1   1/1     Running   0          10m
 nebula-storaged-2   1/1     Running   0          10m
 ```
 
+In addition, you can [Install Nebula Cluster with helm](doc/user/nebula_cluster_helm_guide.md).
+
 ### Failover
 If the minority of nebula components crash, the nebula operator will automatically recover the failure. Let's walk through this in the following steps.  
 

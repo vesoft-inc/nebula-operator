@@ -1,0 +1,44 @@
+apiVersion: apps.nebula-graph.io/v1alpha1
+kind: NebulaCluster
+metadata:
+  name: {{ template "nebula-cluster.name" . }}
+  namespace: {{ template "nebula-cluster.namespace" . }}
+  labels:
+    {{ include "nebula-cluster.labels" . | indent 4 }}
+spec:
+  graphd:
+    replicas: {{ .Values.nebula.graphd.replicas }}
+    resources: {{ toYaml .Values.nebula.graphd.resources | nindent 6 }}
+    image: {{ .Values.nebula.graphd.image }}
+    version: {{ .Values.nebula.version }}
+    service:
+      type: NodePort
+      externalTrafficPolicy: Local
+    storageClaim:
+      resources:
+        requests:
+          storage: {{ .Values.nebula.graphd.storage }}
+      storageClassName: {{ .Values.nebula.storageClassName }}
+  metad:
+    replicas: {{ .Values.nebula.metad.replicas }}
+    resources: {{ toYaml .Values.nebula.metad.resources | nindent 6 }}
+    image: {{ .Values.nebula.metad.image }}
+    version: {{ .Values.nebula.version }}
+    storageClaim:
+      resources:
+        requests:
+          storage: {{ .Values.nebula.metad.storage }}
+      storageClassName: {{ .Values.nebula.storageClassName }}
+  storaged:
+    replicas: {{ .Values.nebula.storaged.replicas }}
+    resources: {{ toYaml .Values.nebula.storaged.resources | nindent 6 }}
+    image: {{ .Values.nebula.storaged.image }}
+    version: {{ .Values.nebula.version }}
+    storageClaim:
+      resources:
+        requests:
+          storage: {{ .Values.nebula.storaged.storage }}
+      storageClassName: {{ .Values.nebula.storageClassName }}
+  reference: {{ toYaml .Values.nebula.reference | nindent 4 }}
+  imagePullPolicy: {{ .Values.nebula.imagePullPolicy }}
+  schedulerName: {{ .Values.nebula.schedulerName }}

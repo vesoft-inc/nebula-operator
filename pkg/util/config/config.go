@@ -42,6 +42,7 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 
 		if line == "" || strings.HasPrefix(line, "#") {
 			b.WriteString(fmt.Sprintf("%s\n", line))
+			continue
 		}
 
 		if strings.HasPrefix(line, "--") {
@@ -59,16 +60,15 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 			b.WriteString(fmt.Sprintf("--%s=%s\n", param, value))
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		klog.Errorf("reading input failed:", err)
+	}
 
 	if len(custom) > 0 {
 		b.WriteString("\n########## Custom ##########\n")
 	}
 	for k, v := range custom {
 		b.WriteString(fmt.Sprintf("--%s=%s\n", k, v))
-	}
-
-	if err := scanner.Err(); err != nil {
-		klog.Errorf("reading input failed:", err)
 	}
 
 	return b.String()

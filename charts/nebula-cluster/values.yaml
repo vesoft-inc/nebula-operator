@@ -9,6 +9,7 @@ nebula:
   graphd:
     image: vesoft/nebula-graphd
     replicas: 2
+    env: []
     resources:
       requests:
         cpu: "500m"
@@ -21,6 +22,7 @@ nebula:
   metad:
     image: vesoft/nebula-metad
     replicas: 3
+    env: []
     resources:
       requests:
         cpu: "500m"
@@ -33,6 +35,7 @@ nebula:
   storaged:
     image: vesoft/nebula-storaged
     replicas: 3
+    env: []
     resources:
       requests:
         cpu: "500m"

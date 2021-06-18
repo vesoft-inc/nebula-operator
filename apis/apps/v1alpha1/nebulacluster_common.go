@@ -170,20 +170,18 @@ func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, 
 }
 
 func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []corev1.Container {
-	namespace := c.GetNamespace()
-	svcName := c.GetServiceName()
 	componentType := c.Type().String()
 	nc := c.GetNebulaCluster()
 
-	containers := make([]corev1.Container, 0)
+	containers := make([]corev1.Container, 0, 1)
 
 	metadAddress := strings.Join(nc.GetMetadEndpoints(), ",")
 	cmd := []string{"/bin/bash", "-ecx"}
 	cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
 		fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+
 		" --meta_server_addrs="+metadAddress+
-		" --local_ip=$(hostname)."+svcName+"."+namespace+".svc.cluster.local"+
-		" --ws_ip=$(hostname)."+svcName+"."+namespace+".svc.cluster.local"+
+		" --local_ip=$(hostname)."+c.GetServiceFQDN()+
+		" --ws_ip=$(hostname)."+c.GetServiceFQDN()+
 		" --minloglevel=1"+
 		" --v=0"+
 		" --daemonize=false")
@@ -202,6 +200,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		Name:         componentType,
 		Image:        c.GetImage(),
 		Command:      cmd,
+		Env:          c.GetEnvVars(),
 		Ports:        ports,
 		VolumeMounts: mounts,
 		ReadinessProbe: &corev1.Probe{

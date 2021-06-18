@@ -83,6 +83,10 @@ func (c *metadComponent) GetStorageResources() *corev1.ResourceRequirements {
 	return c.nc.Spec.Metad.StorageClaim.Resources.DeepCopy()
 }
 
+func (c *metadComponent) GetEnvVars() []corev1.EnvVar {
+	return c.nc.Spec.Metad.EnvVars
+}
+
 func (c *metadComponent) IsHeadlessService() bool {
 	return true
 }

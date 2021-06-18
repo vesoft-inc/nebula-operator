@@ -10,10 +10,12 @@ image:
     imagePullPolicy: IfNotPresent
 
 imagePullSecrets: []
+kubernetesClusterDomain: ""
 
 controllerManager:
   create: true
   replicas: 2
+  env: []
   resources:
     limits:
       cpu: 100m
@@ -29,6 +31,7 @@ scheduler:
   create: true
   schedulerName: nebula-scheduler
   replicas: 2
+  env: []
   resources:
     limits:
       cpu: 100m

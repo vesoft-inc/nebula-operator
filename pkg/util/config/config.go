@@ -41,7 +41,7 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 		line := scanner.Text()
 
 		if line == "" || strings.HasPrefix(line, "#") {
-			b.WriteString(fmt.Sprintf("%s\n", line))
+			_, _ = b.WriteString(fmt.Sprintf("%s\n", line))
 			continue
 		}
 
@@ -57,7 +57,7 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 				value = v
 				delete(custom, param)
 			}
-			b.WriteString(fmt.Sprintf("--%s=%s\n", param, value))
+			_, _ = b.WriteString(fmt.Sprintf("--%s=%s\n", param, value))
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -65,10 +65,10 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 	}
 
 	if len(custom) > 0 {
-		b.WriteString("\n########## Custom ##########\n")
+		_, _ = b.WriteString("\n########## Custom ##########\n")
 	}
 	for k, v := range custom {
-		b.WriteString(fmt.Sprintf("--%s=%s\n", k, v))
+		_, _ = b.WriteString(fmt.Sprintf("--%s=%s\n", k, v))
 	}
 
 	return b.String()

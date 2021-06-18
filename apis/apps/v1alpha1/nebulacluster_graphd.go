@@ -83,6 +83,10 @@ func (c *graphdComponent) GetStorageResources() *corev1.ResourceRequirements {
 	return c.nc.Spec.Graphd.StorageClaim.Resources.DeepCopy()
 }
 
+func (c *graphdComponent) GetEnvVars() []corev1.EnvVar {
+	return c.nc.Spec.Graphd.EnvVars
+}
+
 func (c *graphdComponent) IsHeadlessService() bool {
 	return false
 }

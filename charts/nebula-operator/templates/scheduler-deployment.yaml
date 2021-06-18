@@ -1,4 +1,4 @@
-{{- if .Values.controllerManager.create }}
+{{- if .Values.scheduler.create }}
 {{- if .Values.scheduler.create }}
 ---
 apiVersion: apps/v1
@@ -28,6 +28,14 @@ spec:
           imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
           command:
             - /usr/local/bin/scheduler
+          {{- if or .Values.kubernetesClusterDomain .Values.scheduler.env }}
+          env:
+            {{- if .Values.kubernetesClusterDomain }}
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.kubernetesClusterDomain }}
+            {{- end }}
+            {{- if .Values.scheduler.env }}{{ toYaml .Values.scheduler.env | nindent 12 }}{{- end }}
+          {{- end }}
           resources:
           {{- toYaml .Values.scheduler.resources | nindent 12 }}
         - name: kube-scheduler

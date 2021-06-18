@@ -85,6 +85,10 @@ func (c *storagedComponent) GetStorageResources() *corev1.ResourceRequirements {
 	return c.nc.Spec.Storaged.StorageClaim.Resources.DeepCopy()
 }
 
+func (c *storagedComponent) GetEnvVars() []corev1.EnvVar {
+	return c.nc.Spec.Storaged.EnvVars
+}
+
 func (c *storagedComponent) IsHeadlessService() bool {
 	return true
 }

@@ -30,6 +30,14 @@ spec:
             - --metrics-bind-address=127.0.0.1:8080
             - --leader-elect
             - --admission-webhook={{ .Values.admissionWebhook.create }}
+          {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
+          env:
+            {{- if .Values.kubernetesClusterDomain }}
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.kubernetesClusterDomain }}
+            {{- end }}
+          {{- if .Values.controllerManager.env }}{{ toYaml .Values.controllerManager.env | nindent 12 }}{{- end }}
+          {{- end }}
           {{- if .Values.admissionWebhook.create }}
           ports:
             - containerPort: 9443

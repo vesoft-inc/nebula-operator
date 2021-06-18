@@ -125,14 +125,14 @@ objectSelector:
 {{- end -}}
 
 {{/*
-Controller manager name of the chart.
+Scheduler name of the chart.
 */}}
 {{- define "scheduler.name" -}}
 {{ include "nebula-operator.name" . }}-scheduler
 {{- end }}
 
 {{/*
-Controller manager selector labels
+Scheduler selector labels
 */}}
 {{- define "scheduler.matchLabels" -}}
 app.kubernetes.io/component: scheduler
@@ -140,7 +140,7 @@ app.kubernetes.io/component: scheduler
 {{- end }}
 
 {{/*
-Controller manager labels
+Scheduler labels
 */}}
 {{- define "scheduler.labels" -}}
 app.kubernetes.io/component: scheduler

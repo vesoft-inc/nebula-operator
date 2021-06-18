@@ -23,7 +23,9 @@ Welcome to Nebula Graph!
 (user@nebula) [(none)]> 
 ```
 
-If accessing this service from a different namespace than that of the nebula cluster, use the fully qualified domain name (FQDN) `http://<cluster-name>-graphd.<cluster-namespace>.svc.cluster.local:9669`.
+If accessing this service from a different namespace than that of the nebula cluster, use the fully qualified domain name (FQDN) `http://<cluster-name>-graphd.<cluster-namespace>.svc.<CLUSTER_DOMAIN>:9669`.
+
+Generally, the default value of `CLUSTER_DOMAIN` is `cluster.local`.
 
 ## Accessing the service from outside the cluster
 

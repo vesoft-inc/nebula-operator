@@ -38,6 +38,7 @@ type NebulaClusterComponentter interface {
 	GetResources() *corev1.ResourceRequirements
 	GetStorageClass() string
 	GetStorageResources() *corev1.ResourceRequirements
+	GetEnvVars() []corev1.EnvVar
 	IsHeadlessService() bool
 	GetServiceSpec() *ServiceSpec
 	GetServiceName() string

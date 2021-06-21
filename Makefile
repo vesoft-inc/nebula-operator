@@ -90,6 +90,12 @@ build: generate check ## Build binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o images/nebula-operator/bin/controller-manager cmd/controller-manager/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o images/nebula-operator/bin/scheduler cmd/scheduler/main.go
 
+build-helm: helm
+	helm repo index charts --url https://vesoft-inc.github.io/nebula-operator/charts
+	helm package charts/nebula-operator
+	helm package charts/nebula-cluster
+	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/
+
 run: run-controller-manager
 
 run-controller-manager: manifests generate check

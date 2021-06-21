@@ -261,10 +261,11 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 	}
 
 	podSpec := corev1.PodSpec{
-		SchedulerName: nc.Spec.SchedulerName,
-		NodeSelector:  nc.Spec.NodeSelector,
-		Containers:    containers,
-		Volumes:       volumes,
+		SchedulerName:    nc.Spec.SchedulerName,
+		NodeSelector:     nc.Spec.NodeSelector,
+		Containers:       containers,
+		Volumes:          volumes,
+		ImagePullSecrets: nc.Spec.ImagePullSecrets,
 	}
 
 	if nc.Spec.SchedulerName == corev1.DefaultSchedulerName && enableEvenPodsSpread {

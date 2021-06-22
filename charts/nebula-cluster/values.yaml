@@ -1,7 +1,7 @@
 nebula:
   version: v2.0.0
   imagePullPolicy: IfNotPresent
-  storageClassName: gp2
+  # storageClassName:
   schedulerName: default-scheduler # nebula-scheduler
   reference:
     name: statefulsets.apps

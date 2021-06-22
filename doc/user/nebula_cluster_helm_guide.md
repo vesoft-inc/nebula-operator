@@ -77,7 +77,7 @@ The following table lists is the configurable parameters of the chart and their 
 | `nameOverride` | Override the name of the chart | `nil` |
 | `nebula.version` | Nebula version | `v2.0.0` |
 | `nebula.imagePullPolicy` | Nebula image pull policy | `IfNotPresent` |
-| `nebula.storageClassName` | PersistentVolume class | `gp2` |
+| `nebula.storageClassName` | PersistentVolume class, default to use the default StorageClass | `nil` |
 | `nebula.schedulerName` | Scheduler for nebula component | `default-scheduler` |
 | `nebula.reference` | Reference for nebula component | `{"name": "statefulsets.apps", "version": "v1"}` |
 | `nebula.graphd.image` | Graphd container image without tag, and use `nebula.version` as tag | `vesoft/nebula-graphd` |

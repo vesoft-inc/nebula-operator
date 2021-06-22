@@ -75,8 +75,12 @@ func (c *graphdComponent) GetResources() *corev1.ResourceRequirements {
 	return getResources(c.nc.Spec.Graphd.Resources)
 }
 
-func (c *graphdComponent) GetStorageClass() string {
-	return *c.nc.Spec.Graphd.StorageClaim.StorageClassName
+func (c *graphdComponent) GetStorageClass() *string {
+	scName := c.nc.Spec.Graphd.StorageClaim.StorageClassName
+	if scName == nil || *scName == "" {
+		return nil
+	}
+	return scName
 }
 
 func (c *graphdComponent) GetStorageResources() *corev1.ResourceRequirements {

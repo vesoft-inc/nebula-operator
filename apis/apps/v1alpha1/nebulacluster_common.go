@@ -317,7 +317,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 						Resources:        storageRequest,
-						StorageClassName: &scName,
+						StorageClassName: scName,
 					},
 				},
 			},

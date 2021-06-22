@@ -75,8 +75,12 @@ func (c *metadComponent) GetResources() *corev1.ResourceRequirements {
 	return getResources(c.nc.Spec.Metad.Resources)
 }
 
-func (c *metadComponent) GetStorageClass() string {
-	return *c.nc.Spec.Metad.StorageClaim.StorageClassName
+func (c *metadComponent) GetStorageClass() *string {
+	scName := c.nc.Spec.Metad.StorageClaim.StorageClassName
+	if scName == nil || *scName == "" {
+		return nil
+	}
+	return scName
 }
 
 func (c *metadComponent) GetStorageResources() *corev1.ResourceRequirements {

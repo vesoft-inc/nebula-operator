@@ -77,8 +77,12 @@ func (c *storagedComponent) GetResources() *corev1.ResourceRequirements {
 	return getResources(c.nc.Spec.Storaged.Resources)
 }
 
-func (c *storagedComponent) GetStorageClass() string {
-	return *c.nc.Spec.Storaged.StorageClaim.StorageClassName
+func (c *storagedComponent) GetStorageClass() *string {
+	scName := c.nc.Spec.Storaged.StorageClaim.StorageClassName
+	if scName == nil || *scName == "" {
+		return nil
+	}
+	return scName
 }
 
 func (c *storagedComponent) GetStorageResources() *corev1.ResourceRequirements {

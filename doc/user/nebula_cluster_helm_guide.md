@@ -66,7 +66,6 @@ nebula-storaged-4   1/1     Running   0          56s
 
 ```shell
 $ helm uninstall "${NEBULA_CLUSTER_NAME}" --namespace="${NEBULA_CLUSTER_NAMESPACE}"
-$ kubectl delete crd nebulaclusters.apps.nebula-graph.io
 ```
 
 ### Optional: chart parameters

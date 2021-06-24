@@ -20,6 +20,8 @@ spec:
         requests:
           storage: {{ .Values.nebula.graphd.storage }}
       storageClassName: {{ .Values.nebula.storageClassName }}
+    labels: {{ toYaml .Values.nebula.podLabels | nindent 6 }}
+    annotations: {{ toYaml .Values.nebula.podAnnotations | nindent 6 }}
   metad:
     replicas: {{ .Values.nebula.metad.replicas }}
     resources: {{ toYaml .Values.nebula.metad.resources | nindent 6 }}
@@ -31,6 +33,8 @@ spec:
         requests:
           storage: {{ .Values.nebula.metad.storage }}
       storageClassName: {{ .Values.nebula.storageClassName }}
+    labels: {{ toYaml .Values.nebula.podLabels | nindent 6 }}
+    annotations: {{ toYaml .Values.nebula.podAnnotations | nindent 6 }}
   storaged:
     replicas: {{ .Values.nebula.storaged.replicas }}
     resources: {{ toYaml .Values.nebula.storaged.resources | nindent 6 }}
@@ -42,6 +46,8 @@ spec:
         requests:
           storage: {{ .Values.nebula.storaged.storage }}
       storageClassName: {{ .Values.nebula.storageClassName }}
+    labels: {{ toYaml .Values.nebula.podLabels | nindent 6 }}
+    annotations: {{ toYaml .Values.nebula.podAnnotations | nindent 6 }}
   reference: {{ toYaml .Values.nebula.reference | nindent 4 }}
   imagePullPolicy: {{ .Values.nebula.imagePullPolicy }}
   {{- if .Values.imagePullSecrets }}

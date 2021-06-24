@@ -62,6 +62,10 @@ spec:
             properties:
               graphd:
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
                   config:
                     additionalProperties:
                       type: string
@@ -130,10 +134,6 @@ spec:
                     default: vesoft/graphd
                     type: string
                   labels:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  podAnnotations:
                     additionalProperties:
                       type: string
                     type: object
@@ -220,6 +220,10 @@ spec:
                 type: array
               metad:
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
                   config:
                     additionalProperties:
                       type: string
@@ -288,10 +292,6 @@ spec:
                     default: vesoft/graphd
                     type: string
                   labels:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  podAnnotations:
                     additionalProperties:
                       type: string
                     type: object
@@ -380,6 +380,10 @@ spec:
                 type: string
               storaged:
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
                   config:
                     additionalProperties:
                       type: string
@@ -448,10 +452,6 @@ spec:
                     default: vesoft/graphd
                     type: string
                   labels:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  podAnnotations:
                     additionalProperties:
                       type: string
                     type: object

@@ -3,9 +3,9 @@ entries:
   nebula-cluster:
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2021-06-21T16:59:36.417046+08:00"
+    created: "2021-06-28T10:15:33.333416+08:00"
     description: Nebula Cluster Helm chart for Kubernetes
-    digest: 7328fbf57484a9625a5c559d75de18b89c0e66988eb12eee02c6ad8ddc9d9b55
+    digest: df8dfc3a710753bec8544b6cde9c9ad35c0fcd89bb6144f59f5ce48b5bbb2f1d
     home: https://nebula-graph.io
     keywords:
     - kubernetes
@@ -29,9 +29,9 @@ entries:
   nebula-operator:
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2021-06-21T16:59:36.417725+08:00"
+    created: "2021-06-28T10:15:33.334456+08:00"
     description: Nebula Operator Helm chart for Kubernetes
-    digest: e13a783739c636748908daa59bbfcf491155e42603ce24a2365843d9a1071cbb
+    digest: 53c46adb019cf7e1c5226df321486c451e83d2071f95f95d9620bde141f1330a
     home: https://nebula-graph.io
     keywords:
     - kubernetes
@@ -50,4 +50,4 @@ entries:
     urls:
     - https://vesoft-inc.github.io/nebula-operator/charts/nebula-operator-0.1.0.tgz
     version: 0.1.0
-generated: "2021-06-21T16:59:36.416476+08:00"
+generated: "2021-06-28T10:15:33.332855+08:00"

@@ -66,6 +66,7 @@ nebula-storaged-4   1/1     Running   0          56s
 
 ```shell
 $ helm uninstall "${NEBULA_CLUSTER_NAME}" --namespace="${NEBULA_CLUSTER_NAMESPACE}"
+$ kubectl delete crd nebulaclusters.apps.nebula-graph.io
 ```
 
 ### Optional: chart parameters
@@ -80,6 +81,8 @@ The following table lists is the configurable parameters of the chart and their 
 | `nebula.storageClassName` | PersistentVolume class, default to use the default StorageClass | `nil` |
 | `nebula.schedulerName` | Scheduler for nebula component | `default-scheduler` |
 | `nebula.reference` | Reference for nebula component | `{"name": "statefulsets.apps", "version": "v1"}` |
+| `nebula.podLabels` | Labels for nebula component | `{}` |
+| `nebula.podAnnotations` | Annotations for nebula component | `{}` |
 | `nebula.graphd.image` | Graphd container image without tag, and use `nebula.version` as tag | `vesoft/nebula-graphd` |
 | `nebula.graphd.replicas` | Graphd replica number | `2` |
 | `nebula.graphd.env` | Graphd env | `[]` |

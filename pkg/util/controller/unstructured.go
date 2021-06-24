@@ -108,7 +108,21 @@ func (u *Unstructured) SetSpecField(obj *unstructured.Unstructured, value interf
 }
 
 func (u *Unstructured) SetTemplateAnnotations(obj *unstructured.Unstructured, ann map[string]string) error {
-	return unstructured.SetNestedStringMap(obj.Object, ann, "spec", "template", "metadata", "annotations")
+	fields := []string{"spec", "template", "metadata", "annotations"}
+	oldAnn, _, err := unstructured.NestedStringMap(obj.Object, fields...)
+	if err != nil {
+		return err
+	}
+
+	if oldAnn == nil {
+		oldAnn = make(map[string]string, len(ann))
+	}
+
+	for k, v := range ann {
+		oldAnn[k] = v
+	}
+
+	return unstructured.SetNestedStringMap(obj.Object, oldAnn, fields...)
 }
 
 func IsUpgrading(u UnstructuredExtender, obj *unstructured.Unstructured) bool {

@@ -200,7 +200,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		Name:         componentType,
 		Image:        c.GetImage(),
 		Command:      cmd,
-		Env:          c.GetEnvVars(),
+		Env:          c.GetPodEnvVars(),
 		Ports:        ports,
 		VolumeMounts: mounts,
 		ReadinessProbe: &corev1.Probe{
@@ -298,7 +298,8 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 			Selector: &metav1.LabelSelector{MatchLabels: componentLabel},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: componentLabel,
+					Labels:      mergeStringMaps(false, componentLabel, c.GetPodLabels()),
+					Annotations: c.GetPodAnnotations(),
 				},
 				Spec: podSpec,
 			},
@@ -434,4 +435,31 @@ func generateConfigMap(c NebulaClusterComponentter) *corev1.ConfigMap {
 	cm.Data = make(map[string]string)
 
 	return cm
+}
+
+func mergeStringMaps(overwrite bool, ms ...map[string]string) map[string]string {
+	n := 0
+	for _, m := range ms {
+		n += len(m)
+	}
+	mp := make(map[string]string, n)
+	if n == 0 {
+		return mp
+	}
+	for _, m := range ms {
+		for k, v := range m {
+			if overwrite || !isStringMapExist(mp, k) {
+				mp[k] = v
+			}
+		}
+	}
+	return mp
+}
+
+func isStringMapExist(m map[string]string, key string) bool {
+	if m == nil {
+		return false
+	}
+	_, exist := m[key]
+	return exist
 }

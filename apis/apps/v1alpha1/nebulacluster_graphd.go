@@ -87,8 +87,16 @@ func (c *graphdComponent) GetStorageResources() *corev1.ResourceRequirements {
 	return c.nc.Spec.Graphd.StorageClaim.Resources.DeepCopy()
 }
 
-func (c *graphdComponent) GetEnvVars() []corev1.EnvVar {
-	return c.nc.Spec.Graphd.EnvVars
+func (c *graphdComponent) GetPodEnvVars() []corev1.EnvVar {
+	return c.nc.Spec.Graphd.PodSpec.EnvVars
+}
+
+func (c *graphdComponent) GetPodAnnotations() map[string]string {
+	return c.nc.Spec.Graphd.PodSpec.Annotations
+}
+
+func (c *graphdComponent) GetPodLabels() map[string]string {
+	return c.nc.Spec.Graphd.PodSpec.Labels
 }
 
 func (c *graphdComponent) IsHeadlessService() bool {

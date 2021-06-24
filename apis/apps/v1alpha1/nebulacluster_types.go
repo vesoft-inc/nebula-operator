@@ -227,7 +227,7 @@ type PodSpec struct {
 
 	// K8S pod annotations.
 	// +optional
-	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`

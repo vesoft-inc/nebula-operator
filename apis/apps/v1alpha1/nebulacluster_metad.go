@@ -87,8 +87,16 @@ func (c *metadComponent) GetStorageResources() *corev1.ResourceRequirements {
 	return c.nc.Spec.Metad.StorageClaim.Resources.DeepCopy()
 }
 
-func (c *metadComponent) GetEnvVars() []corev1.EnvVar {
-	return c.nc.Spec.Metad.EnvVars
+func (c *metadComponent) GetPodEnvVars() []corev1.EnvVar {
+	return c.nc.Spec.Metad.PodSpec.EnvVars
+}
+
+func (c *metadComponent) GetPodAnnotations() map[string]string {
+	return c.nc.Spec.Graphd.PodSpec.Annotations
+}
+
+func (c *metadComponent) GetPodLabels() map[string]string {
+	return c.nc.Spec.Graphd.PodSpec.Labels
 }
 
 func (c *metadComponent) IsHeadlessService() bool {

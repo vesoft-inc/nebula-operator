@@ -6,6 +6,8 @@ nebula:
   reference:
     name: statefulsets.apps
     version: v1
+  podLabels: {}
+  podAnnotations: {}
   graphd:
     image: vesoft/nebula-graphd
     replicas: 2

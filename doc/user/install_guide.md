@@ -62,4 +62,5 @@ $ helm upgrade nebula-operator nebula-operator/nebula-operator -f `${HOME}/nebul
 
 ```shell script
 $ helm uninstall nebula-operator
+$ kubectl delete crd nebulaclusters.apps.nebula-graph.io
 ```

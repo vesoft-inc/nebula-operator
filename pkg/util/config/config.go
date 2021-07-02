@@ -22,13 +22,12 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"k8s.io/klog/v2"
 )
 
 var paramPattern = regexp.MustCompile(`--(\w+)=(.+)`)
 
 func AppendCustomConfig(data string, custom map[string]string) string {
+	log := getLog()
 	if len(custom) == 0 {
 		return data
 	}
@@ -48,7 +47,7 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 		if strings.HasPrefix(line, "--") {
 			match := paramPattern.FindStringSubmatch(line)
 			if len(match) != 3 {
-				klog.Errorf("%s not match param pattern", line)
+				log.Info("not match param pattern", "line", line)
 				continue
 			}
 			param, value := match[1], match[2]
@@ -61,7 +60,7 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		klog.Errorf("reading input failed:", err)
+		log.Error(err, "reading input failed")
 	}
 
 	if len(custom) > 0 {

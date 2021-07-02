@@ -95,18 +95,12 @@ build-helm: helm
 	helm package charts/nebula-operator
 	helm package charts/nebula-cluster
 	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/
+	cp config/crd/bases/apps.nebula-graph.io_nebulaclusters.yaml charts/nebula-operator/crds/nebulacluster.yaml
 
 run: run-controller-manager
 
 run-controller-manager: manifests generate check
 	go run -ldflags '$(LDFLAGS)' cmd/controller-manager/main.go
-
-build-helm: helm
-	helm repo index charts --url https://vesoft-inc.github.io/nebula-operator/charts
-	helm package charts/nebula-operator
-	helm package charts/nebula-cluster
-	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/
-	cp config/crd/bases/apps.nebula-graph.io_nebulaclusters.yaml charts/nebula-operator/crds/nebulacluster.yaml
 
 run-scheduler: manifests generate check
 	go run -ldflags '$(LDFLAGS)' cmd/scheduler/main.go

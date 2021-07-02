@@ -11,16 +11,20 @@ require (
 	github.com/onsi/gomega v1.10.2
 	github.com/openkruise/kruise-api v0.8.0
 	github.com/pkg/errors v0.9.1
+	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/vesoft-inc/nebula-go v0.0.0-20210322063004-e37085b865d6
 	go.uber.org/zap v1.15.0
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2
 	k8s.io/apiserver v0.19.2
+	k8s.io/cli-runtime v0.19.2
 	k8s.io/client-go v0.19.2
 	k8s.io/code-generator v0.19.2
-	k8s.io/klog/v2 v2.4.0
+	k8s.io/klog/v2 v2.4.0 // indirect
 	k8s.io/kube-scheduler v0.0.0
+	k8s.io/kubectl v0.0.0
 	k8s.io/kubernetes v1.19.2
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 	sigs.k8s.io/controller-runtime v0.7.0

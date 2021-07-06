@@ -18,13 +18,13 @@ package cmd
 
 import (
 	"flag"
-	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/check"
 	"io"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/check"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/console"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/info"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/list"

@@ -119,36 +119,49 @@ func (o *CheckOptions) Validate(cmd *cobra.Command) error {
 	return nil
 }
 
-// Run executes debug command
+// Run executes check command
 func (o *CheckOptions) RunCheck() error {
 	switch o.ResourceType {
 	case "nebulaclusters", "nebulacluster", "nc":
-		return o.CheckNebulaCluster()
+		{
+			str, err := o.CheckNebulaCluster()
+			if err != nil {
+				return err
+			}
+			ignore.Fprintf(o.Out, "%s\n", str)
+		}
 	case "pod", "pods":
-		return o.CheckPods()
+		{
+			str, err := o.CheckPods()
+			if err != nil {
+				return err
+			}
+			ignore.Fprintf(o.Out, "%s\n", str)
+
+		}
 	}
 
 	return nil
 }
 
-func (o *CheckOptions) CheckNebulaCluster() error {
+func (o *CheckOptions) CheckNebulaCluster() (string, error) {
 	var nc appsv1alpha1.NebulaCluster
 	key := client.ObjectKey{Namespace: o.Namespace, Name: o.NebulaClusterName}
 	if err := o.runtimeCli.Get(context.TODO(), key, &nc); err != nil {
-		return err
+		return "", err
 	}
 	for _, cond := range nc.Status.Conditions {
 		if cond.Type == v1alpha1.NebulaClusterReady {
-			ignore.Fprintf(o.Out, "%s\n", cond.Message)
+			return cond.Message, nil
 		}
 	}
-	return nil
+	return "", nil
 }
 
-func (o *CheckOptions) CheckPods() error {
+func (o *CheckOptions) CheckPods() (string, error) {
 	selector, err := label.New().Cluster(o.NebulaClusterName).Selector()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var pods corev1.PodList
@@ -157,7 +170,7 @@ func (o *CheckOptions) CheckPods() error {
 		Namespace:     o.Namespace,
 	}
 	if err := o.runtimeCli.List(context.TODO(), &pods, &listOptions); err != nil {
-		return err
+		return "", err
 	}
 
 	allWork := true
@@ -173,8 +186,10 @@ func (o *CheckOptions) CheckPods() error {
 		if pod.Status.Phase != corev1.PodRunning {
 			allWork = false
 			for _, cond := range pod.Status.Conditions {
-				ignore.Fprintf(tw, "\t%s", pod.Name)
-				ignore.Fprintf(tw, "\t%s\t%s\t%s", pod.Status.Phase, cond.Type, cond.Message)
+				if cond.Status != corev1.ConditionTrue {
+					ignore.Fprintf(tw, "\t%s", pod.Name)
+					ignore.Fprintf(tw, "\t%s\t%s\t%s\n", pod.Status.Phase, cond.Type, cond.Message)
+				}
 			}
 		}
 	}
@@ -182,10 +197,8 @@ func (o *CheckOptions) CheckPods() error {
 	_ = tw.Flush()
 
 	if allWork {
-		ignore.Fprintf(o.Out, "%s", "All pods are running")
+		return "All pods are running", nil
 	} else {
-		ignore.Fprintf(o.Out, "%s\n", buf.String())
+		return buf.String(), nil
 	}
-
-	return nil
 }

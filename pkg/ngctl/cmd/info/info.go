@@ -18,10 +18,10 @@ package info
 
 import (
 	"fmt"
-	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"

@@ -19,12 +19,12 @@ package version
 import (
 	"context"
 	"fmt"
-	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/spf13/cobra"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubernetes/pkg/apis/core"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/label"

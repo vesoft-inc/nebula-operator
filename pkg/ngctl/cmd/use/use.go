@@ -19,10 +19,10 @@ package use
 import (
 	"context"
 	"fmt"
-	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"

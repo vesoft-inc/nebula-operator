@@ -62,6 +62,7 @@ func NewCmdVersion(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *co
 	cmd := &cobra.Command{
 		Use:     "version",
 		Short:   "Print the cli and nebula operator version",
+		Long:    "Print the cli and nebula operator version",
 		Example: versionExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(f))

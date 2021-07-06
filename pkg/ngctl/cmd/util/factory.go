@@ -36,9 +36,9 @@ type (
 		ToRuntimeClient() (client.Client, error)
 		GetNebulaClusterNameAndNamespace(withUseConfig bool, args []string) (string, string, error)
 		GetNebulaClusterNamesAndNamespace(withUseConfig bool, args []string) ([]string, string, error)
-		// GetNebulaClusterName() (string, error)
+		GetNebulaClusterName() (string, error)
 		// GetNebulaClusterNameWithoutConfig() string
-		// GetNamespace() (string, error)
+		GetNamespace() (string, error)
 		GetNebulaClusterConfigFile() (string, error)
 	}
 	factoryImpl struct {
@@ -152,7 +152,7 @@ func (f *factoryImpl) getNebulaClusterName(withConfig bool) (string, error) {
 
 	c, err := f.getNebulaClusterConfig()
 	if err != nil {
-		return "", err
+		return "", errNotSpecified
 	}
 
 	return c.ClusterName, nil

@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"flag"
+	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/check"
 	"io"
 
 	"github.com/spf13/cobra"
@@ -64,6 +65,7 @@ func NewNgctlCmd(in io.Reader, out, err io.Writer) *cobra.Command {
 		{
 			Message: "Cluster Management Commands:",
 			Commands: []*cobra.Command{
+				check.NewCmdCheck(f, ioStreams),
 				console.NewCmdConsole(f, ioStreams),
 				info.NewCmdInfo(f, ioStreams),
 				list.NewCmdList(f, ioStreams),

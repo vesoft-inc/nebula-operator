@@ -46,7 +46,7 @@ const (
 )
 
 type (
-	// Options is a struct to support version command
+	// Options is a struct to support use command
 	Options struct {
 		Namespace               string
 		NebulaClusterName       string

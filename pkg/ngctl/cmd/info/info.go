@@ -18,6 +18,7 @@ package info
 
 import (
 	"fmt"
+	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -26,17 +27,17 @@ import (
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
 )
 
-const (
-	infoLong = `
-		Get specified nebula cluster information.
-`
-	infoExample = `
+var (
+	infoLong = templates.LongDesc(`
+		Get specified nebula cluster information.`)
+
+	infoExample = templates.Examples(`
 		# get current nebula cluster information, which is set by 'ngctl use' command
 		ngctl info
 		
 		# get specified nebula cluster information
-		ngctl info CLUSTER_NAME
-`
+		ngctl info CLUSTER_NAME`)
+
 	infoUsage = `expected 'info CLUSTER_NAME' for the info command, or using 'ngctl use' 
 to set nebula cluster first.
 `

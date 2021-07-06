@@ -19,6 +19,7 @@ package version
 import (
 	"context"
 	"fmt"
+	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/spf13/cobra"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,11 +33,10 @@ import (
 	operatorversion "github.com/vesoft-inc/nebula-operator/pkg/version"
 )
 
-const (
-	versionExample = `
+var (
+	versionExample = templates.Examples(`
 		# Print the cli and nebula operator version
-		ngctl version
-`
+		ngctl version`)
 )
 
 type (

@@ -19,6 +19,7 @@ package use
 import (
 	"context"
 	"fmt"
+	"k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -29,19 +30,20 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/config"
 )
 
-const (
-	useLong = `
+var (
+	useLong = templates.LongDesc(`
 		Specify a nebula cluster to use.
 		
 		By using a certain cluster, you may omit --nebulacluster option
-		in many control commands.
-`
-	useExample = `
+		in many control commands.`)
+
+	useExample = templates.Examples(`
 		# specify a nebula cluster to use
 		ngctl use demo-cluster
+
 		# specify kubernetes context and namespace
-		ngctl use --namespace=demo-ns demo-cluster
-`
+		ngctl use --namespace=demo-ns demo-cluster`)
+
 	useUsage = "expected 'use CLUSTER_NAME' for the use command"
 )
 

@@ -22,13 +22,13 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util/ignore"

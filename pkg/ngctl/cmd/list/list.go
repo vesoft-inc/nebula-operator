@@ -19,8 +19,6 @@ package list
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
-	"k8s.io/kubectl/pkg/util/templates"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -37,7 +35,9 @@ import (
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
 )
 

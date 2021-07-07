@@ -37,7 +37,6 @@ func init() {
 }
 
 func TestGenerateConsolePod(t *testing.T) {
-
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 	fakeOptions := Options{
@@ -67,5 +66,4 @@ func TestGenerateConsolePod(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
 }

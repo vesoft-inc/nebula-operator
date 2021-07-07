@@ -38,7 +38,6 @@ func init() {
 }
 
 func TestCheckNebulaCluster(t *testing.T) {
-
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 	testcases := []struct {
@@ -111,7 +110,6 @@ func TestCheckNebulaCluster(t *testing.T) {
 }
 
 func TestCheckPods(t *testing.T) {
-
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 	testcases := []struct {

@@ -33,11 +33,7 @@ import (
 	operatorversion "github.com/vesoft-inc/nebula-operator/pkg/version"
 )
 
-var (
-	versionExample = templates.Examples(`
-		# Print the cli and nebula operator version
-		ngctl version`)
-)
+var versionExample = templates.Examples(`# Print the cli and nebula operator version、ngctl version`)
 
 type (
 	// Options is a struct to support version command

@@ -27,7 +27,6 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
@@ -45,6 +44,8 @@ var (
 		# check specified nebula cluster pods
 		ngctl check pods --nebulacluster=nebula`)
 )
+
+const resourceType = "nebulacluster"
 
 type CheckOptions struct {
 	Namespace         string
@@ -109,20 +110,20 @@ func (o *CheckOptions) Complete(f cmdutil.Factory, args []string) error {
 // Validate validates the provided options
 func (o *CheckOptions) Validate(cmd *cobra.Command) error {
 	if o.NebulaClusterName == "" {
-		return cmdutil.UsageErrorf(cmd, "expected specify nebula cluster like 'ngctl check resource --nebulacluster=CLUSTER_NAME' for the check command, or using 'ngctl use' \nto set nebula cluster first.")
+		return cmdutil.UsageErrorf(cmd, "using 'ngctl use' or '--nebulacluster' to set nebula cluster first.")
 	}
 
 	if o.ResourceType == "" {
-		o.ResourceType = "nebulacluster"
+		o.ResourceType = resourceType
 	}
 
 	return nil
 }
 
-// Run executes check command
+// RunCheck executes check command
 func (o *CheckOptions) RunCheck() error {
 	switch o.ResourceType {
-	case "nebulaclusters", "nebulacluster", "nc":
+	case resourceType, "nebulaclusters", "nc":
 		{
 			str, err := o.CheckNebulaCluster()
 			if err != nil {
@@ -137,7 +138,6 @@ func (o *CheckOptions) RunCheck() error {
 				return err
 			}
 			ignore.Fprintf(o.Out, "%s\n", str)
-
 		}
 	}
 
@@ -151,7 +151,7 @@ func (o *CheckOptions) CheckNebulaCluster() (string, error) {
 		return "", err
 	}
 	for _, cond := range nc.Status.Conditions {
-		if cond.Type == v1alpha1.NebulaClusterReady {
+		if cond.Type == appsv1alpha1.NebulaClusterReady {
 			return cond.Message, nil
 		}
 	}
@@ -182,13 +182,13 @@ func (o *CheckOptions) CheckPods() (string, error) {
 	ignore.Fprintf(tw, "\tPodName\tPhase\tConditionType\tMessage\n")
 	ignore.Fprintf(tw, "\t-------\t------\t-------------\t-------\n")
 
-	for _, pod := range pods.Items {
-		if pod.Status.Phase != corev1.PodRunning {
+	for i := range pods.Items {
+		if pods.Items[i].Status.Phase != corev1.PodRunning {
 			allWork = false
-			for _, cond := range pod.Status.Conditions {
+			for _, cond := range pods.Items[i].Status.Conditions {
 				if cond.Status != corev1.ConditionTrue {
-					ignore.Fprintf(tw, "\t%s", pod.Name)
-					ignore.Fprintf(tw, "\t%s\t%s\t%s\n", pod.Status.Phase, cond.Type, cond.Message)
+					ignore.Fprintf(tw, "\t%s", pods.Items[i].Name)
+					ignore.Fprintf(tw, "\t%s\t%s\t%s\n", pods.Items[i].Status.Phase, cond.Type, cond.Message)
 				}
 			}
 		}
@@ -198,7 +198,6 @@ func (o *CheckOptions) CheckPods() (string, error) {
 
 	if allWork {
 		return "All pods are running", nil
-	} else {
-		return buf.String(), nil
 	}
+	return buf.String(), nil
 }

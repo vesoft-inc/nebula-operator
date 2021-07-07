@@ -67,5 +67,4 @@ func TestLoadFromFileAndSaveToFile(t *testing.T) {
 			t.Errorf("%d: Expected: \n%#v\n but actual: \n%#v\n", i, tc.expected, tc.config)
 		}
 	}
-
 }

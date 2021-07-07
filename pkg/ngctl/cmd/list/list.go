@@ -72,7 +72,9 @@ var (
   		ngctl list -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,IMAGE:.spec.graphd.image`)
 )
 
-const OutputFormatWide = "wide"
+const (
+	OutputFormatWide = "wide"
+)
 
 // ListOptions is a struct to support list command
 type ListOptions struct {
@@ -230,7 +232,7 @@ func (o *ListOptions) Validate(cmd *cobra.Command) error {
 	}
 
 	if o.NebulaClusterName == "" && o.ResourceType != "" {
-		return cmdutil.UsageErrorf(cmd, "expected specify nebula cluster like 'ngctl list resource --nebulacluster=CLUSTER_NAME' for the list command, or using 'ngctl use' \nto set nebula cluster first.")
+		return cmdutil.UsageErrorf(cmd, "using 'ngctl use' or '--nebulacluster' to set nebula cluster first.")
 	}
 
 	if o.ResourceType == "" {
@@ -259,7 +261,6 @@ func (o *ListOptions) transformRequests(req *rest.Request) {
 
 // Run executes list command
 func (o *ListOptions) Run() error {
-
 	if o.LabelSelector == "" {
 		o.LabelSelector = o.NebulaClusterLabel
 	} else {

@@ -1,6 +1,6 @@
 
 # Overview
-ngctl is a terminal cmd tool for nebula-operator, it has the following commands:
+ngctl is a terminal cmd tool for Nebula Graph managed by nebula-operator, it has the following commands:
 - [ngctl use](#ngctl-use)
 - [ngctl console](#ngctl-console)
 - [ngctl list](#ngctl-list)
@@ -15,7 +15,7 @@ Examples:
   # specify a nebula cluster to use
   ngctl use demo-cluster
 
-  # specify kubernetes context and namespace
+  # specify the cluster name and namespace
   ngctl use demo-cluster -n test-system
 ```
 ## ngctl console

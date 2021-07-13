@@ -162,6 +162,9 @@ func (o *ListOptions) Complete(f cmdutil.Factory, cmd *cobra.Command, args []str
 
 	if len(args) > 0 {
 		o.ResourceType = args[0]
+	} else {
+		o.ResourceType = cmdutil.NebulaClusterResourceType
+		o.NebulaClusterLabel = ""
 	}
 
 	o.SortBy, err = cmd.Flags().GetString("sort-by")
@@ -233,11 +236,6 @@ func (o *ListOptions) Validate(cmd *cobra.Command) error {
 
 	if o.NebulaClusterName == "" && o.ResourceType != "" {
 		return cmdutil.UsageErrorf(cmd, "using 'ngctl use' or '--nebulacluster' to set nebula cluster first.")
-	}
-
-	if o.ResourceType == "" {
-		o.ResourceType = "nebulacluster"
-		o.NebulaClusterLabel = ""
 	}
 
 	return nil

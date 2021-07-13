@@ -45,13 +45,10 @@ var (
 		ngctl check pods --nebulacluster=nebula`)
 )
 
-const resourceType = "nebulacluster"
-
 type CheckOptions struct {
 	Namespace         string
 	NebulaClusterName string
 	ResourceType      string
-	AllNamespaces     bool
 
 	runtimeCli client.Client
 	genericclioptions.IOStreams
@@ -97,6 +94,8 @@ func (o *CheckOptions) Complete(f cmdutil.Factory, args []string) error {
 
 	if len(args) > 0 {
 		o.ResourceType = args[0]
+	} else {
+		o.ResourceType = cmdutil.NebulaClusterResourceType
 	}
 
 	o.runtimeCli, err = f.ToRuntimeClient()
@@ -113,17 +112,13 @@ func (o *CheckOptions) Validate(cmd *cobra.Command) error {
 		return cmdutil.UsageErrorf(cmd, "using 'ngctl use' or '--nebulacluster' to set nebula cluster first.")
 	}
 
-	if o.ResourceType == "" {
-		o.ResourceType = resourceType
-	}
-
 	return nil
 }
 
 // RunCheck executes check command
 func (o *CheckOptions) RunCheck() error {
 	switch o.ResourceType {
-	case resourceType, "nebulaclusters", "nc":
+	case cmdutil.NebulaClusterResourceType, "nebulaclusters", "nc":
 		{
 			str, err := o.CheckNebulaCluster()
 			if err != nil {

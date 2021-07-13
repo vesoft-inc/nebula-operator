@@ -16,7 +16,10 @@ limitations under the License.
 
 package config
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestLoadFromFileAndSaveToFile(t *testing.T) {
 	testcases := []struct {
@@ -29,7 +32,7 @@ func TestLoadFromFileAndSaveToFile(t *testing.T) {
 	}{
 		{
 			desc:     "",
-			filename: "~/.kube/config1",
+			filename: "",
 			config: NebulaClusterConfig{
 				ClusterName: "nebula",
 				Namespace:   "nebula-system",
@@ -41,7 +44,7 @@ func TestLoadFromFileAndSaveToFile(t *testing.T) {
 		},
 		{
 			desc:     "",
-			filename: "~/.kube/config2",
+			filename: "",
 			config: NebulaClusterConfig{
 				ClusterName: "nebula",
 				Namespace:   "",
@@ -53,7 +56,20 @@ func TestLoadFromFileAndSaveToFile(t *testing.T) {
 		},
 	}
 
+	defer func() {
+		for _, tc := range testcases {
+			_ = os.Remove(tc.filename)
+		}
+	}()
+
 	for i, tc := range testcases {
+		configFile, err := os.CreateTemp("", "")
+		if err != nil {
+			t.Error(err)
+		}
+
+		tc.filename = configFile.Name()
+
 		if err := tc.config.SaveToFile(tc.filename); err != nil {
 			t.Error(err)
 		}

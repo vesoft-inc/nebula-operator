@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"os"
 	"sync"
 	"testing"
 
@@ -37,7 +38,7 @@ func TestGetNebulaClusterConfig(t *testing.T) {
 			},
 			factory: &factoryImpl{
 				nebulaClusterName:       "",
-				nebulaClusterConfigFile: "~/.kube/config1",
+				nebulaClusterConfigFile: "",
 				loadingLock:             sync.Mutex{},
 				nebulaClusterConfig:     nil,
 			},
@@ -46,15 +47,27 @@ func TestGetNebulaClusterConfig(t *testing.T) {
 		{
 			factory: &factoryImpl{
 				nebulaClusterName:       "",
-				nebulaClusterConfigFile: "~/.kube/config2",
+				nebulaClusterConfigFile: "",
 				loadingLock:             sync.Mutex{},
 				nebulaClusterConfig:     nil,
 			},
-			expectedErr: false,
+			expectedErr: true,
 		},
 	}
 
+	defer func() {
+		for _, tc := range testcases {
+			_ = os.Remove(tc.factory.nebulaClusterConfigFile)
+		}
+	}()
+
 	for i, tc := range testcases {
+		configFile, err := os.CreateTemp("", "")
+		if err != nil {
+			t.Error(err)
+		}
+		tc.factory.nebulaClusterConfigFile = configFile.Name()
+
 		if tc.config != nil {
 			err := tc.config.SaveToFile(tc.factory.nebulaClusterConfigFile)
 			if err != nil {
@@ -62,7 +75,7 @@ func TestGetNebulaClusterConfig(t *testing.T) {
 			}
 		}
 
-		_, err := tc.factory.getNebulaClusterConfig()
+		_, err = tc.factory.getNebulaClusterConfig()
 		if (err != nil) == tc.expectedErr {
 			t.Errorf("%d: Expected: \n%#v\n but actual: \n%#v\n", i, tc.expectedErr, err != nil)
 		}

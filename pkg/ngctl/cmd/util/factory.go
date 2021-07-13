@@ -52,6 +52,8 @@ type (
 	}
 )
 
+const NebulaClusterResourceType = "nebulacluster"
+
 var (
 	_               Factory = (*factoryImpl)(nil)
 	errNotSpecified         = errors.New("Not Specified")
@@ -119,7 +121,6 @@ func (f *factoryImpl) GetNebulaClusterNamesAndNamespace(withUseConfig bool, args
 	if f.nebulaClusterName != "" {
 		return []string{f.nebulaClusterName}, namespace, nil
 	}
-
 	if len(args) > 0 {
 		return args, namespace, nil
 	}

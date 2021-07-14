@@ -115,19 +115,6 @@ func (f *factoryImpl) GetNebulaClusterNamesAndNamespace(withUseConfig bool, args
 	return []string{c.ClusterName}, c.Namespace, nil
 }
 
-func (f *factoryImpl) getNebulaClusterName(withConfig bool) (string, error) {
-	if !withConfig || f.nebulaClusterName != "" {
-		return f.nebulaClusterName, nil
-	}
-
-	c, err := f.getNebulaClusterConfig()
-	if err != nil {
-		return "", errNotSpecified
-	}
-
-	return c.ClusterName, nil
-}
-
 func (f *factoryImpl) GetNebulaClusterConfigFile() (string, error) {
 	if f.nebulaClusterConfigFile != "" {
 		return f.nebulaClusterConfigFile, nil

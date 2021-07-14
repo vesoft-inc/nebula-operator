@@ -36,9 +36,6 @@ type (
 		ToRuntimeClient() (client.Client, error)
 		GetNebulaClusterNameAndNamespace(withUseConfig bool, args []string) (string, string, error)
 		GetNebulaClusterNamesAndNamespace(withUseConfig bool, args []string) ([]string, string, error)
-		// GetNebulaClusterName() (string, error)
-		// GetNebulaClusterNameWithoutConfig() string
-		// GetNamespace() (string, error)
 		GetNebulaClusterConfigFile() (string, error)
 	}
 	factoryImpl struct {
@@ -51,6 +48,8 @@ type (
 		nebulaClusterConfig *config.NebulaClusterConfig
 	}
 )
+
+const NebulaClusterResourceType = "nebulacluster"
 
 var (
 	_               Factory = (*factoryImpl)(nil)
@@ -82,24 +81,6 @@ func (f *factoryImpl) ToRuntimeClient() (client.Client, error) {
 	return client.New(restConfig, client.Options{})
 }
 
-func (f *factoryImpl) GetNamespace() (string, error) {
-	namespace, enforceNamespace, err := f.ToRawKubeConfigLoader().Namespace()
-	if err != nil {
-		return "", err
-	}
-
-	if enforceNamespace {
-		return namespace, err
-	}
-
-	c, err := f.getNebulaClusterConfig()
-	if err != nil {
-		return namespace, nil
-	}
-
-	return c.Namespace, err
-}
-
 func (f *factoryImpl) GetNebulaClusterNameAndNamespace(withUseConfig bool, args []string) (name, namespace string, err error) {
 	var names []string
 	names, namespace, err = f.GetNebulaClusterNamesAndNamespace(withUseConfig, args)
@@ -115,11 +96,9 @@ func (f *factoryImpl) GetNebulaClusterNamesAndNamespace(withUseConfig bool, args
 	if err != nil {
 		return nil, "", err
 	}
-
 	if f.nebulaClusterName != "" {
 		return []string{f.nebulaClusterName}, namespace, nil
 	}
-
 	if len(args) > 0 {
 		return args, namespace, nil
 	}
@@ -134,28 +113,6 @@ func (f *factoryImpl) GetNebulaClusterNamesAndNamespace(withUseConfig bool, args
 	}
 
 	return []string{c.ClusterName}, c.Namespace, nil
-}
-
-func (f *factoryImpl) GetNebulaClusterName() (string, error) {
-	return f.getNebulaClusterName(true)
-}
-
-func (f *factoryImpl) GetNebulaClusterNameWithoutConfig() string {
-	name, _ := f.getNebulaClusterName(false)
-	return name
-}
-
-func (f *factoryImpl) getNebulaClusterName(withConfig bool) (string, error) {
-	if !withConfig || f.nebulaClusterName != "" {
-		return f.nebulaClusterName, nil
-	}
-
-	c, err := f.getNebulaClusterConfig()
-	if err != nil {
-		return "", err
-	}
-
-	return c.ClusterName, nil
 }
 
 func (f *factoryImpl) GetNebulaClusterConfigFile() (string, error) {

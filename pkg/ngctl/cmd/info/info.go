@@ -21,29 +21,30 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
 )
 
-const (
-	infoLong = `
-		Get specified nebula cluster information.
-`
-	infoExample = `
+var (
+	infoLong = templates.LongDesc(`
+		Get specified nebula cluster information.`)
+
+	infoExample = templates.Examples(`
 		# get current nebula cluster information, which is set by 'ngctl use' command
 		ngctl info
 		
 		# get specified nebula cluster information
-		ngctl info CLUSTER_NAME
-`
+		ngctl info CLUSTER_NAME`)
+
 	infoUsage = `expected 'info CLUSTER_NAME' for the info command, or using 'ngctl use' 
 to set nebula cluster first.
 `
 )
 
 type (
-	// Options is a struct to support version command
+	// Options is a struct to support info command
 	Options struct {
 		Namespace         string
 		NebulaClusterName string
@@ -60,7 +61,7 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 	}
 }
 
-// NewCmdInfo returns a cobra command for specify a nebula cluster to use
+// NewCmdInfo returns a cobra command for get specified nebula cluster information
 func NewCmdInfo(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *cobra.Command {
 	o := NewOptions(ioStreams)
 	cmd := &cobra.Command{
@@ -104,7 +105,7 @@ func (o *Options) Validate(cmd *cobra.Command) error {
 	return nil
 }
 
-// Run executes use command
+// Run executes info command
 func (o *Options) Run() error {
 	nci, err := NewNebulaClusterInfo(o.NebulaClusterName, o.Namespace, o.runtimeCli)
 	if err != nil {

@@ -53,7 +53,7 @@ to set nebula cluster first.
 )
 
 type (
-	// Options is a struct to support version command
+	// Options is a struct to support console command
 	Options struct {
 		Namespace         string
 		NebulaClusterName string
@@ -79,7 +79,7 @@ func NewOptions(ioStreams genericclioptions.IOStreams) *Options {
 	}
 }
 
-// NewCmdConsole returns a cobra command for specify a nebula cluster to use
+// NewCmdConsole returns a cobra command for open console to the specified nebula cluster
 func NewCmdConsole(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *cobra.Command {
 	o := NewOptions(ioStreams)
 	cmd := &cobra.Command{
@@ -159,7 +159,7 @@ func (o *Options) Validate(cmd *cobra.Command) error {
 	return nil
 }
 
-// Run executes use command
+// Run executes console command
 func (o *Options) Run() error {
 	pod, err := o.generateConsolePod()
 	if err != nil {

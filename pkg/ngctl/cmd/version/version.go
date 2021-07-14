@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubernetes/pkg/apis/core"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
@@ -32,12 +33,7 @@ import (
 	operatorversion "github.com/vesoft-inc/nebula-operator/pkg/version"
 )
 
-const (
-	versionExample = `
-		# Print the cli and nebula operator version
-		ngctl version
-`
-)
+var versionExample = templates.Examples(`# Print the cli and nebula operator version、ngctl version`)
 
 type (
 	// Options is a struct to support version command
@@ -62,6 +58,7 @@ func NewCmdVersion(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *co
 	cmd := &cobra.Command{
 		Use:     "version",
 		Short:   "Print the cli and nebula operator version",
+		Long:    "Print the cli and nebula operator version",
 		Example: versionExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(f))

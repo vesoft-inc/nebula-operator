@@ -24,6 +24,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/check"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/console"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/info"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/list"
@@ -64,6 +65,7 @@ func NewNgctlCmd(in io.Reader, out, err io.Writer) *cobra.Command {
 		{
 			Message: "Cluster Management Commands:",
 			Commands: []*cobra.Command{
+				check.NewCmdCheck(f, ioStreams),
 				console.NewCmdConsole(f, ioStreams),
 				info.NewCmdInfo(f, ioStreams),
 				list.NewCmdList(f, ioStreams),

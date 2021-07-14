@@ -35,22 +35,20 @@ import (
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/kubectl/pkg/util/templates"
 
+	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
 )
 
-const (
-	listLong = `
-		List nebula clusters.
+var (
+	listLong = templates.LongDesc(`
+		List nebula clusters or there sub resources.
 
-		Prints a table of the most important information about the nebula clusters. You can 
-		filter the list using a label selector and the --selector flag. You will only see 
-		results in your current namespace unless you pass --all-namespaces.
-		
-		By specifying the output as 'template' and providing a Go template as the value of 
-		the --template flag, you can filter the attributes of the nebula clusters.
-`
-	listExample = `
+		Prints a table of the most important information about the nebula cluster resources. 
+		You can use many of the same flags as kubectl get`)
+
+	listExample = templates.Examples(`
 		# List all nebula clusters.
 		ngctl list
 		
@@ -60,52 +58,56 @@ const (
 		# List all nebula clusters with json format.
 		ngctl list -o json
 
-		# List a single nebula clusters with specified NAME in ps output format.
-		ngctl list NAME
+		# List nebula cluster sub resources with specified cluster name.
+		ngctl list pod --nebulacluster=nebula
   
 	  	# Return only the metad's phase value of the specified pod.
 	  	ngctl list -o template --template="{{.status.graphd.phase}}" NAME
   
   		# List image information in custom columns.
-  		ngctl list -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,IMAGE:.spec.graphd.image
-`
+  		ngctl list -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,IMAGE:.spec.graphd.image`)
+)
+
+const (
 	OutputFormatWide = "wide"
 )
 
-type (
-	// Options is a struct to support version command
-	Options struct {
-		LabelSelector          string
-		FieldSelector          string
-		AllNamespaces          bool
-		Namespace              string
-		NebulaClusterNames     []string
-		Sort                   bool
-		SortBy                 string
-		IgnoreNotFound         bool
-		IsHumanReadablePrinter bool
-		ServerPrint            bool
+// ListOptions is a struct to support list command
+type ListOptions struct {
+	Namespace          string
+	NebulaClusterName  string
+	NebulaClusterLabel string
+	ResourceType       string
 
-		PrintFlags *PrintFlags
-		ToPrinter  func(mapping *meta.RESTMapping, withNamespace bool) (printers.ResourcePrinterFunc, error)
+	LabelSelector  string
+	FieldSelector  string
+	AllNamespaces  bool
+	Sort           bool
+	SortBy         string
+	IgnoreNotFound bool
 
-		builder *resource.Builder
-		genericclioptions.IOStreams
-	}
-)
+	ServerPrint bool
 
-// NewOptions returns initialized Options
-func NewOptions(streams genericclioptions.IOStreams) *Options {
-	return &Options{
+	PrintFlags             *PrintFlags
+	ToPrinter              func(mapping *meta.RESTMapping, withNamespace bool) (printers.ResourcePrinterFunc, error)
+	IsHumanReadablePrinter bool
+
+	builder *resource.Builder
+	genericclioptions.IOStreams
+}
+
+// NewListOptions returns initialized Options
+func NewListOptions(streams genericclioptions.IOStreams) *ListOptions {
+	return &ListOptions{
 		PrintFlags:  NewGetPrintFlags(),
 		IOStreams:   streams,
 		ServerPrint: true,
 	}
 }
 
-// NewCmdList returns a cobra command for list nebula clusters
+// NewCmdList returns a cobra command for list nebula clusters or there sub resources.
 func NewCmdList(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *cobra.Command {
-	o := NewOptions(ioStreams)
+	o := NewListOptions(ioStreams)
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "list all nebula clusters",
@@ -113,18 +115,20 @@ func NewCmdList(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *cobra
 		Example: listExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(f, cmd, args))
+			cmdutil.CheckErr(o.Validate(cmd))
 			cmdutil.CheckErr(o.Run())
 		},
 	}
 
 	o.PrintFlags.AddFlags(cmd)
+	f.AddFlags(cmd)
 	o.AddFlags(cmd)
 
 	return cmd
 }
 
-// AddFlags add all the flags.
-func (o *Options) AddFlags(cmd *cobra.Command) {
+// AddFlags add extra list options flags.
+func (o *ListOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.IgnoreNotFound, "ignore-not-found", o.IgnoreNotFound,
 		"If the requested object does not exist the command will return exit code 0.")
 	cmd.Flags().StringVarP(&o.LabelSelector, "selector", "l", o.LabelSelector,
@@ -139,11 +143,21 @@ func (o *Options) AddFlags(cmd *cobra.Command) {
 }
 
 // Complete completes all the required options
-func (o *Options) Complete(f cmdutil.Factory, cmd *cobra.Command, args []string) error {
+func (o *ListOptions) Complete(f cmdutil.Factory, cmd *cobra.Command, args []string) error {
 	var err error
-	o.NebulaClusterNames, o.Namespace, err = f.GetNebulaClusterNamesAndNamespace(false, args)
+
+	o.NebulaClusterName, o.Namespace, err = f.GetNebulaClusterNameAndNamespace(false, nil)
 	if err != nil && !cmdutil.IsErNotSpecified(err) {
 		return err
+	}
+
+	o.NebulaClusterLabel = label.ClusterLabelKey + "=" + o.NebulaClusterName
+
+	if len(args) > 0 {
+		o.ResourceType = args[0]
+	} else {
+		o.ResourceType = cmdutil.NebulaClusterResourceType
+		o.NebulaClusterLabel = ""
 	}
 
 	o.SortBy, err = cmd.Flags().GetString("sort-by")
@@ -203,7 +217,7 @@ func (o *Options) Complete(f cmdutil.Factory, cmd *cobra.Command, args []string)
 	return nil
 }
 
-func (o *Options) Validate(cmd *cobra.Command) error {
+func (o *ListOptions) Validate(cmd *cobra.Command) error {
 	if showLabels, err := cmd.Flags().GetBool("show-labels"); err != nil {
 		return err
 	} else if showLabels {
@@ -213,10 +227,14 @@ func (o *Options) Validate(cmd *cobra.Command) error {
 		}
 	}
 
+	if o.NebulaClusterName == "" && o.ResourceType != cmdutil.NebulaClusterResourceType {
+		return cmdutil.UsageErrorf(cmd, "using '--nebulacluster' to set nebula cluster first.")
+	}
+
 	return nil
 }
 
-func (o *Options) transformRequests(req *rest.Request) {
+func (o *ListOptions) transformRequests(req *rest.Request) {
 	if !o.ServerPrint || !o.IsHumanReadablePrinter {
 		return
 	}
@@ -232,14 +250,20 @@ func (o *Options) transformRequests(req *rest.Request) {
 	}
 }
 
-// Run executes use command
-func (o *Options) Run() error {
+// Run executes list command
+func (o *ListOptions) Run() error {
+	if o.LabelSelector == "" {
+		o.LabelSelector = o.NebulaClusterLabel
+	} else {
+		o.LabelSelector = o.LabelSelector + "," + o.NebulaClusterLabel
+	}
+
 	r := o.builder.
 		Unstructured().
 		NamespaceParam(o.Namespace).DefaultNamespace().AllNamespaces(o.AllNamespaces).
 		LabelSelectorParam(o.LabelSelector).
 		FieldSelectorParam(o.FieldSelector).
-		ResourceTypeOrNameArgs(true, append([]string{"nebulacluster"}, o.NebulaClusterNames...)...).
+		ResourceTypeOrNameArgs(true, o.ResourceType).
 		ContinueOnError().
 		Latest().
 		Flatten().
@@ -261,7 +285,6 @@ func (o *Options) Run() error {
 	if err != nil {
 		return err
 	}
-
 	objs := make([]runtime.Object, len(infos))
 	for ix := range infos {
 		objs[ix] = infos[ix].Object
@@ -314,7 +337,7 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) printGeneric(r *resource.Result) error {
+func (o *ListOptions) printGeneric(r *resource.Result) error {
 	var errs []error
 	singleItemImplied := false
 	infos, err := r.IntoSingleItemImplied(&singleItemImplied).Infos()

@@ -22,6 +22,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -29,24 +30,25 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/config"
 )
 
-const (
-	useLong = `
+var (
+	useLong = templates.LongDesc(`
 		Specify a nebula cluster to use.
 		
 		By using a certain cluster, you may omit --nebulacluster option
-		in many control commands.
-`
-	useExample = `
+		in many control commands.`)
+
+	useExample = templates.Examples(`
 		# specify a nebula cluster to use
 		ngctl use demo-cluster
-		# specify kubernetes context and namespace
-		ngctl use --namespace=demo-ns demo-cluster
-`
+
+		# specify the cluster name and namespace
+		ngctl use --namespace=demo-ns demo-cluster`)
+
 	useUsage = "expected 'use CLUSTER_NAME' for the use command"
 )
 
 type (
-	// Options is a struct to support version command
+	// Options is a struct to support use command
 	Options struct {
 		Namespace               string
 		NebulaClusterName       string

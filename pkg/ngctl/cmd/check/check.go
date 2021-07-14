@@ -84,11 +84,8 @@ func NewCmdCheck(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *cobr
 func (o *CheckOptions) Complete(f cmdutil.Factory, args []string) error {
 	var err error
 
-	if o.NebulaClusterName, err = f.GetNebulaClusterName(); err != nil && !cmdutil.IsErNotSpecified(err) {
-		return err
-	}
-
-	if o.Namespace, err = f.GetNamespace(); err != nil {
+	o.NebulaClusterName, o.Namespace, err = f.GetNebulaClusterNameAndNamespace(true, nil)
+	if err != nil && !cmdutil.IsErNotSpecified(err) {
 		return err
 	}
 

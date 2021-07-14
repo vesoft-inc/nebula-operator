@@ -60,10 +60,6 @@ var (
 
 		# List nebula cluster sub resources with specified cluster name.
 		ngctl list pod --nebulacluster=nebula
-
-		# You can also use 'use' command to specify a nebula cluster.
-		use nebula
-		ngctl list pod
   
 	  	# Return only the metad's phase value of the specified pod.
 	  	ngctl list -o template --template="{{.status.graphd.phase}}" NAME
@@ -150,15 +146,12 @@ func (o *ListOptions) AddFlags(cmd *cobra.Command) {
 func (o *ListOptions) Complete(f cmdutil.Factory, cmd *cobra.Command, args []string) error {
 	var err error
 
-	if o.NebulaClusterName, err = f.GetNebulaClusterName(); err != nil && !cmdutil.IsErNotSpecified(err) {
+	o.NebulaClusterName, o.Namespace, err = f.GetNebulaClusterNameAndNamespace(false, nil)
+	if err != nil && !cmdutil.IsErNotSpecified(err) {
 		return err
 	}
 
 	o.NebulaClusterLabel = label.ClusterLabelKey + "=" + o.NebulaClusterName
-
-	if o.Namespace, err = f.GetNamespace(); err != nil {
-		return err
-	}
 
 	if len(args) > 0 {
 		o.ResourceType = args[0]
@@ -234,8 +227,8 @@ func (o *ListOptions) Validate(cmd *cobra.Command) error {
 		}
 	}
 
-	if o.NebulaClusterName == "" && o.ResourceType != "" {
-		return cmdutil.UsageErrorf(cmd, "using 'ngctl use' or '--nebulacluster' to set nebula cluster first.")
+	if o.NebulaClusterName == "" && o.ResourceType != cmdutil.NebulaClusterResourceType {
+		return cmdutil.UsageErrorf(cmd, "using '--nebulacluster' to set nebula cluster first.")
 	}
 
 	return nil

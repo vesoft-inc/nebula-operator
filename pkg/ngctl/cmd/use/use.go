@@ -41,7 +41,7 @@ var (
 		# specify a nebula cluster to use
 		ngctl use demo-cluster
 
-        # specify the cluster name and namespace
+		# specify the cluster name and namespace
 		ngctl use --namespace=demo-ns demo-cluster`)
 
 	useUsage = "expected 'use CLUSTER_NAME' for the use command"

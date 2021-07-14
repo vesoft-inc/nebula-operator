@@ -45,10 +45,6 @@ Examples:
   # List nebula cluster sub resources with specified cluster name.
   ngctl list pod --nebulacluster=nebula
   
-  # You can also use 'use' command to specify a nebula cluster.
-  use nebula
-  ngctl list pod
-  
   # Return only the metad's phase value of the specified pod.
   ngctl list -o template --template="{{.status.graphd.phase}}" NAME
   

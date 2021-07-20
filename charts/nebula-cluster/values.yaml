@@ -1,7 +1,7 @@
 nebula:
-  version: v2.0.0
+  version: v2.0.1
   imagePullPolicy: IfNotPresent
-  # storageClassName:
+  storageClassName: ""
   schedulerName: default-scheduler # nebula-scheduler
   reference:
     name: statefulsets.apps
@@ -48,3 +48,5 @@ nebula:
     storage: "1Gi"
 
 imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""

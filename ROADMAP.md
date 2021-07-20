@@ -30,13 +30,4 @@ The dates below should not be considered authoritative.
   
 - Failover in local storage scenario
 
-
-1. BR 功能
-2. API 重构
-
-	// MultiTenancy indicates whether deploy the cluster in the tenant mode
-	// +optional
-	MultiTenancy bool `json:"multiTenancy,omitempty"`
-	
-annotation+config触发更新pod	
 	

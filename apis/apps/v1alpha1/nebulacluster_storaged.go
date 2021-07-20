@@ -94,11 +94,11 @@ func (c *storagedComponent) GetPodEnvVars() []corev1.EnvVar {
 }
 
 func (c *storagedComponent) GetPodAnnotations() map[string]string {
-	return c.nc.Spec.Graphd.PodSpec.Annotations
+	return c.nc.Spec.Metad.PodSpec.Annotations
 }
 
 func (c *storagedComponent) GetPodLabels() map[string]string {
-	return c.nc.Spec.Graphd.PodSpec.Labels
+	return c.nc.Spec.Metad.PodSpec.Labels
 }
 
 func (c *storagedComponent) IsHeadlessService() bool {

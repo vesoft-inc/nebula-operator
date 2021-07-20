@@ -17,15 +17,9 @@ limitations under the License.
 package resource
 
 import (
-	"encoding/json"
-	"fmt"
-	"reflect"
-
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -89,50 +83,4 @@ func GetGVKFromDefinition(dm discovery.Interface, ref v1alpha1.WorkloadReference
 		}
 	}
 	return kinds[0], nil
-}
-
-type Converters struct {
-	Obj runtime.Object
-}
-
-func (c *Converters) ObjectToStatefulSet(set *appsv1.StatefulSet) error {
-	return convertToTypedObj(c.Obj, set)
-}
-
-func (c *Converters) ObjectToAdvancedStatefulSet(set *kruisev1alpha1.StatefulSet) error {
-	return convertToTypedObj(c.Obj, set)
-}
-
-func (c *Converters) ObjectToUnitedDeployment(deploy *kruisev1alpha1.UnitedDeployment) error {
-	return convertToTypedObj(c.Obj, deploy)
-}
-
-func convertToTypedObj(obj runtime.Object, typedObj interface{}) error {
-	un, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		return fmt.Errorf("expected \"*unstructured.Unstructured\", got \"%s\"", reflect.TypeOf(obj).Name())
-	}
-	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.Object, typedObj)
-	if err != nil {
-		_ = fromUnstructuredViaJSON(un.Object, typedObj)
-	}
-	return nil
-}
-
-func fromUnstructuredViaJSON(u map[string]interface{}, obj interface{}) error {
-	data, err := json.Marshal(u)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, obj)
-}
-
-func ConvertToUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
-	objMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
-	if err != nil {
-		return nil, err
-	}
-	return &unstructured.Unstructured{
-		Object: objMap,
-	}, nil
 }

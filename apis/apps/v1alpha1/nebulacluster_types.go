@@ -44,6 +44,8 @@ const (
 	ScaleInPhase ComponentPhase = "ScaleIn"
 	// ScaleOutPhase represents the scaling state of nebula cluster.
 	ScaleOutPhase ComponentPhase = "ScaleOut"
+	// UpdatePhase represents update state of nebula cluster.
+	UpdatePhase ComponentPhase = "Update"
 )
 
 // NebulaClusterSpec defines the desired state of NebulaCluster

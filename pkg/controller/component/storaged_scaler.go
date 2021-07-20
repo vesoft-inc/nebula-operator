@@ -25,20 +25,20 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
-	controllerutil "github.com/vesoft-inc/nebula-operator/pkg/util/controller"
+	extenderutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 )
 
 type storageScaler struct {
 	client.Client
 	clientSet kube.ClientSet
-	extender  controllerutil.UnstructuredExtender
+	extender  extenderutil.UnstructuredExtender
 }
 
 func NewStorageScaler(cli client.Client, clientSet kube.ClientSet) ScaleManager {
 	return &storageScaler{
 		cli,
 		clientSet,
-		&controllerutil.Unstructured{},
+		extenderutil.New(),
 	}
 }
 

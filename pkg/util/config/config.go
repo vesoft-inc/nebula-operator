@@ -47,7 +47,7 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 		if strings.HasPrefix(line, "--") {
 			match := paramPattern.FindStringSubmatch(line)
 			if len(match) != 3 {
-				log.Info("not match param pattern", "line", line)
+				_, _ = b.WriteString(fmt.Sprintf("%s\n", line))
 				continue
 			}
 			param, value := match[1], match[2]

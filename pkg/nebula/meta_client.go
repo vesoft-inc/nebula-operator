@@ -24,6 +24,7 @@ import (
 
 	"github.com/vesoft-inc/nebula-go/nebula"
 	"github.com/vesoft-inc/nebula-go/nebula/meta"
+
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
@@ -40,6 +41,7 @@ type MetaInterface interface {
 	GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, error)
 	GetLeaderCount(leaderHost string) (int, error)
 	Balance(req *meta.BalanceReq) (*meta.BalanceResp, error)
+	IsBalanced([]*meta.HostItem) bool
 	BalanceStatus(id int64) error
 	BalanceLeader() error
 	BalanceData() error
@@ -225,7 +227,8 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 				continue
 			}
 			if partItem.Leader.Host == leaderHost {
-				log.Info("space's partition still distribute this node", "space", spaceID, "partition", partItem.PartID)
+				log.Info("space's partition still distribute this node",
+					"space", spaceID, "partition", partItem.PartID)
 				count++
 			}
 		}
@@ -234,19 +237,58 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 }
 
 func (m *metaClient) BalanceLeader() error {
+	log := getLog()
+	log.Info("balance leader")
 	req := &meta.LeaderBalanceReq{}
 	resp, err := m.client.LeaderBalance(req)
 	if err != nil {
 		return err
 	}
 	if resp.Code != meta.ErrorCode_SUCCEEDED {
+		if resp.Code == meta.ErrorCode_E_LEADER_CHANGED {
+			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
+			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
+			if err := m.updateClient(leader); err != nil {
+				return errors.Errorf("update client failed: %v", err)
+			}
+			resp, err := m.client.LeaderBalance(req)
+			if err != nil {
+				return err
+			}
+			if resp.Code != meta.ErrorCode_SUCCEEDED {
+				return errors.Errorf("retry balance leader code %d", resp.Code)
+			}
+		} else if resp.Code == meta.ErrorCode_E_BALANCED {
+			log.Info("cluster is balanced")
+			return nil
+		}
 		return errors.Errorf("BalanceLeader code %d", resp.Code)
 	}
 	return nil
 }
 
+func (m *metaClient) IsBalanced(hostItem []*meta.HostItem) bool {
+	hostParts := make(map[string]int)
+	var partitions int
+	for _, host := range hostItem {
+		for _, leaders := range host.LeaderParts {
+			num := len(leaders)
+			hostParts[host.HostAddr.Host] += num
+			partitions += num
+		}
+	}
+	average := partitions / len(hostItem)
+	remainder := partitions % len(hostItem)
+	for _, parts := range hostParts {
+		if parts-average > remainder {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *metaClient) balance(req *meta.BalanceReq) error {
-	log := getLog().WithValues("req", req)
+	log := getLog()
 	log.Info("start balance")
 	resp, err := m.client.Balance(req)
 	if err != nil {
@@ -254,7 +296,6 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 		return err
 	}
 	log = log.WithValues("balanceID", resp.Id)
-	log.Info("balance returned")
 	if resp.Code != meta.ErrorCode_SUCCEEDED {
 		if resp.Code == meta.ErrorCode_E_LEADER_CHANGED {
 			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)

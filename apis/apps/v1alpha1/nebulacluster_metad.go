@@ -92,11 +92,11 @@ func (c *metadComponent) GetPodEnvVars() []corev1.EnvVar {
 }
 
 func (c *metadComponent) GetPodAnnotations() map[string]string {
-	return c.nc.Spec.Graphd.PodSpec.Annotations
+	return c.nc.Spec.Metad.PodSpec.Annotations
 }
 
 func (c *metadComponent) GetPodLabels() map[string]string {
-	return c.nc.Spec.Graphd.PodSpec.Labels
+	return c.nc.Spec.Metad.PodSpec.Labels
 }
 
 func (c *metadComponent) IsHeadlessService() bool {

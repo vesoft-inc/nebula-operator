@@ -46,3 +46,14 @@ func IsInHaMode(ann map[string]string) bool {
 	}
 	return false
 }
+
+func CopyAnnotations(src map[string]string) map[string]string {
+	if src == nil {
+		return nil
+	}
+	dst := map[string]string{}
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}

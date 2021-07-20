@@ -18,24 +18,33 @@ package component
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/config"
 	controllerutil "github.com/vesoft-inc/nebula-operator/pkg/util/controller"
+	extenderutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/hash"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/maputil"
 )
 
+const (
+	InPlaceGracePeriodSeconds = 60
+)
+
 func syncComponentStatus(
 	component v1alpha1.NebulaClusterComponentter,
-	extender controllerutil.UnstructuredExtender,
+	extender extenderutil.UnstructuredExtender,
 	status *v1alpha1.ComponentStatus,
 	workload *unstructured.Unstructured) error {
 	if workload == nil {
@@ -47,7 +56,7 @@ func syncComponentStatus(
 		return err
 	}
 
-	image := controllerutil.GetContainerImage(extender, workload, component.Type().String())
+	image := getContainerImage(extender, workload, component.Type().String())
 	if image != "" && strings.Contains(image, ":") {
 		status.Version = strings.Split(image, ":")[1]
 	}
@@ -58,7 +67,7 @@ func syncComponentStatus(
 }
 
 func setWorkloadStatus(
-	extender controllerutil.UnstructuredExtender,
+	extender extenderutil.UnstructuredExtender,
 	obj *unstructured.Unstructured,
 	status *v1alpha1.ComponentStatus,
 ) error {
@@ -143,4 +152,99 @@ func syncConfigMap(
 		return nil, "", err
 	}
 	return cm, cmHash, nil
+}
+
+func getContainerImage(
+	extender extenderutil.UnstructuredExtender,
+	obj *unstructured.Unstructured,
+	containerName string) string {
+	if obj == nil {
+		return ""
+	}
+	containers := extender.GetContainers(obj)
+	for _, ctr := range containers {
+		if ctr["name"] == containerName {
+			return ctr["image"].(string)
+		}
+	}
+	return ""
+}
+
+func isUpdating(
+	component v1alpha1.NebulaClusterComponentter,
+	podClient kube.Pod,
+	obj *unstructured.Unstructured) (bool, error) {
+	extender := extenderutil.New()
+	if extenderutil.IsUpdating(extender, obj) {
+		return true, nil
+	}
+
+	selector, err := label.Label(component.GenerateLabels()).Selector()
+	if err != nil {
+		return false, err
+	}
+
+	pods, err := podClient.ListPods(component.GetNamespace(), selector)
+	if err != nil {
+		return false, fmt.Errorf(
+			"failed to get pods for cluster %s/%s, selector %s, error: %s",
+			component.GetNamespace(),
+			component.GetClusterName(),
+			selector,
+			err,
+		)
+	}
+	for i := range pods {
+		pod := pods[i]
+		revisionHash, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+		if !exist {
+			return false, nil
+		}
+		if revisionHash != component.GetUpdateRevision() {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func setPartition(
+	extender extenderutil.UnstructuredExtender,
+	obj *unstructured.Unstructured,
+	upgradeOrdinal int64,
+	advanced bool,
+) error {
+	return extenderutil.SetUpdatePartition(extender, obj, upgradeOrdinal, InPlaceGracePeriodSeconds, advanced)
+}
+
+func getNextUpdatePod(component v1alpha1.NebulaClusterComponentter, replicas int32, podClient kube.Pod) (int32, error) {
+	namespace := component.GetNamespace()
+	updateRevision := component.GetUpdateRevision()
+	for index := replicas - 1; index >= 0; index-- {
+		podName := component.GetPodName(index)
+		pod, err := podClient.GetPod(namespace, podName)
+		if err != nil {
+			return -1, err
+		}
+		revision, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+		if !exist {
+			return -1, err
+		}
+		if revision == updateRevision {
+			continue
+		}
+
+		return index, nil
+	}
+	return -1, nil
+}
+
+func getLastConfig(extender extenderutil.UnstructuredExtender, actual, desired *unstructured.Unstructured) error {
+	spec := make(map[string]interface{})
+	if lastAppliedConfig, ok := actual.GetAnnotations()[annotation.AnnLastAppliedConfigKey]; ok {
+		if err := json.Unmarshal([]byte(lastAppliedConfig), &spec); err != nil {
+			return err
+		}
+	}
+
+	return extender.SetSpecField(desired, spec["template"], "template")
 }

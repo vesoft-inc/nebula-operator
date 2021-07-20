@@ -62,6 +62,9 @@ func NewClusterReconciler(mgr ctrl.Manager) (*ClusterReconciler, error) {
 	}
 
 	sm := component.NewStorageScaler(mgr.GetClient(), clientSet)
+	graphdUpdater := component.NewGraphdUpdater(clientSet.Pod())
+	metadUpdater := component.NewMetadUpdater(clientSet.Pod())
+	storagedUpdater := component.NewStoragedUpdater(mgr.GetClient(), clientSet)
 
 	dm, err := discutil.New(mgr.GetConfig())
 	if err != nil {
@@ -83,15 +86,18 @@ func NewClusterReconciler(mgr ctrl.Manager) (*ClusterReconciler, error) {
 			component.NewGraphdCluster(
 				clientSet,
 				dm,
+				graphdUpdater,
 				evenPodsSpread),
 			component.NewMetadCluster(
 				clientSet,
 				dm,
+				metadUpdater,
 				evenPodsSpread),
 			component.NewStoragedCluster(
 				clientSet,
 				dm,
 				sm,
+				storagedUpdater,
 				evenPodsSpread),
 			reclaimer.NewMetaReconciler(clientSet),
 			reclaimer.NewPVCReclaimer(clientSet),

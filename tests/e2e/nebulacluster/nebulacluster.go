@@ -140,14 +140,15 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						replicaFactor = 1
 					}
 					executeSchema := fmt.Sprintf(
-						"CREATE SPACE IF NOT EXISTS e2e_test(partition_num=%d,replica_factor=%d);",
+						"CREATE SPACE IF NOT EXISTS e2e_test(partition_num=%d,replica_factor=%d,vid_type=FIXED_STRING(16));",
 						5*tc.StoragedReplicas, replicaFactor) +
 						"USE e2e_test;" +
 						"CREATE TAG IF NOT EXISTS person(name string, age int);" +
 						"CREATE EDGE IF NOT EXISTS like(likeness double);"
 					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
 						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
-					framework.ExpectNoError(err, "failed to init space after deploy for NebulaCluster %s/%s", ns, nc.Name)
+					framework.ExpectNoError(err, "failed to init space after deploy for NebulaCluster %s/%s, executeSchema: %s",
+						ns, nc.Name, executeSchema)
 					time.Sleep(10 * time.Second)
 
 					executeSchema = "USE e2e_test;" +
@@ -161,7 +162,8 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"'Bob'->'Lily':(80.0);"
 					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
 						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
-					framework.ExpectNoError(err, "failed to insert samples after deploy for NebulaCluster %s/%s", ns, nc.Name)
+					framework.ExpectNoError(err, "failed to insert samples after deploy for NebulaCluster %s/%s, executeSchema: %s",
+						ns, nc.Name, executeSchema)
 
 					ginkgo.By("Query from NebulaCluster")
 					time.Sleep(2 * time.Second)
@@ -169,7 +171,8 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"GO FROM 'Bob' OVER like YIELD $^.person.name, $^.person.age, like.likeness;"
 					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
 						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
-					framework.ExpectNoError(err, "failed to insert samples after scale out for NebulaCluster %s/%s", ns, nc.Name)
+					framework.ExpectNoError(err, "failed to insert samples after scale out for NebulaCluster %s/%s executeSchema: %s",
+						ns, nc.Name, executeSchema)
 
 					ginkgo.By("Delete NebulaCluster")
 					err = runtimeClient.Delete(context.TODO(), nc)

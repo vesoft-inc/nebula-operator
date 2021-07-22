@@ -150,7 +150,7 @@ func waitForNebulaClusterReady(
 			return false, nil
 		}
 		if actual.Status.Metad.Phase != v1alpha1.RunningPhase {
-			framework.Logf("Metad is not in %s phase nor %s for NebulaCluster %s ",
+			framework.Logf("Metad is in %s phase nor %s for NebulaCluster %s ",
 				actual.Status.Metad.Phase, v1alpha1.RunningPhase, key)
 			return false, nil
 		}
@@ -161,7 +161,7 @@ func waitForNebulaClusterReady(
 			return false, nil
 		}
 		if actual.Status.Storaged.Phase != v1alpha1.RunningPhase {
-			framework.Logf("Storaged is not in %s phase nor %s for NebulaCluster %s ",
+			framework.Logf("Storaged is in %s phase nor %s for NebulaCluster %s ",
 				actual.Status.Storaged.Phase, v1alpha1.RunningPhase, key)
 			return false, nil
 		}

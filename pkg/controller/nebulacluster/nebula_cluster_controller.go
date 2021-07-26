@@ -132,7 +132,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	defer func() {
 		if retErr == nil {
 			if res.Requeue || res.RequeueAfter > 0 {
-				log.Info("Finished reconciling nebulaCluster", "spendTime", time.Since(startTime), "res", res)
+				log.Info("Finished reconciling nebulaCluster", "spendTime", time.Since(startTime), "result", res)
 			} else {
 				log.Info("Finished reconcile nebulaCluster", "spendTime", time.Since(startTime))
 			}
@@ -160,7 +160,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		isReconcileError := func(err error) (b bool) {
 			defer func() {
 				if b {
-					log.Info("reconcile failed", "err", err)
+					log.Info("reconcile failed", "error", err)
 				}
 			}()
 			return errorsutil.IsReconcileError(err)

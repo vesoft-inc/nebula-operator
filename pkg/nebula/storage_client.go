@@ -17,7 +17,6 @@ limitations under the License.
 package nebula
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -46,14 +45,14 @@ func NewStorageClient(endpoints []string, options ...Option) (StorageInterface, 
 	if len(endpoints) == 0 {
 		return nil, ErrNoAvailableMetadEndpoints
 	}
-	sc, err := newStoragedClient(endpoints[0], options...)
+	sc, err := newStorageConnection(endpoints[0], options...)
 	if err != nil {
 		return nil, err
 	}
 	return sc, nil
 }
 
-func newStoragedClient(endpoint string, options ...Option) (*storageClient, error) {
+func newStorageConnection(endpoint string, options ...Option) (*storageClient, error) {
 	transport, pf, err := buildClientTransport(endpoint, options...)
 	if err != nil {
 		return nil, err
@@ -64,18 +63,6 @@ func newStoragedClient(endpoint string, options ...Option) (*storageClient, erro
 		return nil, err
 	}
 	return sc, nil
-}
-
-func (s *storageClient) updateClient(endpoint string, options ...Option) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	if err := s.disconnect(); err != nil {
-		return err
-	}
-	if _, err := newStoragedClient(endpoint, options...); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *storageClient) connect() error {
@@ -107,40 +94,24 @@ func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.P
 		PartID:     partID,
 		NewLeader_: newLeader,
 	}
-	log := getLog().WithValues("req", req)
+	log := getLog()
 	log.Info("start TransLeader")
 	resp, err := s.client.TransLeader(req)
 	if err != nil {
 		log.Error(err, "TransLeader failed")
 		return err
 	}
-	log.Info("TransLeader returned")
 
 	if len(resp.Result_.FailedParts) > 0 {
 		if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_PART_NOT_FOUND {
 			return errors.Errorf("part %d not found", partID)
 		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_SPACE_NOT_FOUND {
 			return errors.Errorf("space %d not found", partID)
-		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_TRANSFER_LEADER_FAILED {
+		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_LEADER_CHANGED {
 			log.Info("request leader changed",
 				"host", resp.Result_.FailedParts[0].Leader.Host,
 				"port", resp.Result_.FailedParts[0].Leader.Port)
-			leader := fmt.Sprintf("%s:%v", resp.Result_.FailedParts[0].Leader.Host, resp.Result_.FailedParts[0].Leader.Port)
-			if err := s.updateClient(leader); err != nil {
-				return err
-			}
-			resp, err := s.client.TransLeader(req)
-			if err != nil {
-				log.Error(err, "TransLeader failed")
-				return err
-			}
-			log.Info("TransLeader returned")
-			if len(resp.Result_.FailedParts) > 0 {
-				return errors.Errorf("Trans leader failed")
-			}
 			return nil
-		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_LEADER_CHANGED {
-			return errors.Errorf("leader changed, please request to leader")
 		} else {
 			return errors.Errorf("TransLeader space %d part %d code %d", spaceID, partID, resp.Result_.FailedParts[0].Code)
 		}

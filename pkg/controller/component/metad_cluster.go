@@ -28,14 +28,13 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-	extenderutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
 type metadCluster struct {
 	clientSet            kube.ClientSet
 	dm                   discovery.Interface
-	extender             extenderutil.UnstructuredExtender
 	updateManager        UpdateManager
 	enableEvenPodsSpread bool
 }
@@ -48,7 +47,6 @@ func NewMetadCluster(
 	return &metadCluster{
 		clientSet:            clientSet,
 		dm:                   dm,
-		extender:             extenderutil.New(),
 		updateManager:        um,
 		enableEvenPodsSpread: enableEvenPodsSpread,
 	}
@@ -74,7 +72,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	namespace := nc.GetNamespace()
 	ncName := nc.GetName()
 	componentName := nc.MetadComponent().GetName()
-	log := getLog().WithValues("namespace", namespace, "name", ncName, "componentName", componentName)
+	log := getLog().WithValues("namespace", namespace, "name", ncName)
 
 	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
 	if err != nil {
@@ -101,27 +99,28 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	// Keep image unchanged
-	oldImage := getContainerImage(c.extender, oldWorkload, nc.MetadComponent().Type().String())
-	if err := extenderutil.SetContainerImage(
-		newWorkload,
-		nc.MetadComponent().Type().String(),
-		oldImage); err != nil {
-		return err
+	if nc.Status.Metad.Version != "" {
+		oldImage := nc.Spec.Metad.Image + ":" + nc.Status.Metad.Version
+		if err := extender.SetContainerImage(
+			newWorkload,
+			nc.MetadComponent().Type().String(),
+			oldImage); err != nil {
+			return err
+		}
 	}
 
-	if err := c.extender.SetTemplateAnnotations(
+	if err := extender.SetTemplateAnnotations(
 		newWorkload,
 		map[string]string{annotation.AnnPodConfigMapHash: cmHash}); err != nil {
 		return err
 	}
 
 	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
-		return fmt.Errorf("failed to sync %s/%s's status, error: %v", namespace, ncName, err)
+		return fmt.Errorf("failed to sync metad cluster status, error: %v", err)
 	}
 
 	if notExist {
-		if err := extenderutil.SetLastAppliedConfigAnnotation(c.extender, newWorkload); err != nil {
+		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
 		}
 		if err := c.clientSet.Workload().CreateWorkload(newWorkload); err != nil {
@@ -131,22 +130,22 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return utilerrors.ReconcileErrorf("waiting for metad cluster %s running", newWorkload.GetName())
 	}
 
-	if !extenderutil.PodTemplateEqual(c.extender, newWorkload, oldWorkload) ||
+	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
 		nc.Status.Metad.Phase == v1alpha1.UpdatePhase {
 		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
 			return err
 		}
 	}
 
-	return extenderutil.UpdateWorkload(c.clientSet.Workload(), c.extender, newWorkload, oldWorkload)
+	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)
 }
 
-func (c *metadCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, workload *unstructured.Unstructured) error {
-	if workload == nil {
+func (c *metadCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, oldWorkload *unstructured.Unstructured) error {
+	if oldWorkload == nil {
 		return nil
 	}
 
-	updating, err := isUpdating(nc.MetadComponent(), c.clientSet.Pod(), workload)
+	updating, err := isUpdating(nc.MetadComponent(), c.clientSet.Pod(), oldWorkload)
 	if err != nil {
 		return err
 	}
@@ -158,7 +157,7 @@ func (c *metadCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, workl
 	}
 
 	// TODO: show metad hosts state with metad peers
-	return syncComponentStatus(nc.MetadComponent(), c.extender, &nc.Status.Metad, workload)
+	return syncComponentStatus(nc.MetadComponent(), &nc.Status.Metad, oldWorkload)
 }
 
 func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {

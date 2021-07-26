@@ -28,6 +28,7 @@ import (
 
 type NebulaCluster interface {
 	GetNebulaCluster(namespace, name string) (*v1alpha1.NebulaCluster, error)
+	UpdateNebulaCluster(nc *v1alpha1.NebulaCluster) error
 	UpdateNebulaClusterStatus(nc *v1alpha1.NebulaCluster) error
 }
 
@@ -49,6 +50,18 @@ func (c *nebulaClusterClient) GetNebulaCluster(namespace, name string) (*v1alpha
 		return nil, err
 	}
 	return nebulaCluster, nil
+}
+
+func (c *nebulaClusterClient) UpdateNebulaCluster(nc *v1alpha1.NebulaCluster) error {
+	log := getLog().WithValues("namespace", nc.Namespace, "name", nc.Name)
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		return c.cli.Update(context.TODO(), nc)
+	})
+	if err != nil {
+		return err
+	}
+	log.Info("nebulaCluster updated")
+	return nil
 }
 
 func (c *nebulaClusterClient) UpdateNebulaClusterStatus(nc *v1alpha1.NebulaCluster) error {
@@ -81,6 +94,10 @@ func (f *FakeNebulaCluster) GetNebulaCluster(namespace, name string) (*v1alpha1.
 		return nil, err
 	}
 	return nebulaCluster, nil
+}
+
+func (f *FakeNebulaCluster) UpdateNebulaCluster(nc *v1alpha1.NebulaCluster) error {
+	return f.cli.Update(context.TODO(), nc)
 }
 
 func (f *FakeNebulaCluster) UpdateNebulaClusterStatus(nc *v1alpha1.NebulaCluster) error {

@@ -28,14 +28,13 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-	extendertutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
 type graphdCluster struct {
 	clientSet            kube.ClientSet
 	dm                   discovery.Interface
-	extender             extendertutil.UnstructuredExtender
 	updateManager        UpdateManager
 	enableEvenPodsSpread bool
 }
@@ -48,7 +47,6 @@ func NewGraphdCluster(
 	return &graphdCluster{
 		clientSet:            clientSet,
 		dm:                   dm,
-		extender:             extendertutil.New(),
 		updateManager:        um,
 		enableEvenPodsSpread: enableEvenPodsSpread,
 	}
@@ -95,35 +93,28 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	// TODO:
-	// In order to prevent the newly created workload from reading the user's updated image version
-	// after deletion, the image version set to "none".
-	// The purpose of this is to prevent unknown errors caused by incompatibility between the program and the data.
-
-	oldImage := getContainerImage(c.extender, oldWorkload, nc.GraphdComponent().Type().String())
-	// Keep image unchanged
-	if err := extendertutil.SetContainerImage(
-		newWorkload,
-		nc.GraphdComponent().Type().String(),
-		oldImage); err != nil {
-		return err
+	if nc.Status.Graphd.Version != "" {
+		oldImage := nc.Spec.Graphd.Image + ":" + nc.Status.Graphd.Version
+		if err := extender.SetContainerImage(
+			newWorkload,
+			nc.GraphdComponent().Type().String(),
+			oldImage); err != nil {
+			return err
+		}
 	}
 
-	// TODO: When the annotation of the NebulaCluster is deleted,
-	// the annotation of the workload also needs to be deleted
-	if err := c.extender.SetTemplateAnnotations(
+	if err := extender.SetTemplateAnnotations(
 		newWorkload,
 		map[string]string{annotation.AnnPodConfigMapHash: cmHash}); err != nil {
 		return err
 	}
 
 	if err := c.syncNebulaClusterStatus(nc, newWorkload, oldWorkload); err != nil {
-		log.Error(err, "failed to sync cluster's status")
-		return err
+		return fmt.Errorf("failed to sync graphd status status, error: %v", err)
 	}
 
 	if notExist {
-		if err := extendertutil.SetLastAppliedConfigAnnotation(c.extender, newWorkload); err != nil {
+		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
 		}
 		if err := c.clientSet.Workload().CreateWorkload(newWorkload); err != nil {
@@ -133,14 +124,14 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		return utilerrors.ReconcileErrorf("waiting for graphd cluster %s running", newWorkload.GetName())
 	}
 
-	if !extendertutil.PodTemplateEqual(c.extender, newWorkload, oldWorkload) ||
+	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
 		nc.Status.Graphd.Phase == v1alpha1.UpdatePhase {
 		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
 			return err
 		}
 	}
 
-	return extendertutil.UpdateWorkload(c.clientSet.Workload(), c.extender, newWorkload, oldWorkload)
+	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)
 }
 
 func (c *graphdCluster) syncNebulaClusterStatus(
@@ -151,8 +142,8 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		return nil
 	}
 
-	oldReplicas := c.extender.GetReplicas(oldWorkload)
-	newReplicas := c.extender.GetReplicas(newWorkload)
+	oldReplicas := extender.GetReplicas(oldWorkload)
+	newReplicas := extender.GetReplicas(newWorkload)
 	updating, err := isUpdating(nc.GraphdComponent(), c.clientSet.Pod(), oldWorkload)
 	if err != nil {
 		return err
@@ -173,7 +164,7 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		nc.Status.Graphd.Phase = v1alpha1.RunningPhase
 	}
 
-	return syncComponentStatus(nc.GraphdComponent(), c.extender, &nc.Status.Graphd, oldWorkload)
+	return syncComponentStatus(nc.GraphdComponent(), &nc.Status.Graphd, oldWorkload)
 }
 
 func (c *graphdCluster) syncGraphdService(nc *v1alpha1.NebulaCluster) error {

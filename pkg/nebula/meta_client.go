@@ -24,7 +24,6 @@ import (
 
 	"github.com/vesoft-inc/nebula-go/nebula"
 	"github.com/vesoft-inc/nebula-go/nebula/meta"
-
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
@@ -59,14 +58,14 @@ func NewMetaClient(endpoints []string, options ...Option) (MetaInterface, error)
 	if len(endpoints) == 0 {
 		return nil, ErrNoAvailableMetadEndpoints
 	}
-	mc, err := newMetadClient(endpoints[0], options...)
+	mc, err := newMetaConnection(endpoints[0], options...)
 	if err != nil {
 		return nil, err
 	}
 	return mc, nil
 }
 
-func newMetadClient(endpoint string, options ...Option) (*metaClient, error) {
+func newMetaConnection(endpoint string, options ...Option) (*metaClient, error) {
 	transport, pf, err := buildClientTransport(endpoint, options...)
 	if err != nil {
 		return nil, err
@@ -79,13 +78,13 @@ func newMetadClient(endpoint string, options ...Option) (*metaClient, error) {
 	return mc, nil
 }
 
-func (m *metaClient) updateClient(endpoint string, options ...Option) error {
+func (m *metaClient) reconnect(endpoint string, options ...Option) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if err := m.disconnect(); err != nil {
 		return err
 	}
-	if _, err := newMetadClient(endpoint, options...); err != nil {
+	if _, err := newMetaConnection(endpoint, options...); err != nil {
 		return err
 	}
 	return nil
@@ -238,7 +237,6 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 
 func (m *metaClient) BalanceLeader() error {
 	log := getLog()
-	log.Info("balance leader")
 	req := &meta.LeaderBalanceReq{}
 	resp, err := m.client.LeaderBalance(req)
 	if err != nil {
@@ -248,7 +246,7 @@ func (m *metaClient) BalanceLeader() error {
 		if resp.Code == meta.ErrorCode_E_LEADER_CHANGED {
 			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
 			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
-			if err := m.updateClient(leader); err != nil {
+			if err := m.reconnect(leader); err != nil {
 				return errors.Errorf("update client failed: %v", err)
 			}
 			resp, err := m.client.LeaderBalance(req)
@@ -264,6 +262,7 @@ func (m *metaClient) BalanceLeader() error {
 		}
 		return errors.Errorf("BalanceLeader code %d", resp.Code)
 	}
+	log.Info("balance leader successfully")
 	return nil
 }
 
@@ -300,7 +299,7 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 		if resp.Code == meta.ErrorCode_E_LEADER_CHANGED {
 			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
 			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
-			if err := m.updateClient(leader); err != nil {
+			if err := m.reconnect(leader); err != nil {
 				return errors.Errorf("update client failed: %v", err)
 			}
 			resp, err := m.Balance(req)

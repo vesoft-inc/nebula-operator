@@ -24,20 +24,16 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-	extenderutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
 type graphUpdater struct {
-	extender  extenderutil.UnstructuredExtender
 	podClient kube.Pod
 }
 
 func NewGraphdUpdater(podClient kube.Pod) UpdateManager {
-	return &graphUpdater{
-		extender:  extenderutil.New(),
-		podClient: podClient,
-	}
+	return &graphUpdater{podClient: podClient}
 }
 
 func (g *graphUpdater) Update(
@@ -50,11 +46,12 @@ func (g *graphUpdater) Update(
 	}
 
 	if nc.Status.Metad.Phase == v1alpha1.UpdatePhase || nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
-		return getLastConfig(g.extender, oldUnstruct, newUnstruct)
+		return setLastConfig(oldUnstruct, newUnstruct)
 	}
 
 	nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
-	if !extenderutil.PodTemplateEqual(g.extender, newUnstruct, oldUnstruct) {
+	// template had been changed
+	if !extender.PodTemplateEqual(newUnstruct, oldUnstruct) {
 		return nil
 	}
 
@@ -62,14 +59,14 @@ func (g *graphUpdater) Update(
 		return nil
 	}
 
-	spec := g.extender.GetSpec(oldUnstruct)
+	spec := extender.GetSpec(oldUnstruct)
 	actualStrategy := spec["updateStrategy"].(map[string]interface{})
 	partition := actualStrategy["rollingUpdate"].(map[string]interface{})
 	advanced := gvk.Kind == resource.AdvancedStatefulSetKind.Kind
-	if err := setPartition(g.extender, newUnstruct, partition["partition"].(int64), advanced); err != nil {
+	if err := setPartition(newUnstruct, partition["partition"].(int64), advanced); err != nil {
 		return err
 	}
-	replicas := g.extender.GetReplicas(oldUnstruct)
+	replicas := extender.GetReplicas(oldUnstruct)
 	index, err := getNextUpdatePod(nc.GraphdComponent(), *replicas, g.podClient)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -85,5 +82,5 @@ func (g *graphUpdater) Update(
 }
 
 func (g *graphUpdater) updateGraphdPod(ordinal int32, newUnstruct *unstructured.Unstructured, advanced bool) error {
-	return setPartition(g.extender, newUnstruct, int64(ordinal), advanced)
+	return setPartition(newUnstruct, int64(ordinal), advanced)
 }

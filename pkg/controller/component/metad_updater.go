@@ -24,20 +24,16 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-	extenderutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
 type metadUpdater struct {
-	extender  extenderutil.UnstructuredExtender
 	podClient kube.Pod
 }
 
 func NewMetadUpdater(podClient kube.Pod) UpdateManager {
-	return &metadUpdater{
-		extender:  extenderutil.New(),
-		podClient: podClient,
-	}
+	return &metadUpdater{podClient: podClient}
 }
 
 func (m *metadUpdater) Update(
@@ -50,7 +46,7 @@ func (m *metadUpdater) Update(
 	}
 
 	nc.Status.Metad.Phase = v1alpha1.UpdatePhase
-	if !extenderutil.PodTemplateEqual(m.extender, newUnstruct, oldUnstruct) {
+	if !extender.PodTemplateEqual(newUnstruct, oldUnstruct) {
 		return nil
 	}
 
@@ -58,14 +54,14 @@ func (m *metadUpdater) Update(
 		return nil
 	}
 
-	spec := m.extender.GetSpec(oldUnstruct)
+	spec := extender.GetSpec(oldUnstruct)
 	actualStrategy := spec["updateStrategy"].(map[string]interface{})
 	partition := actualStrategy["rollingUpdate"].(map[string]interface{})
 	advanced := gvk.Kind == resource.AdvancedStatefulSetKind.Kind
-	if err := setPartition(m.extender, newUnstruct, partition["partition"].(int64), advanced); err != nil {
+	if err := setPartition(newUnstruct, partition["partition"].(int64), advanced); err != nil {
 		return err
 	}
-	replicas := m.extender.GetReplicas(oldUnstruct)
+	replicas := extender.GetReplicas(oldUnstruct)
 	index, err := getNextUpdatePod(nc.MetadComponent(), *replicas, m.podClient)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -81,5 +77,5 @@ func (m *metadUpdater) Update(
 }
 
 func (m *metadUpdater) updateMetadPod(ordinal int32, newUnstruct *unstructured.Unstructured, advanced bool) error {
-	return setPartition(m.extender, newUnstruct, int64(ordinal), advanced)
+	return setPartition(newUnstruct, int64(ordinal), advanced)
 }

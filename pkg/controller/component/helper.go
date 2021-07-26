@@ -33,7 +33,8 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/config"
 	controllerutil "github.com/vesoft-inc/nebula-operator/pkg/util/controller"
-	extenderutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/hash"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/maputil"
 )
@@ -44,20 +45,19 @@ const (
 
 func syncComponentStatus(
 	component v1alpha1.NebulaClusterComponentter,
-	extender extenderutil.UnstructuredExtender,
 	status *v1alpha1.ComponentStatus,
 	workload *unstructured.Unstructured) error {
 	if workload == nil {
 		return nil
 	}
 
-	err := setWorkloadStatus(extender, workload, status)
+	err := setWorkloadStatus(workload, status)
 	if err != nil {
 		return err
 	}
 
-	image := getContainerImage(extender, workload, component.Type().String())
-	if image != "" && strings.Contains(image, ":") {
+	image := getContainerImage(workload, component.Type().String())
+	if image != "" && strings.Contains(image, ":") && status.Version == "" {
 		status.Version = strings.Split(image, ":")[1]
 	}
 
@@ -66,11 +66,7 @@ func syncComponentStatus(
 	return nil
 }
 
-func setWorkloadStatus(
-	extender extenderutil.UnstructuredExtender,
-	obj *unstructured.Unstructured,
-	status *v1alpha1.ComponentStatus,
-) error {
+func setWorkloadStatus(obj *unstructured.Unstructured, status *v1alpha1.ComponentStatus) error {
 	workload := v1alpha1.WorkloadStatus{}
 	data, err := json.Marshal(extender.GetStatus(obj))
 	if err != nil {
@@ -155,7 +151,6 @@ func syncConfigMap(
 }
 
 func getContainerImage(
-	extender extenderutil.UnstructuredExtender,
 	obj *unstructured.Unstructured,
 	containerName string) string {
 	if obj == nil {
@@ -174,8 +169,7 @@ func isUpdating(
 	component v1alpha1.NebulaClusterComponentter,
 	podClient kube.Pod,
 	obj *unstructured.Unstructured) (bool, error) {
-	extender := extenderutil.New()
-	if extenderutil.IsUpdating(extender, obj) {
+	if extender.IsUpdating(obj) {
 		return true, nil
 	}
 
@@ -200,20 +194,16 @@ func isUpdating(
 		if !exist {
 			return false, nil
 		}
-		if revisionHash != component.GetUpdateRevision() {
+		if component.GetUpdateRevision() != "" &&
+			revisionHash != component.GetUpdateRevision() {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-func setPartition(
-	extender extenderutil.UnstructuredExtender,
-	obj *unstructured.Unstructured,
-	upgradeOrdinal int64,
-	advanced bool,
-) error {
-	return extenderutil.SetUpdatePartition(extender, obj, upgradeOrdinal, InPlaceGracePeriodSeconds, advanced)
+func setPartition(obj *unstructured.Unstructured, upgradeOrdinal int64, advanced bool) error {
+	return extender.SetUpdatePartition(obj, upgradeOrdinal, InPlaceGracePeriodSeconds, advanced)
 }
 
 func getNextUpdatePod(component v1alpha1.NebulaClusterComponentter, replicas int32, podClient kube.Pod) (int32, error) {
@@ -230,6 +220,9 @@ func getNextUpdatePod(component v1alpha1.NebulaClusterComponentter, replicas int
 			return -1, err
 		}
 		if revision == updateRevision {
+			if pod.Status.Phase != corev1.PodRunning {
+				return -1, &errors.ReconcileError{Msg: fmt.Sprintf("updated pod %s is not running", podName)}
+			}
 			continue
 		}
 
@@ -238,7 +231,7 @@ func getNextUpdatePod(component v1alpha1.NebulaClusterComponentter, replicas int
 	return -1, nil
 }
 
-func getLastConfig(extender extenderutil.UnstructuredExtender, actual, desired *unstructured.Unstructured) error {
+func setLastConfig(actual, desired *unstructured.Unstructured) error {
 	spec := make(map[string]interface{})
 	if lastAppliedConfig, ok := actual.GetAnnotations()[annotation.AnnLastAppliedConfigKey]; ok {
 		if err := json.Unmarshal([]byte(lastAppliedConfig), &spec); err != nil {

@@ -20,12 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/facebook/fbthrift/thrift/lib/go/thrift"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ng "github.com/vesoft-inc/nebula-go/nebula"
@@ -33,7 +31,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-	extenderutil "github.com/vesoft-inc/nebula-operator/pkg/util/extender"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
@@ -44,21 +42,16 @@ const (
 	TransLeaderTimeout = 3 * time.Minute
 )
 
-type storagedUpdate struct {
+type storagedUpdater struct {
 	client.Client
 	clientSet kube.ClientSet
-	extender  extenderutil.UnstructuredExtender
 }
 
 func NewStoragedUpdater(cli client.Client, clientSet kube.ClientSet) UpdateManager {
-	return &storagedUpdate{
-		Client:    cli,
-		clientSet: clientSet,
-		extender:  extenderutil.New(),
-	}
+	return &storagedUpdater{Client: cli, clientSet: clientSet}
 }
 
-func (s *storagedUpdate) Update(
+func (s *storagedUpdater) Update(
 	nc *v1alpha1.NebulaCluster,
 	oldUnstruct, newUnstruct *unstructured.Unstructured,
 	gvk schema.GroupVersionKind,
@@ -68,13 +61,18 @@ func (s *storagedUpdate) Update(
 		return nil
 	}
 
-	if nc.Status.Storaged.Phase == v1alpha1.ScaleInPhase || nc.Status.Storaged.Phase == v1alpha1.ScaleOutPhase {
-		log.Info("storaged is scaling, can not update")
-		return getLastConfig(s.extender, oldUnstruct, newUnstruct)
+	if nc.Status.Storaged.Phase == v1alpha1.ScaleInPhase ||
+		nc.Status.Storaged.Phase == v1alpha1.ScaleOutPhase ||
+		nc.Status.Metad.Phase == v1alpha1.UpdatePhase {
+		return setLastConfig(oldUnstruct, newUnstruct)
 	}
 
 	nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
-	if !extenderutil.PodTemplateEqual(s.extender, newUnstruct, oldUnstruct) {
+	if err := s.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
+		return err
+	}
+
+	if !extender.PodTemplateEqual(newUnstruct, oldUnstruct) {
 		return nil
 	}
 
@@ -82,11 +80,11 @@ func (s *storagedUpdate) Update(
 		return nil
 	}
 
-	spec := s.extender.GetSpec(oldUnstruct)
-	actualStrategy := spec["updateStrategy"].(map[string]interface{})
+	spec := extender.GetSpec(oldUnstruct)
+	oldStrategy := spec["updateStrategy"].(map[string]interface{})
 	advanced := gvk.Kind == resource.AdvancedStatefulSetKind.Kind
-	partition := actualStrategy["rollingUpdate"].(map[string]interface{})
-	if err := setPartition(s.extender, newUnstruct, partition["partition"].(int64), advanced); err != nil {
+	partition := oldStrategy["rollingUpdate"].(map[string]interface{})
+	if err := setPartition(newUnstruct, partition["partition"].(int64), advanced); err != nil {
 		return err
 	}
 
@@ -101,7 +99,13 @@ func (s *storagedUpdate) Update(
 		}
 	}()
 
-	replicas := s.extender.GetReplicas(oldUnstruct)
+	spaces, err := mc.ListSpaces()
+	if err != nil {
+		return err
+	}
+	empty := len(spaces) == 0
+
+	replicas := extender.GetReplicas(oldUnstruct)
 	index, err := getNextUpdatePod(nc.StoragedComponent(), *replicas, s.clientSet.Pod())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -110,42 +114,22 @@ func (s *storagedUpdate) Update(
 		return err
 	}
 	if index >= 0 {
-		return s.updateStoragedPod(mc, nc, index, newUnstruct, advanced)
+		return s.updateStoragedPod(mc, nc, index, newUnstruct, advanced, empty)
 	}
 
-	if err := mc.BalanceLeader(); err != nil {
-		log.Error(err, "balance leader failed")
-		return err
-	}
-
-	hostItem, err := mc.ListHosts()
-	if err != nil {
-		return err
-	}
-	if !mc.IsBalanced(hostItem) {
-		if err := mc.BalanceLeader(); err != nil {
-			log.Error(err, "rebalance leader failed")
-			return err
-		}
-	}
-
-	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
-	return nil
+	return s.updateRunningPhase(mc, nc, empty)
 }
 
-func (s *storagedUpdate) updateStoragedPod(
+func (s *storagedUpdater) updateStoragedPod(
 	mc nebula.MetaInterface,
 	nc *v1alpha1.NebulaCluster,
 	ordinal int32,
 	newUnstruct *unstructured.Unstructured,
 	advanced bool,
+	empty bool,
 ) error {
 	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
-	if *nc.Spec.Storaged.Replicas == 1 {
-		return setPartition(s.extender, newUnstruct, int64(ordinal), advanced)
-	}
-
-	namespace, ncName := nc.GetNamespace(), nc.GetName()
+	namespace := nc.GetNamespace()
 	updatePodName := nc.StoragedComponent().GetPodName(ordinal)
 	updatePod, err := s.clientSet.Pod().GetPod(namespace, updatePodName)
 	if err != nil {
@@ -153,37 +137,24 @@ func (s *storagedUpdate) updateStoragedPod(
 		return err
 	}
 
-	spaces, err := mc.ListSpaces()
-	if err != nil {
-		return err
+	if empty || *nc.Spec.Storaged.Replicas < 3 {
+		return setPartition(newUnstruct, int64(ordinal), advanced)
 	}
 
-	if len(spaces) == 0 {
-		return setPartition(s.extender, newUnstruct, int64(ordinal), advanced)
+	_, ok := updatePod.Annotations[TransLeaderBeginTime]
+	if !ok {
+		return s.transLeaderIfNecessary(nc, mc, ordinal, updatePod)
 	}
 
-	if updatePod.Annotations == nil {
-		updatePod.Annotations = map[string]string{}
-	}
-	now := time.Now().Format(time.RFC3339)
-	updatePod.Annotations[TransLeaderBeginTime] = now
-
-	transAddr := nc.StoragedComponent().GetPodConnAddresses(v1alpha1.StoragedPortNameThrift, ordinal)
-	if err := s.transLeaderIfNecessary(nc, mc, transAddr, updatePod); err != nil {
-		return err
+	podFQDN := nc.StoragedComponent().GetPodFQDN(ordinal)
+	if s.readyToUpdate(mc, podFQDN, updatePod) {
+		return setPartition(newUnstruct, int64(ordinal), advanced)
 	}
 
-	if err := s.clientSet.Pod().UpdatePod(updatePod); err != nil {
-		return err
-	}
-
-	if s.readyToUpdate(mc, transAddr, updatePod) {
-		return setPartition(s.extender, newUnstruct, int64(ordinal), advanced)
-	}
-	return fmt.Errorf("%s/%s's storaged pod: %s is transferring leader", namespace, ncName, updatePodName)
+	return fmt.Errorf("storaged pod: %s is transferring leader", updatePodName)
 }
 
-func (s *storagedUpdate) readyToUpdate(mc nebula.MetaInterface, leaderHost string, updatePod *corev1.Pod) bool {
+func (s *storagedUpdater) readyToUpdate(mc nebula.MetaInterface, leaderHost string, updatePod *corev1.Pod) bool {
 	log := getLog().WithValues("updatePod", updatePod.GetName())
 	count, err := mc.GetLeaderCount(leaderHost)
 	if err != nil {
@@ -191,6 +162,7 @@ func (s *storagedUpdate) readyToUpdate(mc nebula.MetaInterface, leaderHost strin
 		return false
 	}
 	if count == 0 {
+		log.Info("leader count is 0, ready for updating", "host", leaderHost)
 		return true
 	}
 	if timeStr, ok := updatePod.Annotations[TransLeaderBeginTime]; ok {
@@ -207,14 +179,26 @@ func (s *storagedUpdate) readyToUpdate(mc nebula.MetaInterface, leaderHost strin
 	return false
 }
 
-func (s *storagedUpdate) transLeaderIfNecessary(
+func (s *storagedUpdater) transLeaderIfNecessary(
 	nc *v1alpha1.NebulaCluster,
 	mc nebula.MetaInterface,
-	transAddr string,
+	ordinal int32,
 	updatePod *corev1.Pod,
 ) error {
 	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
-	sc, err := s.getReadyStorageClient(nc)
+	if updatePod.Annotations == nil {
+		updatePod.Annotations = map[string]string{}
+	}
+	now := time.Now().Format(time.RFC3339)
+	updatePod.Annotations[TransLeaderBeginTime] = now
+
+	if err := s.clientSet.Pod().UpdatePod(updatePod); err != nil {
+		return err
+	}
+
+	podFQDN := nc.StoragedComponent().GetPodFQDN(ordinal)
+	endpoint := fmt.Sprintf("%s:%d", podFQDN, nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameAdmin))
+	sc, err := nebula.NewStorageClient([]string{endpoint})
 	if err != nil {
 		return err
 	}
@@ -235,9 +219,9 @@ func (s *storagedUpdate) transLeaderIfNecessary(
 			if partItem.Leader == nil {
 				continue
 			}
-			if partItem.Leader.Host == transAddr {
-				newLeader := getNewLeader(partItem.Leader, partItem.Peers)
-				if err := s.transLeader(sc, nc, spaceID, partItem.PartID, newLeader, updatePod); err != nil {
+			if partItem.Leader.Host == podFQDN {
+				newLeader := getNewLeader(nc, *nc.Spec.Storaged.Replicas, ordinal)
+				if err := s.transLeader(sc, nc, spaceID, partItem.PartID, newLeader); err != nil {
 					return err
 				}
 			}
@@ -246,75 +230,58 @@ func (s *storagedUpdate) transLeaderIfNecessary(
 	return nil
 }
 
-func (s *storagedUpdate) transLeader(
+func (s *storagedUpdater) transLeader(
 	storageClient nebula.StorageInterface,
 	nc *v1alpha1.NebulaCluster,
 	spaceID ng.GraphSpaceID,
 	partID ng.PartitionID,
 	newLeader *ng.HostAddr,
-	pod *corev1.Pod,
 ) error {
 	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
 	if err := storageClient.TransLeader(spaceID, partID, newLeader); err != nil {
 		return err
 	}
-	log.Info("transfer leader successfully", "space", spaceID, "partition", partID,
-		"pod", pod.GetName())
+	log.Info("transfer leader successfully", "space", spaceID, "partition", partID)
 	return nil
 }
 
-func (s *storagedUpdate) getReadyStorageClient(nc *v1alpha1.NebulaCluster) (nebula.StorageInterface, error) {
-	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
-	namespace := nc.GetNamespace()
-	storageSvcName := nc.StoragedComponent().GetServiceName()
+func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, empty bool) error {
+	if empty {
+		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
+		return nil
+	}
 
-	storageEndpoint, err := s.clientSet.Endpoint().GetEndpoints(namespace, storageSvcName)
+	if err := mc.BalanceLeader(); err != nil {
+		return err
+	}
+
+	hostItem, err := mc.ListHosts()
 	if err != nil {
-		log.Error(err, "get storaged endpoints failed")
-		return nil, err
+		return err
+	}
+	if !mc.IsBalanced(hostItem) {
+		if err := mc.BalanceLeader(); err != nil {
+			return err
+		}
 	}
 
-	eps := getReadyAddress(storageEndpoint)
-	sc, err := nebula.NewStorageClient(eps)
-	if err != nil {
-		transErr, ok := err.(thrift.TransportException)
-		if !ok {
-			return nil, err
-		}
-		if transErr.TypeID() != thrift.NOT_OPEN {
-			return nil, transErr
-		}
-		var retryErr error
-		for retry := 0; retry < len(eps); retry++ {
-			// remove unreachable endpoint
-			eps = append(eps[:0], eps[1:]...)
-			sc, retryErr = nebula.NewStorageClient(eps)
-			if retryErr == nil {
-				break
-			}
-		}
-	}
-	return sc, nil
-}
-
-func getNewLeader(leader *ng.HostAddr, peers []*ng.HostAddr) *ng.HostAddr {
-	others := make([]*ng.HostAddr, 0)
-	for _, peer := range peers {
-		if leader.Host == peer.Host {
-			continue
-		}
-		others = append(others, peer)
-		return others[rand.Intn(len(others))]
-	}
+	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
 }
 
-func getReadyAddress(endpoint *corev1.Endpoints) []string {
-	eps := make([]string, 0)
-	for _, subset := range endpoint.Subsets {
-		for _, addr := range subset.Addresses {
-			eps = append(eps, addr.IP+":9778")
-		}
+func getNewLeader(nc *v1alpha1.NebulaCluster, replicas, ordinal int32) *ng.HostAddr {
+	var podFQDN string
+	newLeader := &ng.HostAddr{
+		Port: ng.Port(nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)),
 	}
-	return eps
+
+	if replicas == 3 || replicas > 3 && replicas&1 == 0 {
+		podFQDN = nc.StoragedComponent().GetPodFQDN((ordinal + 2) % replicas)
+		newLeader.Host = podFQDN
+	} else if replicas > 3 && replicas&1 == 1 {
+		podFQDN = nc.StoragedComponent().GetPodFQDN((ordinal + 3) % replicas)
+		newLeader.Host = podFQDN
+	}
+
+	return newLeader
 }

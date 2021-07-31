@@ -65,16 +65,16 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 	var errs []error
 	oldStatus := nc.Status.DeepCopy()
 
+	c.resetImage(nc)
+	if err := c.nebulaClient.UpdateNebulaCluster(nc.DeepCopy()); err != nil {
+		errs = append(errs, err)
+	}
+
 	if err := c.updateNebulaCluster(nc); err != nil {
 		errs = append(errs, err)
 	}
 
 	c.conditionUpdater.Update(nc)
-
-	c.resetImage(nc)
-	if err := c.nebulaClient.UpdateNebulaCluster(nc.DeepCopy()); err != nil {
-		errs = append(errs, err)
-	}
 
 	if apiequality.Semantic.DeepEqual(&nc.Status, oldStatus) {
 		return errorutils.NewAggregate(errs)

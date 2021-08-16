@@ -150,7 +150,6 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 	}
 
 	if updating &&
-		nc.Status.Storaged.Phase != v1alpha1.UpdatePhase &&
 		nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
 		nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
 	} else if *newReplicas < *oldReplicas {

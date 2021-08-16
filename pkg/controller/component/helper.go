@@ -217,7 +217,7 @@ func getNextUpdatePod(component v1alpha1.NebulaClusterComponentter, replicas int
 		}
 		revision, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
 		if !exist {
-			return -1, err
+			return -1, &errors.ReconcileError{Msg: fmt.Sprintf("updated pod %s has no label: %s", podName, appsv1.ControllerRevisionHashLabelKey)}
 		}
 		if revision == updateRevision {
 			if pod.Status.Phase != corev1.PodRunning {

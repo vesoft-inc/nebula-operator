@@ -149,7 +149,7 @@ func TestSetTemplateAnnotations(t *testing.T) {
 	value := map[string]string{"a": "1", "b": "2"}
 	err = SetTemplateAnnotations(obj, value)
 	assert.Nil(t, err)
-	// nolint: lll
+	// nolint: revive
 	anno := obj.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["metadata"].(map[string]interface{})["annotations"]
 	assert.Equal(t, value["a"], anno.(map[string]interface{})["a"].(string))
 }
@@ -166,7 +166,8 @@ func TestSetLastAppliedConfigAnnotation(t *testing.T) {
 	target := map[string]interface{}{
 		"a":        "1",
 		"b":        "2",
-		"metadata": map[string]interface{}{"annotations": map[string]interface{}{"nebula-graph.io/last-applied-configuration": "null"}}}
+		"metadata": map[string]interface{}{"annotations": map[string]interface{}{"nebula-graph.io/last-applied-configuration": "null"}},
+	}
 	err = SetLastAppliedConfigAnnotation(obj)
 	assert.Nil(t, err)
 	assert.Equal(t, target, obj.Object)
@@ -267,7 +268,7 @@ func TestPodTemplateEqual(t *testing.T) {
 	}
 	equal = PodTemplateEqual(newObj, oldObj)
 	assert.Equal(t, true, equal)
-	// nolint: lll
+	// nolint: revive
 	oldObj.Object["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})["nebula-graph.io/last-applied-configuration"] = `{"template":{"spec":{"a":"1","b":"2","c":"3"}}}`
 	equal = PodTemplateEqual(newObj, oldObj)
 	assert.Equal(t, false, equal)
@@ -291,6 +292,7 @@ func TestObjectEqual(t *testing.T) {
 	oldObj.Object = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
+				// nolint: revive
 				"nebula-graph.io/last-applied-configuration": `{"replicas":1,"template":{"a":"1","b":"2"},"updateStrategy":{"strategy":"abc"}}`,
 				"test.io":  "abc",
 				"instance": "efg",

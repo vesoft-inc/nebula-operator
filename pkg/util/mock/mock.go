@@ -26,10 +26,12 @@ import (
 
 var _ discovery.Interface = &Discovery{}
 
-type GetServerVersion func() (*version.Info, error)
-type GetMapper func() (meta.RESTMapper, error)
-type Refresh func() (meta.RESTMapper, error)
-type KindsFor func(input schema.GroupVersionResource) ([]schema.GroupVersionKind, error)
+type (
+	GetServerVersion func() (*version.Info, error)
+	GetMapper        func() (meta.RESTMapper, error)
+	Refresh          func() (meta.RESTMapper, error)
+	KindsFor         func(input schema.GroupVersionResource) ([]schema.GroupVersionKind, error)
+)
 
 func NewMockDiscovery() *Discovery {
 	return &Discovery{

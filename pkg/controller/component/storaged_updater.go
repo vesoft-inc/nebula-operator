@@ -120,6 +120,7 @@ func (s *storagedUpdater) Update(
 	return s.updateRunningPhase(mc, nc, empty)
 }
 
+// nolint: revive
 func (s *storagedUpdater) updateStoragedPod(
 	mc nebula.MetaInterface,
 	nc *v1alpha1.NebulaCluster,

@@ -66,7 +66,8 @@ func TestEncode(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "object is pointer",
+			name: "object is pointer",
+			// nolint: gosec
 			obj:     (*int)(unsafe.Pointer(reflect.ValueOf(new(x)).Pointer())),
 			want:    `0`,
 			wantErr: false,

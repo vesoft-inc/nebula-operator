@@ -28,7 +28,6 @@ linters-settings:
       - dupImport # https://github.com/go-critic/go-critic/issues/845
       - ifElseChain
       - octalLiteral
-      - tooManyResultsChecker
       - whyNoLint
       - wrapperFunc
   gocyclo:
@@ -133,8 +132,8 @@ linters-settings:
       - name: defer
         arguments: [["call-chain","loop","method-call","recover", "return"]]
       - name: unexported-naming
-      - name: function-length
-        arguments: [50, 100]
+#      - name: function-length
+#        arguments: [50, 100]
 
 linters:
   # please, do not use `enable-all`: it's deprecated and will be removed soon.

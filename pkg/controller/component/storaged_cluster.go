@@ -26,17 +26,17 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	controllerutil "github.com/vesoft-inc/nebula-operator/pkg/util/controller"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
 type storagedCluster struct {
 	clientSet            kube.ClientSet
 	dm                   discovery.Interface
-	extender             controllerutil.UnstructuredExtender
 	scaleManager         ScaleManager
+	updateManager        UpdateManager
 	enableEvenPodsSpread bool
 }
 
@@ -44,12 +44,13 @@ func NewStoragedCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
 	sm ScaleManager,
+	um UpdateManager,
 	enableEvenPodsSpread bool) ReconcileManager {
 	return &storagedCluster{
 		clientSet:            clientSet,
 		dm:                   dm,
-		extender:             &controllerutil.Unstructured{},
 		scaleManager:         sm,
+		updateManager:        um,
 		enableEvenPodsSpread: enableEvenPodsSpread,
 	}
 }
@@ -83,17 +84,12 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	oldWorkloadTemp, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
 	if err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get workload for cluster")
+		log.Error(err, "failed to get workload")
 		return err
 	}
 
 	notExist := apierrors.IsNotFound(err)
-
 	oldWorkload := oldWorkloadTemp.DeepCopy()
-	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
-		log.Error(err, "failed to sync cluster status")
-		return err
-	}
 
 	cm, cmHash, err := c.syncStoragedConfigMap(nc)
 	if err != nil {
@@ -105,14 +101,29 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		log.Error(err, "generate workload template failed")
 		return err
 	}
-	if err := c.extender.SetTemplateAnnotations(
+
+	if nc.Status.Storaged.Version != "" {
+		oldImage := nc.Spec.Storaged.Image + ":" + nc.Status.Storaged.Version
+		if err := extender.SetContainerImage(
+			newWorkload,
+			nc.StoragedComponent().Type().String(),
+			oldImage); err != nil {
+			return err
+		}
+	}
+
+	if err := extender.SetTemplateAnnotations(
 		newWorkload,
 		map[string]string{annotation.AnnPodConfigMapHash: cmHash}); err != nil {
 		return err
 	}
 
+	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
+		return fmt.Errorf("failed to sync storaged cluster status, error: %v", err)
+	}
+
 	if notExist {
-		if err := controllerutil.SetLastAppliedConfigAnnotation(c.extender, newWorkload); err != nil {
+		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
 		}
 		if err := c.clientSet.Workload().CreateWorkload(newWorkload); err != nil {
@@ -121,20 +132,44 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		nc.Status.Storaged.Workload = v1alpha1.WorkloadStatus{}
 		return utilerrors.ReconcileErrorf("waiting for storaged cluster %s running", newWorkload.GetName())
 	}
-	if nc.Status.Storaged.Phase == "" {
-		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
-	}
+
 	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
 		log.Error(err, "failed to scale cluster ")
 		return err
 	}
 
-	return controllerutil.UpdateWorkload(c.clientSet.Workload(), c.extender, newWorkload, oldWorkload)
+	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
+		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
+		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
+			return err
+		}
+	}
+
+	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)
 }
 
-func (c *storagedCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, workload *unstructured.Unstructured) error {
+func (c *storagedCluster) syncNebulaClusterStatus(
+	nc *v1alpha1.NebulaCluster,
+	oldWorkload *unstructured.Unstructured) error {
+	if oldWorkload == nil {
+		return nil
+	}
+
+	if nc.Status.Storaged.Phase == "" {
+		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
+	}
+
+	updating, err := isUpdating(nc.StoragedComponent(), c.clientSet.Pod(), oldWorkload)
+	if err != nil {
+		return err
+	}
+
+	if updating && nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
+		nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
+	}
+
 	// TODO: show storaged hosts state with storaged peers
-	return syncComponentStatus(nc.StoragedComponent(), c.extender, &nc.Status.Storaged, workload)
+	return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged, oldWorkload)
 }
 
 func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {

@@ -16,7 +16,10 @@ limitations under the License.
 
 package annotation
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestIsInHaMode(t *testing.T) {
 	testCases := []struct {
@@ -56,6 +59,32 @@ func TestIsInHaMode(t *testing.T) {
 			if tc.expectIsInHaMode != isInHaMode {
 				t.Errorf("%d: Expected: \n%#v\n but actual: \n%#v\n",
 					i, tc.expectIsInHaMode, isInHaMode)
+			}
+		})
+	}
+}
+
+func TestCopyAnnotations(t *testing.T) {
+	tests := []struct {
+		name string
+		src  map[string]string
+		want map[string]string
+	}{
+		{
+			name: "src is nil",
+			src:  nil,
+			want: nil,
+		},
+		{
+			name: "src not nil",
+			src:  map[string]string{"a": "1", "b": "2"},
+			want: map[string]string{"a": "1", "b": "2"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CopyAnnotations(tt.src); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CopyAnnotations() = %v, want %v", got, tt.want)
 			}
 		})
 	}

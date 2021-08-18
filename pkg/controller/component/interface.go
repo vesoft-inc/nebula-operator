@@ -18,6 +18,7 @@ package component
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 )
@@ -34,4 +35,9 @@ type ScaleManager interface {
 	ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error
 	// ScaleOut scales out the cluster
 	ScaleOut(nc *v1alpha1.NebulaCluster) error
+}
+
+type UpdateManager interface {
+	// Update updates the cluster, as NebulaGraph doesn't support hot upgrade, the image tag remain unchanged
+	Update(nc *v1alpha1.NebulaCluster, old, new *unstructured.Unstructured, gvk schema.GroupVersionKind) error
 }

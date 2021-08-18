@@ -74,7 +74,7 @@ func (pd *podClient) DeletePod(namespace, name string) error {
 	}, pod); err != nil {
 		return err
 	}
-	log.Info("namespace deleted")
+	log.Info("pod deleted")
 	return pd.kubecli.Delete(context.TODO(), pod)
 }
 

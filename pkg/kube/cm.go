@@ -39,7 +39,6 @@ func NewConfigMap(kubecli client.Client) ConfigMap {
 }
 
 func (c *cmClient) CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error {
-	log := getLog().WithValues("namespace", cm.Namespace, "name", cm.Name)
 	if err := c.kubecli.Create(context.TODO(), cm); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			merge := func(existing, desired *corev1.ConfigMap) error {
@@ -66,7 +65,6 @@ func (c *cmClient) CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error {
 			}
 		}
 	}
-	log.V(1).Info("configMap created")
 	return nil
 }
 

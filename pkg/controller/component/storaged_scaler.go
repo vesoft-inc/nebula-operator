@@ -25,26 +25,21 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
-	controllerutil "github.com/vesoft-inc/nebula-operator/pkg/util/controller"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 )
 
 type storageScaler struct {
 	client.Client
 	clientSet kube.ClientSet
-	extender  controllerutil.UnstructuredExtender
 }
 
 func NewStorageScaler(cli client.Client, clientSet kube.ClientSet) ScaleManager {
-	return &storageScaler{
-		cli,
-		clientSet,
-		&controllerutil.Unstructured{},
-	}
+	return &storageScaler{Client: cli, clientSet: clientSet}
 }
 
 func (ss *storageScaler) Scale(nc *v1alpha1.NebulaCluster, oldUnstruct, newUnstruct *unstructured.Unstructured) error {
-	oldReplicas := ss.extender.GetReplicas(oldUnstruct)
-	newReplicas := ss.extender.GetReplicas(newUnstruct)
+	oldReplicas := extender.GetReplicas(oldUnstruct)
+	newReplicas := extender.GetReplicas(newUnstruct)
 
 	if *newReplicas < *oldReplicas || nc.Status.Storaged.Phase == v1alpha1.ScaleInPhase {
 		return ss.ScaleIn(nc, *oldReplicas, *newReplicas)

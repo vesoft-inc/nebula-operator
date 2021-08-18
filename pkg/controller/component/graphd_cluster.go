@@ -26,27 +26,28 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	controllerutil "github.com/vesoft-inc/nebula-operator/pkg/util/controller"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
 type graphdCluster struct {
 	clientSet            kube.ClientSet
 	dm                   discovery.Interface
-	extender             controllerutil.UnstructuredExtender
+	updateManager        UpdateManager
 	enableEvenPodsSpread bool
 }
 
 func NewGraphdCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
+	um UpdateManager,
 	enableEvenPodsSpread bool) ReconcileManager {
 	return &graphdCluster{
 		clientSet:            clientSet,
 		dm:                   dm,
-		extender:             &controllerutil.Unstructured{},
+		updateManager:        um,
 		enableEvenPodsSpread: enableEvenPodsSpread,
 	}
 }
@@ -75,17 +76,12 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 
 	oldWorkloadTemp, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
 	if err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get workload for cluster, error", "workloadName", componentName)
+		log.Error(err, "failed to get workload")
 		return err
 	}
 
 	notExist := apierrors.IsNotFound(err)
-
 	oldWorkload := oldWorkloadTemp.DeepCopy()
-	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
-		log.Error(err, "failed to sync cluster's status")
-		return err
-	}
 
 	cm, cmHash, err := c.syncGraphdConfigMap(nc)
 	if err != nil {
@@ -96,14 +92,29 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	if err != nil {
 		return err
 	}
-	if err := c.extender.SetTemplateAnnotations(
+
+	if nc.Status.Graphd.Version != "" {
+		oldImage := nc.Spec.Graphd.Image + ":" + nc.Status.Graphd.Version
+		if err := extender.SetContainerImage(
+			newWorkload,
+			nc.GraphdComponent().Type().String(),
+			oldImage); err != nil {
+			return err
+		}
+	}
+
+	if err := extender.SetTemplateAnnotations(
 		newWorkload,
 		map[string]string{annotation.AnnPodConfigMapHash: cmHash}); err != nil {
 		return err
 	}
 
+	if err := c.syncNebulaClusterStatus(nc, newWorkload, oldWorkload); err != nil {
+		return fmt.Errorf("failed to sync graphd status status, error: %v", err)
+	}
+
 	if notExist {
-		if err := controllerutil.SetLastAppliedConfigAnnotation(c.extender, newWorkload); err != nil {
+		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
 		}
 		if err := c.clientSet.Workload().CreateWorkload(newWorkload); err != nil {
@@ -112,25 +123,47 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		nc.Status.Graphd.Workload = v1alpha1.WorkloadStatus{}
 		return utilerrors.ReconcileErrorf("waiting for graphd cluster %s running", newWorkload.GetName())
 	}
-	nc.Status.Graphd.Phase = v1alpha1.RunningPhase
 
-	oldReplicas := c.extender.GetReplicas(oldWorkload)
-	newReplicas := c.extender.GetReplicas(newWorkload)
-	if *oldReplicas > *newReplicas {
+	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
+		nc.Status.Graphd.Phase == v1alpha1.UpdatePhase {
+		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
+			return err
+		}
+	}
+
+	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)
+}
+
+func (c *graphdCluster) syncNebulaClusterStatus(
+	nc *v1alpha1.NebulaCluster,
+	newWorkload,
+	oldWorkload *unstructured.Unstructured) error {
+	if oldWorkload == nil {
+		return nil
+	}
+
+	oldReplicas := extender.GetReplicas(oldWorkload)
+	newReplicas := extender.GetReplicas(newWorkload)
+	updating, err := isUpdating(nc.GraphdComponent(), c.clientSet.Pod(), oldWorkload)
+	if err != nil {
+		return err
+	}
+
+	if updating &&
+		nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
+		nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
+	} else if *newReplicas < *oldReplicas {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleInPhase
 		if err := PvcMark(c.clientSet.PVC(), nc.GraphdComponent(), *oldReplicas, *newReplicas); err != nil {
 			return err
 		}
-	}
-	if *oldReplicas < *newReplicas {
+	} else if *newReplicas > *oldReplicas {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleOutPhase
+	} else {
+		nc.Status.Graphd.Phase = v1alpha1.RunningPhase
 	}
 
-	return controllerutil.UpdateWorkload(c.clientSet.Workload(), c.extender, newWorkload, oldWorkload)
-}
-
-func (c *graphdCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, workload *unstructured.Unstructured) error {
-	return syncComponentStatus(nc.GraphdComponent(), c.extender, &nc.Status.Graphd, workload)
+	return syncComponentStatus(nc.GraphdComponent(), &nc.Status.Graphd, oldWorkload)
 }
 
 func (c *graphdCluster) syncGraphdService(nc *v1alpha1.NebulaCluster) error {

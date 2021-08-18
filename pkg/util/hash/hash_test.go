@@ -14,18 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package hash
 
-import (
-	"github.com/go-logr/logr"
+import "testing"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/logging"
-)
-
-// Please don't use directly, but use getLog.
-// Examples:
-//   log := getLog().WithName("name").WithValues("key", "value")
-//   log.Info(...)
-var _log = logging.Log.WithName("config")
-
-func getLog() logr.Logger { return _log }
+func TestHash(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+		want string
+	}{
+		{
+			name: "text is empty",
+			want: "cf83e1357eefb8bd",
+		},
+		{
+			name: "text not empty",
+			text: "Hello world",
+			want: "b7f783baed8297f0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Hash(tt.text); got != tt.want {
+				t.Errorf("Hash() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

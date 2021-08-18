@@ -62,6 +62,9 @@ func NewClusterReconciler(mgr ctrl.Manager) (*ClusterReconciler, error) {
 	}
 
 	sm := component.NewStorageScaler(mgr.GetClient(), clientSet)
+	graphdUpdater := component.NewGraphdUpdater(clientSet.Pod())
+	metadUpdater := component.NewMetadUpdater(clientSet.Pod())
+	storagedUpdater := component.NewStoragedUpdater(mgr.GetClient(), clientSet)
 
 	dm, err := discutil.New(mgr.GetConfig())
 	if err != nil {
@@ -83,15 +86,18 @@ func NewClusterReconciler(mgr ctrl.Manager) (*ClusterReconciler, error) {
 			component.NewGraphdCluster(
 				clientSet,
 				dm,
+				graphdUpdater,
 				evenPodsSpread),
 			component.NewMetadCluster(
 				clientSet,
 				dm,
+				metadUpdater,
 				evenPodsSpread),
 			component.NewStoragedCluster(
 				clientSet,
 				dm,
 				sm,
+				storagedUpdater,
 				evenPodsSpread),
 			reclaimer.NewMetaReconciler(clientSet),
 			reclaimer.NewPVCReclaimer(clientSet),
@@ -126,7 +132,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	defer func() {
 		if retErr == nil {
 			if res.Requeue || res.RequeueAfter > 0 {
-				log.Info("Finished reconciling nebulaCluster", "spendTime", time.Since(startTime), "res", res)
+				log.Info("Finished reconciling nebulaCluster", "spendTime", time.Since(startTime), "result", res)
 			} else {
 				log.Info("Finished reconcile nebulaCluster", "spendTime", time.Since(startTime))
 			}
@@ -154,7 +160,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		isReconcileError := func(err error) (b bool) {
 			defer func() {
 				if b {
-					log.Info("reconcile failed", "err", err)
+					log.Info("reconcile failed", "error", err)
 				}
 			}()
 			return errorsutil.IsReconcileError(err)

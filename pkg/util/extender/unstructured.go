@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package extender
 
 import (
 	"encoding/json"
@@ -26,24 +26,10 @@ import (
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/codec"
 )
 
-type UnstructuredExtender interface {
-	GetSpec(obj *unstructured.Unstructured) map[string]interface{}
-	GetTemplateMeta(obj *unstructured.Unstructured) map[string]interface{}
-	GetTemplateSpec(obj *unstructured.Unstructured) map[string]interface{}
-	GetStatus(obj *unstructured.Unstructured) map[string]interface{}
-	GetReplicas(obj *unstructured.Unstructured) *int32
-	GetContainers(obj *unstructured.Unstructured) []map[string]interface{}
-	SetSpecField(obj *unstructured.Unstructured, value interface{}, fields ...string) error
-	SetTemplateAnnotations(obj *unstructured.Unstructured, ann map[string]string) error
-}
-
-var _ UnstructuredExtender = &Unstructured{}
-
-type Unstructured struct{}
-
-func (u *Unstructured) GetSpec(obj *unstructured.Unstructured) map[string]interface{} {
+func GetSpec(obj *unstructured.Unstructured) map[string]interface{} {
 	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil || !found {
 		return nil
@@ -51,15 +37,7 @@ func (u *Unstructured) GetSpec(obj *unstructured.Unstructured) map[string]interf
 	return spec
 }
 
-func (u *Unstructured) GetTemplateMeta(obj *unstructured.Unstructured) map[string]interface{} {
-	meta, found, err := unstructured.NestedMap(obj.Object, "spec", "template", "metadata")
-	if err != nil || !found {
-		return nil
-	}
-	return meta
-}
-
-func (u *Unstructured) GetTemplateSpec(obj *unstructured.Unstructured) map[string]interface{} {
+func GetTemplateSpec(obj *unstructured.Unstructured) map[string]interface{} {
 	spec, found, err := unstructured.NestedMap(obj.Object, "spec", "template", "spec")
 	if err != nil || !found {
 		return nil
@@ -67,7 +45,7 @@ func (u *Unstructured) GetTemplateSpec(obj *unstructured.Unstructured) map[strin
 	return spec
 }
 
-func (u *Unstructured) GetStatus(obj *unstructured.Unstructured) map[string]interface{} {
+func GetStatus(obj *unstructured.Unstructured) map[string]interface{} {
 	statusField, found, err := unstructured.NestedMap(obj.Object, "status")
 	if err != nil || !found {
 		return nil
@@ -75,7 +53,7 @@ func (u *Unstructured) GetStatus(obj *unstructured.Unstructured) map[string]inte
 	return statusField
 }
 
-func (u *Unstructured) GetReplicas(obj *unstructured.Unstructured) *int32 {
+func GetReplicas(obj *unstructured.Unstructured) *int32 {
 	replicas, found, err := unstructured.NestedInt64(obj.Object, "spec", "replicas")
 	if err != nil || !found {
 		return nil
@@ -83,31 +61,29 @@ func (u *Unstructured) GetReplicas(obj *unstructured.Unstructured) *int32 {
 	return pointer.Int32Ptr(int32(replicas))
 }
 
-func (u *Unstructured) GetContainers(obj *unstructured.Unstructured) []map[string]interface{} {
-	fields := []string{"spec", "template", "spec"}
+func GetContainers(obj *unstructured.Unstructured) []map[string]interface{} {
+	fields := []string{"spec", "template", "spec", "containers"}
 	containers := make([]map[string]interface{}, 0)
-	for _, field := range []string{"initContainers", "containers", "ephemeralContainers"} {
-		ctrs, ok, err := unstructured.NestedFieldNoCopy(obj.Object, append(fields, field)...)
-		if err != nil {
-			return nil
-		}
-		if !ok {
-			continue
-		}
-		ctrList := ctrs.([]interface{})
-		for _, container := range ctrList {
-			ctr := container.(map[string]interface{})
-			containers = append(containers, ctr)
-		}
+	ctrs, ok, err := unstructured.NestedFieldNoCopy(obj.Object, fields...)
+	if err != nil {
+		return nil
+	}
+	if !ok {
+		return nil
+	}
+	ctrList := ctrs.([]interface{})
+	for _, container := range ctrList {
+		ctr := container.(map[string]interface{})
+		containers = append(containers, ctr)
 	}
 	return containers
 }
 
-func (u *Unstructured) SetSpecField(obj *unstructured.Unstructured, value interface{}, fields ...string) error {
+func SetSpecField(obj *unstructured.Unstructured, value interface{}, fields ...string) error {
 	return unstructured.SetNestedField(obj.Object, value, append([]string{"spec"}, fields...)...)
 }
 
-func (u *Unstructured) SetTemplateAnnotations(obj *unstructured.Unstructured, ann map[string]string) error {
+func SetTemplateAnnotations(obj *unstructured.Unstructured, ann map[string]string) error {
 	fields := []string{"spec", "template", "metadata", "annotations"}
 	oldAnn, _, err := unstructured.NestedStringMap(obj.Object, fields...)
 	if err != nil {
@@ -125,12 +101,11 @@ func (u *Unstructured) SetTemplateAnnotations(obj *unstructured.Unstructured, an
 	return unstructured.SetNestedStringMap(obj.Object, oldAnn, fields...)
 }
 
-func IsUpgrading(u UnstructuredExtender, obj *unstructured.Unstructured) bool {
-	status := u.GetStatus(obj)
+func IsUpdating(obj *unstructured.Unstructured) bool {
+	status := GetStatus(obj)
 	if status == nil {
 		return false
 	}
-	desiredReplicas := u.GetReplicas(obj)
 
 	if status["currentRevision"] == nil || status["updateRevision"] == nil || status["observedGeneration"] == nil {
 		return false
@@ -140,7 +115,8 @@ func IsUpgrading(u UnstructuredExtender, obj *unstructured.Unstructured) bool {
 		return true
 	}
 
-	if obj.GetGeneration() > status["observedGeneration"].(int64) && desiredReplicas == status["replicas"] {
+	desiredReplicas := GetReplicas(obj)
+	if obj.GetGeneration() > status["observedGeneration"].(int64) && int64(*desiredReplicas) == status["replicas"].(int64) {
 		return true
 	}
 	return false
@@ -148,12 +124,12 @@ func IsUpgrading(u UnstructuredExtender, obj *unstructured.Unstructured) bool {
 
 func templateEqual(oldTemplate, newTemplate map[string]interface{}) bool {
 	var newVal, oldVal interface{}
-	oldApply, _ := Encode(oldTemplate)
+	oldApply, _ := codec.Encode(oldTemplate)
 	if err := json.Unmarshal([]byte(oldApply), &oldVal); err != nil {
 		log.Error(err, "unmarshal failed")
 		return false
 	}
-	newApply, _ := Encode(newTemplate)
+	newApply, _ := codec.Encode(newTemplate)
 	if err := json.Unmarshal([]byte(newApply), &newVal); err != nil {
 		log.Error(err, "unmarshal failed")
 		return false
@@ -161,9 +137,9 @@ func templateEqual(oldTemplate, newTemplate map[string]interface{}) bool {
 	return apiequality.Semantic.DeepEqual(oldVal, newVal)
 }
 
-func PodTemplateEqual(u UnstructuredExtender, newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
+func PodTemplateEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
 	oldSpec := make(map[string]interface{})
-	newPodTemplate := u.GetTemplateSpec(newUnstruct)
+	newPodTemplate := GetTemplateSpec(newUnstruct)
 	lastAppliedConfig, ok := oldUnstruct.GetAnnotations()[annotation.AnnLastAppliedConfigKey]
 	if ok {
 		if err := json.Unmarshal([]byte(lastAppliedConfig), &oldSpec); err != nil {
@@ -178,7 +154,7 @@ func PodTemplateEqual(u UnstructuredExtender, newUnstruct, oldUnstruct *unstruct
 	return false
 }
 
-func ObjectEqual(u UnstructuredExtender, newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
+func ObjectEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
 	annotations := map[string]string{}
 	for k, v := range oldUnstruct.GetAnnotations() {
 		if k != annotation.AnnLastAppliedConfigKey {
@@ -197,7 +173,7 @@ func ObjectEqual(u UnstructuredExtender, newUnstruct, oldUnstruct *unstructured.
 				"name", oldUnstruct.GetName())
 			return false
 		}
-		newSpec := u.GetSpec(newUnstruct)
+		newSpec := GetSpec(newUnstruct)
 		return (int64(oldSpec["replicas"].(float64))) == newSpec["replicas"].(int64) &&
 			templateEqual(oldSpec["template"].(map[string]interface{}), newSpec["template"].(map[string]interface{})) &&
 			templateEqual(oldSpec["updateStrategy"].(map[string]interface{}), newSpec["updateStrategy"].(map[string]interface{}))
@@ -205,30 +181,33 @@ func ObjectEqual(u UnstructuredExtender, newUnstruct, oldUnstruct *unstructured.
 	return false
 }
 
-func UpdateWorkload(workloadClient kube.Workload, u UnstructuredExtender, newUnstruct, oldUnstruct *unstructured.Unstructured) error {
+func UpdateWorkload(
+	workloadClient kube.Workload,
+	newUnstruct,
+	oldUnstruct *unstructured.Unstructured) error {
 	isOrphan := metav1.GetControllerOf(oldUnstruct) == nil
-	if !ObjectEqual(u, newUnstruct, oldUnstruct) || isOrphan {
+	if !ObjectEqual(newUnstruct, oldUnstruct) || isOrphan {
 		w := oldUnstruct
-		if err := u.SetSpecField(w, u.GetSpec(newUnstruct)["template"], "template"); err != nil {
+		if err := SetSpecField(w, GetSpec(newUnstruct)["template"], "template"); err != nil {
 			return err
 		}
-		annotations := CopyAnnotations(newUnstruct.GetAnnotations())
+		annotations := annotation.CopyAnnotations(newUnstruct.GetAnnotations())
 		v, ok := oldUnstruct.GetAnnotations()[annotation.AnnLastSyncTimestampKey]
 		if ok {
 			annotations[annotation.AnnLastSyncTimestampKey] = v
 		}
 		w.SetAnnotations(annotations)
 		var updateStrategy interface{}
-		newSpec := u.GetSpec(newUnstruct)
+		newSpec := GetSpec(newUnstruct)
 		if newSpec != nil {
 			updateStrategy = newSpec["updateStrategy"]
-			if err := u.SetSpecField(w, updateStrategy, "updateStrategy"); err != nil {
+			if err := SetSpecField(w, updateStrategy, "updateStrategy"); err != nil {
 				return err
 			}
 		}
-		replicas := u.GetReplicas(newUnstruct)
+		replicas := GetReplicas(newUnstruct)
 		if replicas != nil {
-			if err := u.SetSpecField(w, int64(*replicas), "replicas"); err != nil {
+			if err := SetSpecField(w, int64(*replicas), "replicas"); err != nil {
 				return err
 			}
 		}
@@ -236,7 +215,7 @@ func UpdateWorkload(workloadClient kube.Workload, u UnstructuredExtender, newUns
 			w.SetOwnerReferences(newUnstruct.GetOwnerReferences())
 			w.SetLabels(newUnstruct.GetLabels())
 		}
-		if err := SetLastAppliedConfigAnnotation(u, w); err != nil {
+		if err := SetLastAppliedConfigAnnotation(w); err != nil {
 			return err
 		}
 		if err := workloadClient.UpdateWorkload(w); err != nil {
@@ -246,9 +225,9 @@ func UpdateWorkload(workloadClient kube.Workload, u UnstructuredExtender, newUns
 	return nil
 }
 
-func SetLastAppliedConfigAnnotation(u UnstructuredExtender, obj *unstructured.Unstructured) error {
-	spec := u.GetSpec(obj)
-	apply, err := Encode(spec)
+func SetLastAppliedConfigAnnotation(obj *unstructured.Unstructured) error {
+	spec := GetSpec(obj)
+	apply, err := codec.Encode(spec)
 	if err != nil {
 		return err
 	}
@@ -261,21 +240,49 @@ func SetLastAppliedConfigAnnotation(u UnstructuredExtender, obj *unstructured.Un
 	return nil
 }
 
-func SetUpgradePartition(u UnstructuredExtender, obj *unstructured.Unstructured, upgradeOrdinal, gracePeriod int64, advanced bool) error {
-	if err := u.SetSpecField(obj, "RollingUpdate", "updateStrategy", "type"); err != nil {
+func SetUpdatePartition(
+	obj *unstructured.Unstructured,
+	upgradeOrdinal,
+	gracePeriod int64,
+	advanced bool) error {
+	if err := SetSpecField(obj, "RollingUpdate", "updateStrategy", "type"); err != nil {
 		return err
 	}
-	if err := u.SetSpecField(obj, upgradeOrdinal, "updateStrategy", "rollingUpdate", "partition"); err != nil {
+	if err := SetSpecField(obj, upgradeOrdinal, "updateStrategy", "rollingUpdate", "partition"); err != nil {
 		return err
 	}
 	if advanced {
-		if err := u.SetSpecField(obj, "InPlaceIfPossible", "updateStrategy", "rollingUpdate", "podUpdatePolicy"); err != nil {
+		if err := SetSpecField(obj, "InPlaceIfPossible", "updateStrategy", "rollingUpdate", "podUpdatePolicy"); err != nil {
 			return err
 		}
-		if err := u.SetSpecField(obj, gracePeriod,
+		if err := SetSpecField(obj, gracePeriod,
 			"updateStrategy", "rollingUpdate", "inPlaceUpdateStrategy", "gracePeriodSeconds"); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func SetContainerImage(obj *unstructured.Unstructured, containerName, image string) error {
+	fields := []string{"spec", "template", "spec", "containers"}
+	ctrs, ok, err := unstructured.NestedFieldCopy(obj.Object, fields...)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+	var match bool
+	ctrList := ctrs.([]interface{})
+	for _, container := range ctrList {
+		ctr := container.(map[string]interface{})
+		if ctr["name"] == containerName {
+			ctr["image"] = image
+			match = true
+		}
+	}
+	if !match {
+		return nil
+	}
+	return unstructured.SetNestedField(obj.Object, ctrs, fields...)
 }

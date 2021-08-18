@@ -14,18 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package codec
 
-import (
-	"github.com/go-logr/logr"
+import "encoding/json"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/logging"
-)
-
-// Please don't use directly, but use getLog.
-// Examples:
-//   log := getLog().WithName("name").WithValues("key", "value")
-//   log.Info(...)
-var _log = logging.Log.WithName("config")
-
-func getLog() logr.Logger { return _log }
+func Encode(obj interface{}) (string, error) {
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}

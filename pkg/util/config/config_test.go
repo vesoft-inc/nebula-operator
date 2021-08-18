@@ -28,6 +28,8 @@ const template = `
 ########## Authentication ##########
 # User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
 --auth_type=password
+
+--rocksdb_compression_per_level=
 `
 
 func TestAppendCustomConfig(t *testing.T) {
@@ -52,6 +54,8 @@ func TestAppendCustomConfig(t *testing.T) {
 ########## Authentication ##########
 # User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
 --auth_type=cloud
+
+--rocksdb_compression_per_level=
 `,
 		},
 		{
@@ -68,6 +72,8 @@ func TestAppendCustomConfig(t *testing.T) {
 ########## Authentication ##########
 # User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
 --auth_type=password
+
+--rocksdb_compression_per_level=
 
 ########## Custom ##########
 --enable_optimizer=true
@@ -88,6 +94,8 @@ func TestAppendCustomConfig(t *testing.T) {
 ########## Authentication ##########
 # User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
 --auth_type=password
+
+--rocksdb_compression_per_level=
 
 ########## Custom ##########
 --enable_optimizer=true

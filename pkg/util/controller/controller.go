@@ -21,7 +21,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 )
@@ -49,33 +48,4 @@ func ServiceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
 		return apiequality.Semantic.DeepEqual(oldSpec, newSvc.Spec), nil
 	}
 	return false, nil
-}
-
-func GetContainerImage(u UnstructuredExtender, obj *unstructured.Unstructured, containerName string) string {
-	containers := u.GetContainers(obj)
-	for _, ctr := range containers {
-		if ctr["name"] == containerName {
-			return ctr["image"].(string)
-		}
-	}
-	return ""
-}
-
-func CopyAnnotations(src map[string]string) map[string]string {
-	if src == nil {
-		return nil
-	}
-	dst := map[string]string{}
-	for k, v := range src {
-		dst[k] = v
-	}
-	return dst
-}
-
-func Encode(obj interface{}) (string, error) {
-	b, err := json.Marshal(obj)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }

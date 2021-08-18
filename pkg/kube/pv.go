@@ -53,7 +53,7 @@ func (p *pvClient) CreatePersistentVolume(pv *corev1.PersistentVolume) error {
 	if err := p.kubecli.Create(context.TODO(), pv); err != nil {
 		return err
 	}
-	log.Info("namespace created")
+	log.Info("pv created")
 	return nil
 }
 
@@ -78,7 +78,7 @@ func (p *pvClient) PatchPVReclaimPolicy(pv *corev1.PersistentVolume, reclaimPoli
 	if err != nil {
 		return err
 	}
-	log.Info("namespace patched reclaim policy")
+	log.Info("pv patched reclaim policy")
 	return nil
 }
 

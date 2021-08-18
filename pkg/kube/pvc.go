@@ -93,7 +93,7 @@ func (p *pvcClient) UpdatePVC(pvc *corev1.PersistentVolumeClaim) error {
 	if err != nil {
 		return err
 	}
-	log.V(4).Info("namespace updated")
+	log.V(4).Info("pvc updated")
 	return nil
 }
 
@@ -106,6 +106,6 @@ func (p *pvcClient) DeletePVC(namespace, name string) error {
 	if err := p.kubecli.Delete(context.TODO(), pvc); err != nil {
 		return err
 	}
-	log.Info("namespace deleted")
+	log.Info("pvc deleted")
 	return nil
 }

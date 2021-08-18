@@ -14,18 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package extender
 
-import (
-	"github.com/go-logr/logr"
+import "github.com/vesoft-inc/nebula-operator/pkg/logging"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/logging"
-)
-
-// Please don't use directly, but use getLog.
-// Examples:
-//   log := getLog().WithName("name").WithValues("key", "value")
-//   log.Info(...)
-var _log = logging.Log.WithName("config")
-
-func getLog() logr.Logger { return _log }
+var log = logging.Log.WithName("extender")

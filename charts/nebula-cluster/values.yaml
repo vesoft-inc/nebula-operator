@@ -1,5 +1,5 @@
 nebula:
-  version: v2.0.1
+  version: v2.5.0
   imagePullPolicy: IfNotPresent
   storageClassName: ""
   schedulerName: default-scheduler # nebula-scheduler

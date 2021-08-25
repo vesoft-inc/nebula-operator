@@ -66,6 +66,10 @@ type NebulaClusterSpec struct {
 	// +optional
 	SchedulerName string `json:"schedulerName"`
 
+	// Flag to enable/disable pvc reclaim while the nebula cluster deleted , default false
+	// +optional
+	EnablePVReclaim *bool `json:"enablePVReclaim,omitempty"`
+
 	// +kubebuilder:default=IfNotPresent
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 

@@ -42,6 +42,9 @@ func PvcGc(cli client.Client, namespace, clusterName string) error {
 
 	for i := range pvcs {
 		pvc := pvcs[i]
+		if pvc.Annotations[annotation.AnnPvReclaimKey] == "false" {
+			continue
+		}
 		if err := pvcClient.DeletePVC(pvc.Namespace, pvc.Name); err != nil {
 			return err
 		}

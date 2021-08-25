@@ -31,6 +31,8 @@ const (
 	AnnPodSchedulingKey = "nebula-graph.io/pod-scheduling"
 	// AnnPodConfigMapHash is pod configmap hash key to update configuration dynamically
 	AnnPodConfigMapHash = "nebula-graph.io/cm-hash"
+	// AnnPvReclaimKey is annotation key that indicate whether reclaim persistent volume
+	AnnPvReclaimKey = "nebula-graph.io/enable-pv-reclaim"
 
 	// AnnHaModeVal is annotation value to indicate whether in ha mode
 	AnnHaModeVal = "true"

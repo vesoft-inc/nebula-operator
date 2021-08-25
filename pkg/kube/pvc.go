@@ -18,6 +18,7 @@ package kube
 
 import (
 	"context"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -31,7 +32,7 @@ import (
 type PersistentVolumeClaim interface {
 	CreatePVC(pvc *corev1.PersistentVolumeClaim) error
 	GetPVC(namespace, name string) (*corev1.PersistentVolumeClaim, error)
-	UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev1.Pod) error
+	UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev1.Pod, isReclaimEnabled bool) error
 	UpdatePVC(pvc *corev1.PersistentVolumeClaim) error
 	DeletePVC(namespace string, name string) error
 	ListPVCs(namespace string, selector labels.Selector) ([]corev1.PersistentVolumeClaim, error)
@@ -74,13 +75,15 @@ func (p *pvcClient) ListPVCs(namespace string, selector labels.Selector) ([]core
 	return pvcList.Items, nil
 }
 
-func (p *pvcClient) UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev1.Pod) error {
+func (p *pvcClient) UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev1.Pod, isReclaimEnabled bool) error {
 	podName := pod.GetName()
 	if pvc.Annotations == nil {
 		pvc.Annotations = make(map[string]string)
 	}
 	pvc.Labels[annotation.AnnPodNameKey] = podName
 	pvc.Annotations[annotation.AnnPodNameKey] = podName
+	pvc.Annotations[annotation.AnnPvReclaimKey] = pod.Annotations[annotation.AnnPvReclaimKey]
+	pvc.Annotations[annotation.AnnPvReclaimKey] = strconv.FormatBool(isReclaimEnabled)
 
 	return p.UpdatePVC(pvc)
 }

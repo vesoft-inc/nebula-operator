@@ -82,7 +82,6 @@ func (p *pvcClient) UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev
 	}
 	pvc.Labels[annotation.AnnPodNameKey] = podName
 	pvc.Annotations[annotation.AnnPodNameKey] = podName
-	pvc.Annotations[annotation.AnnPvReclaimKey] = pod.Annotations[annotation.AnnPvReclaimKey]
 	pvc.Annotations[annotation.AnnPvReclaimKey] = strconv.FormatBool(isReclaimEnabled)
 
 	return p.UpdatePVC(pvc)

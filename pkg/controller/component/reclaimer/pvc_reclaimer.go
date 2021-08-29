@@ -103,7 +103,8 @@ func (p *pvcReclaimer) reclaimPV(nc *v1alpha1.NebulaCluster) error {
 
 		if pv.Spec.PersistentVolumeReclaimPolicy != corev1.PersistentVolumeReclaimDelete {
 			if err := p.clientSet.PV().PatchPVReclaimPolicy(pv, corev1.PersistentVolumeReclaimDelete); err != nil {
-				return fmt.Errorf("cluster %s/%s patch pv %s to %s failed: %v", namespace, ncName, pvName, corev1.PersistentVolumeReclaimDelete, err)
+				return fmt.Errorf("cluster %s/%s patch pv %s to %s failed: %v", namespace, ncName, pvName,
+					corev1.PersistentVolumeReclaimDelete, err)
 			}
 			log.Info("patch pv policy to Delete success", "pvName", pvName)
 		}

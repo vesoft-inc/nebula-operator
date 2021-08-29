@@ -105,7 +105,7 @@ run-controller-manager: manifests generate check
 run-scheduler: manifests generate check
 	go run -ldflags '$(LDFLAGS)' cmd/scheduler/main.go
 
-docker-build: build test ## Build docker images.
+docker-build: build ## Build docker images.
 	docker build -t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" images/nebula-operator/
 
 docker-push: docker-build ## Push docker images.

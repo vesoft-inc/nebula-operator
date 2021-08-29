@@ -40,11 +40,11 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	log := getLog().WithValues("namespace", nc.Namespace, "name", nc.Name)
 	namespace := nc.GetNamespace()
 	clusterName := nc.GetClusterName()
-	l, err := label.New().Cluster(clusterName).Selector()
+	selector, err := label.New().Cluster(clusterName).Selector()
 	if err != nil {
 		return err
 	}
-	pods, err := m.clientSet.Pod().ListPods(namespace, l)
+	pods, err := m.clientSet.Pod().ListPods(namespace, selector)
 	if err != nil {
 		return fmt.Errorf("list pods for cluster %s/%s failed: %v", namespace, clusterName, err)
 	}
@@ -60,7 +60,7 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		}
 		for i := range pvcs {
 			pvc := pvcs[i]
-			if err := m.clientSet.PVC().UpdateMetaInfo(pvc, &pod); err != nil {
+			if err := m.clientSet.PVC().UpdateMetaInfo(pvc, &pod, nc.IsPVReclaimEnabled()); err != nil {
 				return err
 			}
 			if pvc.Spec.VolumeName == "" {

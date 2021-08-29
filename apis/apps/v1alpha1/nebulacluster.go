@@ -72,3 +72,11 @@ func (nc *NebulaCluster) GenerateOwnerReferences() []metav1.OwnerReference {
 		},
 	}
 }
+
+func (nc *NebulaCluster) IsPVReclaimEnabled() bool {
+	enabled := nc.Spec.EnablePVReclaim
+	if enabled == nil {
+		return false
+	}
+	return *enabled
+}

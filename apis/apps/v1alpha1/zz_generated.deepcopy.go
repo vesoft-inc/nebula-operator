@@ -228,6 +228,11 @@ func (in *NebulaClusterSpec) DeepCopyInto(out *NebulaClusterSpec) {
 		(*in).DeepCopyInto(*out)
 	}
 	out.Reference = in.Reference
+	if in.EnablePVReclaim != nil {
+		in, out := &in.EnablePVReclaim, &out.EnablePVReclaim
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ImagePullPolicy != nil {
 		in, out := &in.ImagePullPolicy, &out.ImagePullPolicy
 		*out = new(v1.PullPolicy)

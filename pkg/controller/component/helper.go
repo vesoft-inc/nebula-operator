@@ -23,6 +23,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -32,7 +33,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/config"
-	controllerutil "github.com/vesoft-inc/nebula-operator/pkg/util/controller"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/hash"
@@ -88,7 +88,7 @@ func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Se
 
 	oldSvcTmp, err := svcClient.GetService(newSvc.Namespace, newSvc.Name)
 	if apierrors.IsNotFound(err) {
-		if err := controllerutil.SetServiceLastAppliedConfigAnnotation(newSvc); err != nil {
+		if err := setServiceLastAppliedConfigAnnotation(newSvc); err != nil {
 			return err
 		}
 		return svcClient.CreateService(newSvc)
@@ -99,7 +99,7 @@ func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Se
 	}
 
 	oldSvc := oldSvcTmp.DeepCopy()
-	equal, err := controllerutil.ServiceEqual(newSvc, oldSvc)
+	equal, err := serviceEqual(newSvc, oldSvc)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Se
 	if !equal || !annoEqual || isOrphan {
 		svc := *oldSvc
 		svc.Spec = newSvc.Spec
-		if err := controllerutil.SetServiceLastAppliedConfigAnnotation(&svc); err != nil {
+		if err := setServiceLastAppliedConfigAnnotation(&svc); err != nil {
 			return err
 		}
 		if oldSvc.Spec.ClusterIP != "" {
@@ -129,6 +129,30 @@ func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Se
 	}
 
 	return nil
+}
+
+func setServiceLastAppliedConfigAnnotation(svc *corev1.Service) error {
+	b, err := json.Marshal(svc.Spec)
+	if err != nil {
+		return err
+	}
+	if svc.Annotations == nil {
+		svc.Annotations = map[string]string{}
+	}
+	svc.Annotations[annotation.AnnLastAppliedConfigKey] = string(b)
+	return nil
+}
+
+func serviceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
+	oldSpec := corev1.ServiceSpec{}
+	if lastAppliedConfig, ok := oldSvc.Annotations[annotation.AnnLastAppliedConfigKey]; ok {
+		err := json.Unmarshal([]byte(lastAppliedConfig), &oldSpec)
+		if err != nil {
+			return false, err
+		}
+		return apiequality.Semantic.DeepEqual(oldSpec, newSvc.Spec), nil
+	}
+	return false, nil
 }
 
 func syncConfigMap(

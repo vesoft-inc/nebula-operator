@@ -60,6 +60,8 @@ spec:
             type: object
           spec:
             properties:
+              enablePVReclaim:
+                type: boolean
               graphd:
                 properties:
                   annotations:

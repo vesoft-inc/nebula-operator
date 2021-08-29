@@ -66,7 +66,7 @@ type NebulaClusterSpec struct {
 	// +optional
 	SchedulerName string `json:"schedulerName"`
 
-	// Flag to enable/disable pvc reclaim while the nebula cluster deleted , default false
+	// Flag to enable/disable pv reclaim while the nebula cluster deleted , default false
 	// +optional
 	EnablePVReclaim *bool `json:"enablePVReclaim,omitempty"`
 

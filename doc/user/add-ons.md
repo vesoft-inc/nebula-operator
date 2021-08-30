@@ -6,14 +6,21 @@ This section links to third party projects that provide functionality required b
 ## coredns
 [CoreDNS](https://coredns.io/) is a flexible, extensible DNS server which can be [installed](https://github.com/coredns/deployment/tree/master/kubernetes) as the in-cluster DNS for pods.
 
+NebulaGraph each component can communicate via DNS like _x.default.svc.cluster.local_, coredns is used for address resolution.
+
 ## cert-manager
+**Note:**
+If you set helm chart nebula-operator _.Values.admissionWebhook.create_ to false, the cert-manager is not needed. 
+
 [cert-manager](https://cert-manager.io/) is a tool that automates certificate management. It makes use of extending the Kubernetes API server using a Webhook server to provide dynamic admission control over cert-manager resources. 
 
 Consult the [cert-manager installation documentation](https://cert-manager.io/docs/installation/kubernetes/) to get started.
 
+cert-manager is used for validating NebulaGraph each component replicas, if you run it in production environment and care high availability, you should set  _.Values.admissionWebhook.create_ to true and install cert-manager.
+
 ## openkruise
 **Note:**
-nebula-operator need advanced features for StatefulSet when it starts.
+nebula-operator need advanced features for StatefulSet when it starts. nebula-operator will update nebula cluster pod in-place instead of destroying it.
 
 [openkruise](https://openkruise.io/en-us/)  is a full set of standard extensions for Kubernetes. It works well with original Kubernetes and provides more powerful and efficient features for managing applications Pods, sidecar containers, and even images on Node.
 
@@ -21,7 +28,7 @@ Consult the [openkruise installation documentation](https://openkruise.io/en-us/
 
 ## sig-storage-local-static-provisioner
 **Note:**
-Only you deploy NebulaGraph with local storage when it is required.
+It is required in the scenario that you deploy NebulaGraph with local storage.
 
 [local-static-provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner) manages the PersistentVolume lifecycle for pre-allocated disks by detecting and creating PVs for each local disk on the host, and cleaning up the disks when released. It does not support dynamic provisioning.
 

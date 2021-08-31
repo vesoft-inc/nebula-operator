@@ -102,6 +102,16 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		return err
 	}
 
+	if nc.Status.Storaged.Version != "" {
+		oldImage := nc.Spec.Storaged.Image + ":" + nc.Status.Storaged.Version
+		if err := extender.SetContainerImage(
+			newWorkload,
+			nc.StoragedComponent().Type().String(),
+			oldImage); err != nil {
+			return err
+		}
+	}
+
 	if err := extender.SetTemplateAnnotations(
 		newWorkload,
 		map[string]string{annotation.AnnPodConfigMapHash: cmHash}); err != nil {

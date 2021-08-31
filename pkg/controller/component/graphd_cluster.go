@@ -93,6 +93,16 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
+	if nc.Status.Graphd.Version != "" {
+		oldImage := nc.Spec.Graphd.Image + ":" + nc.Status.Graphd.Version
+		if err := extender.SetContainerImage(
+			newWorkload,
+			nc.GraphdComponent().Type().String(),
+			oldImage); err != nil {
+			return err
+		}
+	}
+
 	if err := extender.SetTemplateAnnotations(
 		newWorkload,
 		map[string]string{annotation.AnnPodConfigMapHash: cmHash}); err != nil {

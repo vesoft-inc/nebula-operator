@@ -155,7 +155,7 @@ Please refer to [FAQ.md](FAQ.md)
 ## Community
 Feel free to reach out if you have any questions. The maintainers of this project are reachable via:
 
-- [Filing an issue](https://github.com/vesoft-inc/nebula-operator/issue) against this repo
+- [Filing an issue](https://github.com/vesoft-inc/nebula-operator/issues) against this repo
 
 ## Contributing
 

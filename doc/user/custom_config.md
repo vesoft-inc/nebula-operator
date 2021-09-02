@@ -24,7 +24,7 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-graphd
-    version: v2.5.0
+    version: v2.0.0
     storageClaim:
       resources:
         requests:

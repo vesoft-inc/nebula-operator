@@ -16,19 +16,18 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/vesoft-inc/nebula-go v0.0.0-20210322063004-e37085b865d6
 	go.uber.org/zap v1.15.0
-	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2
 	k8s.io/apiserver v0.19.2
 	k8s.io/cli-runtime v0.19.2
 	k8s.io/client-go v0.19.2
 	k8s.io/code-generator v0.19.2
-	k8s.io/klog/v2 v2.4.0 // indirect
-	k8s.io/kube-scheduler v0.0.0
-	k8s.io/kubectl v0.0.0
+	k8s.io/kube-scheduler v0.19.2
+	k8s.io/kubectl v0.19.2
 	k8s.io/kubernetes v1.19.2
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 	sigs.k8s.io/controller-runtime v0.7.0
+	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (

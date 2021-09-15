@@ -26,9 +26,13 @@ const (
 --pid_file=pids/nebula-graphd.pid
 # Whether to enable optimizer
 --enable_optimizer=true
+# Heartbeat interval of communication between meta client and graphd service
+--heartbeat_interval_secs=10
+# Whether to use the configuration obtained from the configuration file
+--local_config=true
 
 ########## logging ##########
-# The directory to host logging files, which must already exists
+# The directory to host logging files
 --log_dir=logs
 # Log level, 0, 1, 2, 3 for INFO, WARNING, ERROR, FATAL respectively
 --minloglevel=0
@@ -67,7 +71,7 @@ const (
 # Seconds before the idle connections are closed, 0 for never closed
 --client_idle_timeout_secs=0
 # Seconds before the idle sessions are expired, 0 for no expiration
---session_idle_timeout_secs=0
+--session_idle_timeout_secs=60000
 # The number of threads to accept incoming connections
 --num_accept_threads=1
 # The number of networking IO threads, 0 for # of CPU cores
@@ -80,19 +84,20 @@ const (
 --ws_http_port=19669
 # HTTP2 service port
 --ws_h2_port=19670
+# storage client timeout
+--storage_client_timeout_ms=60000
+# Port to listen on Meta with HTTP protocol, it corresponds to ws_http_port in metad's configuration file
+--ws_meta_http_port=19559
 
-# The default charset when a space is created
---default_charset=utf8
-# The defaule collate when a space is created
---default_collate=utf8_bin
-
-########## authorization ##########
+########## authentication ##########
 # Enable authorization
 --enable_authorize=false
-
-########## Authentication ##########
 # User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
 --auth_type=password
+
+########## memory ##########
+# System memory high watermark ratio
+--system_memory_high_watermark_ratio=0.8
 `
 	// nolint: revive
 	MetadhConfigTemplate = `
@@ -103,7 +108,7 @@ const (
 --pid_file=pids/nebula-metad.pid
 
 ########## logging ##########
-# The directory to host logging files, which must already exists
+# The directory to host logging files
 --log_dir=logs
 # Log level, 0, 1, 2, 3 for INFO, WARNING, ERROR, FATAL respectively
 --minloglevel=0
@@ -134,6 +139,8 @@ const (
 --ws_http_port=19559
 # HTTP2 service port
 --ws_h2_port=19560
+# Port to listen on Storage with HTTP protocol, it corresponds to ws_http_port in storage's configuration file
+--ws_storage_http_port=19779
 
 ########## storage ##########
 # Root data path, here should be only single path for metad
@@ -146,13 +153,20 @@ const (
 --default_replica_factor=1
 
 --heartbeat_interval_secs=10
+
+############## rocksdb Options ##############
+--rocksdb_wal_sync=true
+
 `
 	// nolint: revive
-	StoragedConfigTemplate = `########## basics ##########
+	StoragedConfigTemplate = `
+########## basics ##########
 # Whether to run as a daemon process
 --daemonize=true
 # The file to host the process id
 --pid_file=pids/nebula-storaged.pid
+# Whether to use the configuration obtained from the configuration file
+--local_config=true
 
 ########## logging ##########
 # The directory to host logging files
@@ -202,12 +216,15 @@ const (
 # One path per Rocksdb instance.
 --data_path=data/storage
 
+# Minimum reserved bytes of each data path
+--minimum_reserved_bytes=268435456
+
 # The default reserved bytes for one batch operation
 --rocksdb_batch_size=4096
 # The default block cache size used in BlockBasedTable.
 # The unit is MB.
 --rocksdb_block_cache=4
-# The type of storage engine, 'rocksdb'', 'memory', etc.
+# The type of storage engine: rocksdb, memory, etc.
 --engine_type=rocksdb
 
 # Compression algorithm, options: no,snappy,lz4,lz4hc,zlib,bzip2,zstd
@@ -237,11 +254,6 @@ const (
 
 # Whether or not to enable rocksdb's prefix bloom filter, disabled by default.
 --enable_rocksdb_prefix_filtering=false
-# Whether or not to enable the whole key filtering.
---enable_rocksdb_whole_key_filtering=true
-# The prefix length for each key to use as the filter value.
-# can be 12 bytes(PartitionId + VertexID), or 16 bytes(PartitionId + VertexID + TagID/EdgeType).
---rocksdb_filtering_prefix_length=12
 
 ############## rocksdb Options ##############
 # rocksdb DBOptions in json, each name and value of option is a string, given as "option_name":"option_value" separated by comma

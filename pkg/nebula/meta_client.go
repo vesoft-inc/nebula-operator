@@ -22,19 +22,19 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/vesoft-inc/nebula-go/nebula"
-	"github.com/vesoft-inc/nebula-go/nebula/meta"
+	"github.com/vesoft-inc/nebula-go/v2/nebula"
+	"github.com/vesoft-inc/nebula-go/v2/nebula/meta"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 var ErrNoAvailableMetadEndpoints = errors.New("metadclient: no available endpoints")
 
-var _ MetaInterface = &metaClient{}
+var _ MetaInterface = (*metaClient)(nil)
 
 type MetaInterface interface {
 	GetSpace(spaceName string) (*meta.SpaceItem, error)
 	ListSpaces() ([]*meta.IdName, error)
-	ListHosts() ([]*meta.HostItem, error)
+	ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error)
 	GetPartsAlloc(spaceID nebula.GraphSpaceID) (map[nebula.PartitionID][]*nebula.HostAddr, error)
 	ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.PartitionID) ([]*meta.PartItem, error)
 	GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, error)
@@ -57,14 +57,14 @@ func NewMetaClient(endpoints []string, options ...Option) (MetaInterface, error)
 	if len(endpoints) == 0 {
 		return nil, ErrNoAvailableMetadEndpoints
 	}
-	mc, err := newMetadClient(endpoints[0], options...)
+	mc, err := newMetaConnection(endpoints[0], options...)
 	if err != nil {
 		return nil, err
 	}
 	return mc, nil
 }
 
-func newMetadClient(endpoint string, options ...Option) (*metaClient, error) {
+func newMetaConnection(endpoint string, options ...Option) (*metaClient, error) {
 	transport, pf, err := buildClientTransport(endpoint, options...)
 	if err != nil {
 		return nil, err
@@ -77,13 +77,13 @@ func newMetadClient(endpoint string, options ...Option) (*metaClient, error) {
 	return mc, nil
 }
 
-func (m *metaClient) updateClient(endpoint string, options ...Option) error {
+func (m *metaClient) reconnect(endpoint string, options ...Option) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if err := m.disconnect(); err != nil {
 		return err
 	}
-	if _, err := newMetadClient(endpoint, options...); err != nil {
+	if _, err := newMetaConnection(endpoint, options...); err != nil {
 		return err
 	}
 	return nil
@@ -91,11 +91,11 @@ func (m *metaClient) updateClient(endpoint string, options ...Option) error {
 
 func (m *metaClient) connect() error {
 	log := getLog()
-	if err := m.client.Transport.Open(); err != nil {
+	if err := m.client.Open(); err != nil {
 		log.Error(err, "open transport failed")
 		return err
 	}
-	log.Info("metad connection opened", "isOpen", m.client.Transport.IsOpen())
+	log.Info("metad connection opened", "isOpen", m.client.IsOpen())
 	return nil
 }
 
@@ -118,7 +118,7 @@ func (m *metaClient) GetSpace(spaceName string) (*meta.SpaceItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
+	if resp.Code != nebula.ErrorCode_E_DISCONNECTED {
 		return nil, errors.Errorf("GetSpace code %d", resp.Code)
 	}
 	return resp.Item, nil
@@ -132,21 +132,21 @@ func (m *metaClient) ListSpaces() ([]*meta.IdName, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
 		return nil, errors.Errorf("ListSpaces code %d", resp.Code)
 	}
 	return resp.Spaces, nil
 }
 
-func (m *metaClient) ListHosts() ([]*meta.HostItem, error) {
+func (m *metaClient) ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	req := &meta.ListHostsReq{}
+	req := &meta.ListHostsReq{Type: hostType}
 	resp, err := m.client.ListHosts(req)
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
 		return nil, errors.Errorf("ListHosts code %d", resp.Code)
 	}
 	return resp.Hosts, nil
@@ -160,7 +160,7 @@ func (m *metaClient) GetPartsAlloc(spaceID nebula.GraphSpaceID) (map[nebula.Part
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
 		return nil, errors.Errorf("GetPartsAlloc code %d", resp.Code)
 	}
 	partMap := make(map[nebula.PartitionID][]*nebula.HostAddr, len(resp.Parts))
@@ -181,7 +181,7 @@ func (m *metaClient) ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.Par
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
 		return nil, errors.Errorf("ListParts code %d", resp.Code)
 	}
 	return resp.Parts, nil
@@ -200,7 +200,7 @@ func (m *metaClient) GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, 
 		}
 		var partIDs []nebula.PartitionID
 		for partID := int32(1); partID <= spaceDetail.Properties.PartitionNum; partID++ {
-			partIDs = append(partIDs, nebula.PartitionID(partID))
+			partIDs = append(partIDs, partID)
 		}
 		partItems, err := m.ListParts(*space.Id.SpaceID, partIDs)
 		if err != nil {
@@ -225,7 +225,8 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 				continue
 			}
 			if partItem.Leader.Host == leaderHost {
-				log.Info("space's partition still distribute this node", "space", spaceID, "partition", partItem.PartID)
+				log.Info("space's partition still distribute this node",
+					"space", spaceID, "partition", partItem.PartID)
 				count++
 			}
 		}
@@ -234,19 +235,38 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 }
 
 func (m *metaClient) BalanceLeader() error {
+	log := getLog()
 	req := &meta.LeaderBalanceReq{}
 	resp, err := m.client.LeaderBalance(req)
 	if err != nil {
 		return err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
+		if resp.Code == nebula.ErrorCode_E_LEADER_CHANGED {
+			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
+			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
+			if err := m.reconnect(leader); err != nil {
+				return errors.Errorf("update client failed: %v", err)
+			}
+			resp, err := m.client.LeaderBalance(req)
+			if err != nil {
+				return err
+			}
+			if resp.Code != nebula.ErrorCode_SUCCEEDED {
+				return errors.Errorf("retry balance leader code %d", resp.Code)
+			}
+		} else if resp.Code == nebula.ErrorCode_E_BALANCED {
+			log.Info("cluster is balanced")
+			return nil
+		}
 		return errors.Errorf("BalanceLeader code %d", resp.Code)
 	}
+	log.Info("balance leader successfully")
 	return nil
 }
 
 func (m *metaClient) balance(req *meta.BalanceReq) error {
-	log := getLog().WithValues("req", req)
+	log := getLog()
 	log.Info("start balance")
 	resp, err := m.client.Balance(req)
 	if err != nil {
@@ -254,29 +274,28 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 		return err
 	}
 	log = log.WithValues("balanceID", resp.Id)
-	log.Info("balance returned")
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
-		if resp.Code == meta.ErrorCode_E_LEADER_CHANGED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
+		if resp.Code == nebula.ErrorCode_E_LEADER_CHANGED {
 			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
 			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
-			if err := m.updateClient(leader); err != nil {
+			if err := m.reconnect(leader); err != nil {
 				return errors.Errorf("update client failed: %v", err)
 			}
 			resp, err := m.Balance(req)
 			if err != nil {
 				return err
 			}
-			if resp.Code != meta.ErrorCode_SUCCEEDED {
+			if resp.Code != nebula.ErrorCode_SUCCEEDED {
 				return errors.Errorf("retry balance code %d", resp.Code)
 			}
 			log.Info("balance plan running now")
 			return m.BalanceStatus(resp.Id)
-		} else if resp.Code == meta.ErrorCode_E_NO_VALID_HOST {
+		} else if resp.Code == nebula.ErrorCode_E_NO_VALID_HOST {
 			return errors.Errorf("the cluster no valid host to balance")
-		} else if resp.Code == meta.ErrorCode_E_BALANCED {
+		} else if resp.Code == nebula.ErrorCode_E_BALANCED {
 			log.Info("the cluster is balanced")
 			return nil
-		} else if resp.Code == meta.ErrorCode_E_BALANCER_RUNNING {
+		} else if resp.Code == nebula.ErrorCode_E_BALANCER_RUNNING {
 			return errors.Errorf("the cluster balance job is running")
 		}
 		return errors.Errorf("balance code %d", resp.Code)
@@ -308,7 +327,7 @@ func (m *metaClient) BalanceStatus(id int64) error {
 	if err != nil {
 		return err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
 		return errors.Errorf("BalanceStatus code %d", resp.Code)
 	}
 	log := getLog().WithValues("balanceID", id)
@@ -338,8 +357,8 @@ func (m *metaClient) BalanceStop(stop bool) error {
 	if err != nil {
 		return err
 	}
-	if resp.Code != meta.ErrorCode_SUCCEEDED {
-		if resp.Code == meta.ErrorCode_E_NO_RUNNING_BALANCE_PLAN {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
+		if resp.Code == nebula.ErrorCode_E_NO_RUNNING_BALANCE_PLAN {
 			return errors.Errorf("BalanceStop no running balance plan")
 		}
 		return errors.Errorf("BalanceStop code %d", resp.Code)

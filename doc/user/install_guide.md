@@ -55,12 +55,12 @@ $ helm show values nebula-operator/nebula-operator
 If you need to upgrade the Nebula Operator, modify the ${HOME}/nebula-operator/values.yaml file, and then execute the following command to upgrade:
 
 ```shell script
-$ helm upgrade nebula-operator nebula-operator/nebula-operator -f `${HOME}/nebula-operator/values.yaml`
+$ helm upgrade nebula-operator nebula-operator/nebula-operator --namespace=nebula-operator-system -f `${HOME}/nebula-operator/values.yaml`
 ```
 
 ### Uninstall Operator
 
 ```shell script
-$ helm uninstall nebula-operator
+$ helm uninstall nebula-operator --namespace=nebula-operator-system
 $ kubectl delete crd nebulaclusters.apps.nebula-graph.io
 ```

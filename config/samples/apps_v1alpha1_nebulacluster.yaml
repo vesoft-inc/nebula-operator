@@ -58,4 +58,4 @@ spec:
     name: statefulsets.apps
     version: v1
   schedulerName: default-scheduler
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always

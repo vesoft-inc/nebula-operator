@@ -76,7 +76,7 @@ The following table lists is the configurable parameters of the chart and their 
 |:---------|:-----------|:-------|
 | `nameOverride` | Override the name of the chart | `nil` |
 | `nebula.version` | Nebula version | `v2.0.1` |
-| `nebula.imagePullPolicy` | Nebula image pull policy | `IfNotPresent` |
+| `nebula.imagePullPolicy` | Nebula image pull policy | `Always` |
 | `nebula.storageClassName` | PersistentVolume class, default to use the default StorageClass | `nil` |
 | `nebula.schedulerName` | Scheduler for nebula component | `default-scheduler` |
 | `nebula.reference` | Reference for nebula component | `{"name": "statefulsets.apps", "version": "v1"}` |

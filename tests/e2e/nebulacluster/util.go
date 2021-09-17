@@ -45,7 +45,7 @@ import (
 )
 
 func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1alpha1.NebulaCluster {
-	imagePullPolicy := corev1.PullIfNotPresent
+	imagePullPolicy := corev1.PullAlways
 	storageClassName := getStorageClassName(runtimeClient)
 	nebulaVersion := e2econfig.TestConfig.NebulaVersion
 	return &v1alpha1.NebulaCluster{

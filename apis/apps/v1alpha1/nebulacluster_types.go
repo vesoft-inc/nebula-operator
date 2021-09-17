@@ -70,7 +70,7 @@ type NebulaClusterSpec struct {
 	// +optional
 	EnablePVReclaim *bool `json:"enablePVReclaim,omitempty"`
 
-	// +kubebuilder:default=IfNotPresent
+	// +kubebuilder:default=Always
 	ImagePullPolicy *corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// +optional

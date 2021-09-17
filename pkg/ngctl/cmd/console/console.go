@@ -40,16 +40,16 @@ const (
 	consoleExample = `
 		# Open console to the current nebula cluster, which is set by 'ngctl use' command
 		ngctl console
-		
+
 		# Open console to the specified nebula cluster
 		ngctl console CLUSTER_NAME
 `
-	consoleUsage = `expected 'console CLUSTER_NAME' for the console command, or using 'ngctl use' 
+	consoleUsage = `expected 'console CLUSTER_NAME' for the console command, or using 'ngctl use'
 to set nebula cluster first.
 `
 	consolePodGenerateNameFmt = "console-%s-"
 	consoleContainerName      = "console"
-	consoleDefaultImage       = "vesoft/nebula-console:v2-nightly"
+	consoleDefaultImage       = "vesoft/nebula-console:nightly"
 )
 
 type (

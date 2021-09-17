@@ -64,6 +64,6 @@ func RegisterClusterFlags(flags *flag.FlagSet) {
 	flags.StringVar(&TestConfig.StorageClass, "storage-class", "",
 		"The storage class to use to install nebula cluster."+
 			"If don't configure, use the default storage class and then the others in the kubernetes.")
-	flags.StringVar(&TestConfig.NebulaVersion, "nebula-version", "v2-nightly",
+	flags.StringVar(&TestConfig.NebulaVersion, "nebula-version", "nightly",
 		"The nebula version.")
 }

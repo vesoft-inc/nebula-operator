@@ -22,7 +22,7 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -55,11 +55,7 @@ func (c *NebulaClusterConfig) LoadFromFile(filename string) error {
 		return err
 	}
 
-	err = yaml.Unmarshal(bs, c)
-	if err != nil {
-		return err
-	}
-	return nil
+	return yaml.Unmarshal(bs, c)
 }
 
 func (c *NebulaClusterConfig) SaveToFile(filename string) error {

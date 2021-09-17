@@ -118,7 +118,7 @@ func (m *metaClient) GetSpace(spaceName string) (*meta.SpaceItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != nebula.ErrorCode_E_DISCONNECTED {
+	if resp.Code != nebula.ErrorCode_SUCCEEDED {
 		return nil, errors.Errorf("GetSpace code %d", resp.Code)
 	}
 	return resp.Item, nil

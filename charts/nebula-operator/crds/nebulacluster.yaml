@@ -209,7 +209,7 @@ spec:
                     type: string
                 type: object
               imagePullPolicy:
-                default: IfNotPresent
+                default: Always
                 type: string
               imagePullSecrets:
                 items:

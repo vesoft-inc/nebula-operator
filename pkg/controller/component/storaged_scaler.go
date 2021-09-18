@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nebulago "github.com/vesoft-inc/nebula-go/nebula"
+	nebulago "github.com/vesoft-inc/nebula-go/v2/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
@@ -116,7 +116,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 
 	if oldReplicas-newReplicas > 0 {
 		hosts := make([]*nebulago.HostAddr, 0, oldReplicas-newReplicas)
-		port := nebulago.Port(nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift))
+		port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 		for i := oldReplicas - 1; i >= newReplicas; i-- {
 			hosts = append(hosts, &nebulago.HostAddr{
 				Host: nc.StoragedComponent().GetPodFQDN(i),

@@ -5,7 +5,7 @@ LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
 DOCKER_REGISTRY ?= localhost:5000
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
-IMAGE_TAG ?= latest
+IMAGE_TAG ?= v0.8.0
 
 export GO111MODULE := on
 GOOS := $(if $(GOOS),$(GOOS),linux)

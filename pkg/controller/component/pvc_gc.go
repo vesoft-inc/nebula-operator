@@ -65,7 +65,6 @@ func PvcMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClus
 		}
 		now := time.Now().Format(time.RFC3339)
 		pvc.Annotations[annotation.AnnPVCDeferDeletingKey] = now
-		log := log.WithValues("key", annotation.AnnPVCDeferDeletingKey, now)
 		if err := pvcClient.UpdatePVC(pvc); err != nil {
 			log.Error(err, "failed to set pvc annotation", "pvcName", pvcName)
 			return err

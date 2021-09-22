@@ -36,7 +36,7 @@ $ helm install nebula-operator nebula-operator/nebula-operator --namespace=nebul
 Note:   
 If the corresponding nebula-system namespace does not exist, you can create the namespace first by running the _kubectl create namespace nebula-operator-system_ command.
 
-${chart_version} represents the chart version of Nebula Operator. For example, v0.1.0. You can view the currently supported versions by running the _helm search repo -l nebula-operator_ command.
+${chart_version} represents the chart version of Nebula Operator. For example, v0.8.0. You can view the currently supported versions by running the _helm search repo -l nebula-operator_ command.
 
 _See [configuration](#configure-operator) below._
 

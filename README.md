@@ -63,7 +63,7 @@ Modify the file and change `replicas` from 3 to 5.
         memory: "1Gi"
     replicas: 5
     image: vesoft/nebula-storaged
-    version: v2.0.0
+    version: v2.5.0
     storageClaim:
       resources:
         requests:
@@ -101,7 +101,7 @@ Similarly we can decrease the size of the cluster from 5 back to 3 by changing t
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v2.0.0
+    version: v2.5.0
     storageClaim:
       resources:
         requests:
@@ -155,7 +155,7 @@ Please refer to [FAQ.md](FAQ.md)
 ## Community
 Feel free to reach out if you have any questions. The maintainers of this project are reachable via:
 
-- [Filing an issue](https://github.com/vesoft-inc/nebula-operator/issue) against this repo
+- [Filing an issue](https://github.com/vesoft-inc/nebula-operator/issues) against this repo
 
 ## Contributing
 

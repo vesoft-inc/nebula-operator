@@ -4,6 +4,7 @@ Nebula Operator manages [NebulaGraph](https://github.com/vesoft-inc/nebula-graph
 It evolved from [NebulaGraph Cloud Service](https://www.nebula-cloud.io/), makes NebulaGraph a truly cloud-native database.
 
 ## Quick Start
+
 - [Install Nebula Operator](#install-nebula-operator)
 - [Create and Destroy](#create-and-destroy-a-nebula-cluster)
 - [Resize](#resize-a-nebula-cluster)
@@ -18,7 +19,7 @@ $ kubectl create -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 A none ha-mode nebula cluster will be created.
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          1m
 nebula-metad-0      1/1     Running   0          1m
@@ -63,7 +64,7 @@ Modify the file and change `replicas` from 3 to 5.
         memory: "1Gi"
     replicas: 5
     image: vesoft/nebula-storaged
-    version: v2.5.0
+    version: v2.5.1
     storageClaim:
       resources:
         requests:
@@ -78,7 +79,7 @@ $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 
 The storaged cluster will scale to 5 members (5 pods):
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          2m
 nebula-metad-0      1/1     Running   0          2m
@@ -101,7 +102,7 @@ Similarly we can decrease the size of the cluster from 5 back to 3 by changing t
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v2.5.0
+    version: v2.5.1
     storageClaim:
       resources:
         requests:
@@ -111,7 +112,7 @@ Similarly we can decrease the size of the cluster from 5 back to 3 by changing t
 We should see that storaged cluster will eventually reduce to 3 pods:
 
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          10m
 nebula-metad-0      1/1     Running   0          10m
@@ -139,7 +140,7 @@ $ kubectl delete pod nebula-storaged-2 --now
 The nebula operator will recover the failure by creating a new pod `nebula-storaged-2`:
 
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          15m
 nebula-metad-0      1/1     Running   0          15m

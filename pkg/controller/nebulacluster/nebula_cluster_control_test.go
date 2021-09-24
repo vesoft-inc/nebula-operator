@@ -124,7 +124,6 @@ func Test_defaultNebulaClusterControl_UpdateNebulaCluster(t *testing.T) {
 	}
 }
 
-// nolint: gocritic
 func newFakeNebulaClusterControl() (
 	ControlInterface,
 	*component.FakeGraphdCluster,
@@ -173,7 +172,7 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 						},
 					},
 					Image:   "vesoft/graphd",
-					Version: "v2.5.0",
+					Version: "v2.5.1",
 				},
 			},
 			Metad: &v1alpha1.MetadSpec{
@@ -186,7 +185,7 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 						},
 					},
 					Image:   "vesoft/metad",
-					Version: "v2.5.0",
+					Version: "v2.5.1",
 				},
 			},
 			Storaged: &v1alpha1.StoragedSpec{
@@ -199,7 +198,7 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 						},
 					},
 					Image:   "vesoft/storaged",
-					Version: "v2.5.0",
+					Version: "v2.5.1",
 				},
 			},
 		},

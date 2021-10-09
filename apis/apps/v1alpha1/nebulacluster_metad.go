@@ -99,6 +99,17 @@ func (c *metadComponent) GetPodLabels() map[string]string {
 	return c.nc.Spec.Metad.PodSpec.Labels
 }
 
+func (c *metadComponent) NodeSelector() map[string]string {
+	selector := map[string]string{}
+	for k, v := range c.nc.Spec.NodeSelector {
+		selector[k] = v
+	}
+	for k, v := range c.nc.Spec.Metad.PodSpec.NodeSelector {
+		selector[k] = v
+	}
+	return selector
+}
+
 func (c *metadComponent) IsHeadlessService() bool {
 	return true
 }

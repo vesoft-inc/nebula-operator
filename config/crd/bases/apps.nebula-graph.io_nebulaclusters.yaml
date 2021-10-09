@@ -139,6 +139,10 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    type: object
                   replicas:
                     format: int32
                     minimum: 0
@@ -294,6 +298,10 @@ spec:
                     default: vesoft/graphd
                     type: string
                   labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  nodeSelector:
                     additionalProperties:
                       type: string
                     type: object
@@ -454,6 +462,10 @@ spec:
                     default: vesoft/graphd
                     type: string
                   labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  nodeSelector:
                     additionalProperties:
                       type: string
                     type: object

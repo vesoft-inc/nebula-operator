@@ -237,6 +237,10 @@ type PodSpec struct {
 
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
+
+	// K8S nodeSelector.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // StorageClaim contains details of storages

@@ -260,7 +260,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 
 	podSpec := corev1.PodSpec{
 		SchedulerName:    nc.Spec.SchedulerName,
-		NodeSelector:     nc.Spec.NodeSelector,
+		NodeSelector:     c.NodeSelector(),
 		Containers:       containers,
 		Volumes:          volumes,
 		ImagePullSecrets: nc.Spec.ImagePullSecrets,

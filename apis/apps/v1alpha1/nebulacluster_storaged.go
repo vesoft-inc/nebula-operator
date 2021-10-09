@@ -101,6 +101,17 @@ func (c *storagedComponent) GetPodLabels() map[string]string {
 	return c.nc.Spec.Storaged.PodSpec.Labels
 }
 
+func (c *storagedComponent) NodeSelector() map[string]string {
+	selector := map[string]string{}
+	for k, v := range c.nc.Spec.NodeSelector {
+		selector[k] = v
+	}
+	for k, v := range c.nc.Spec.Storaged.PodSpec.NodeSelector {
+		selector[k] = v
+	}
+	return selector
+}
+
 func (c *storagedComponent) IsHeadlessService() bool {
 	return true
 }

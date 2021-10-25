@@ -41,6 +41,7 @@ type NebulaClusterComponentter interface {
 	GetPodEnvVars() []corev1.EnvVar
 	GetPodAnnotations() map[string]string
 	GetPodLabels() map[string]string
+	NodeSelector() map[string]string
 	IsHeadlessService() bool
 	GetServiceSpec() *ServiceSpec
 	GetServiceName() string

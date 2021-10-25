@@ -124,7 +124,6 @@ func Test_defaultNebulaClusterControl_UpdateNebulaCluster(t *testing.T) {
 	}
 }
 
-// nolint: gocritic
 func newFakeNebulaClusterControl() (
 	ControlInterface,
 	*component.FakeGraphdCluster,

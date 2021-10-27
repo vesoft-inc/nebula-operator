@@ -43,7 +43,11 @@ import (
 	errorsutil "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
-const reconcileTimeOut = 10 * time.Second
+const (
+	reconcileTimeOut = 10 * time.Second
+
+	KruiseReferenceName = "statefulsets.apps.kruise.io"
+)
 
 var ReconcileWaitResult = reconcile.Result{RequeueAfter: reconcileTimeOut}
 
@@ -51,11 +55,12 @@ var ReconcileWaitResult = reconcile.Result{RequeueAfter: reconcileTimeOut}
 type ClusterReconciler struct {
 	Control ControlInterface
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log          logr.Logger
+	Scheme       *runtime.Scheme
+	EnableKruise bool
 }
 
-func NewClusterReconciler(mgr ctrl.Manager) (*ClusterReconciler, error) {
+func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconciler, error) {
 	clientSet, err := kube.NewClientSet(mgr.GetConfig())
 	if err != nil {
 		return nil, err
@@ -103,9 +108,10 @@ func NewClusterReconciler(mgr ctrl.Manager) (*ClusterReconciler, error) {
 			reclaimer.NewPVCReclaimer(clientSet),
 			NewClusterConditionUpdater(),
 		),
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NebulaCluster"),
-		Scheme: mgr.GetScheme(),
+		Client:       mgr.GetClient(),
+		Log:          ctrl.Log.WithName("controllers").WithName("NebulaCluster"),
+		Scheme:       mgr.GetScheme(),
+		EnableKruise: enableKruise,
 	}, nil
 }
 
@@ -152,17 +158,17 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	}
 	log.Info("Start to reconcile")
 
+	if !r.EnableKruise && nebulaCluster.Spec.Reference.Name == KruiseReferenceName {
+		return ReconcileWaitResult, errorsutil.ReconcileErrorf("openkruise scheme not registered")
+	}
+
 	if err := r.syncNebulaCluster(nebulaCluster.DeepCopy()); err != nil {
 		if strings.Contains(err.Error(), registry.OptimisticLockErrorMsg) {
 			return ReconcileWaitResult, nil
 		}
 
-		isReconcileError := func(err error) (b bool) {
-			defer func() {
-				if b {
-					log.Info("reconcile failed", "error", err)
-				}
-			}()
+		isReconcileError := func(err error) bool {
+			defer log.Info("reconcile failed", "error", err)
 			return errorsutil.IsReconcileError(err)
 		}
 
@@ -183,12 +189,22 @@ func (r *ClusterReconciler) syncNebulaCluster(nc *v1alpha1.NebulaCluster) error 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager, opts controller.Options) error {
+	if r.EnableKruise {
+		return ctrl.NewControllerManagedBy(mgr).
+			For(&v1alpha1.NebulaCluster{}).
+			Owns(&corev1.ConfigMap{}).
+			Owns(&corev1.Service{}).
+			Owns(&appsv1.StatefulSet{}).
+			Owns(&kruisev1alpha1.StatefulSet{}).
+			WithOptions(opts).
+			Complete(r)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.NebulaCluster{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
-		Owns(&kruisev1alpha1.StatefulSet{}).
 		WithOptions(opts).
 		Complete(r)
 }

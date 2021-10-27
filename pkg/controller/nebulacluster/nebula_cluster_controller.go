@@ -159,7 +159,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	log.Info("Start to reconcile")
 
 	if !r.EnableKruise && nebulaCluster.Spec.Reference.Name == KruiseReferenceName {
-		return ReconcileWaitResult, errorsutil.ReconcileErrorf("openkruise scheme not registered")
+		return ctrl.Result{}, errorsutil.ReconcileErrorf("openkruise scheme not registered")
 	}
 
 	if err := r.syncNebulaCluster(nebulaCluster.DeepCopy()); err != nil {
@@ -167,8 +167,12 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 			return ReconcileWaitResult, nil
 		}
 
-		isReconcileError := func(err error) bool {
-			defer log.Info("reconcile failed", "error", err)
+		isReconcileError := func(err error) (b bool) {
+			defer func() {
+				if b {
+					log.Info("reconcile failed", "error", err)
+				}
+			}()
 			return errorsutil.IsReconcileError(err)
 		}
 

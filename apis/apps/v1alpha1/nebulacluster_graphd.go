@@ -17,7 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -75,16 +78,16 @@ func (c *graphdComponent) GetResources() *corev1.ResourceRequirements {
 	return getResources(c.nc.Spec.Graphd.Resources)
 }
 
-func (c *graphdComponent) GetStorageClass() *string {
-	scName := c.nc.Spec.Graphd.StorageClaim.StorageClassName
+func (c *graphdComponent) GetLogStorageClass() *string {
+	scName := c.nc.Spec.Graphd.LogVolumeClaim.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil
 	}
 	return scName
 }
 
-func (c *graphdComponent) GetStorageResources() *corev1.ResourceRequirements {
-	return c.nc.Spec.Graphd.StorageClaim.Resources.DeepCopy()
+func (c *graphdComponent) GetLogStorageResources() *corev1.ResourceRequirements {
+	return c.nc.Spec.Graphd.LogVolumeClaim.Resources.DeepCopy()
 }
 
 func (c *graphdComponent) GetPodEnvVars() []corev1.EnvVar {
@@ -201,6 +204,29 @@ func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
 			},
 		},
 	}
+}
+
+func (c *graphdComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
+	componentType := c.Type().String()
+	scName, storageRes := c.GetLogStorageClass(), c.GetLogStorageResources()
+	storageRequest, err := parseStorageRequest(storageRes.Requests)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse storage request for %s, error: %v", componentType, err)
+	}
+
+	claims := []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: componentType,
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources:        storageRequest,
+				StorageClassName: scName,
+			},
+		},
+	}
+	return claims, nil
 }
 
 func (c *graphdComponent) GenerateWorkload(

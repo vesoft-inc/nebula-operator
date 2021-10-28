@@ -19,14 +19,17 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -36,6 +39,20 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/logging"
 	"github.com/vesoft-inc/nebula-operator/pkg/version"
 	"github.com/vesoft-inc/nebula-operator/pkg/webhook"
+)
+
+const (
+	defaultWatchNamespace                 = corev1.NamespaceAll
+	defaultLeaderElectionNamespace        = ""
+	defaultLeaderElectionID               = "nebula-controller-manager-leader"
+	defaultMetricsBindAddr                = ":8080"
+	defaultHealthProbeBindAddr            = ":8081"
+	defaultSyncPeriod                     = 30 * time.Minute
+	defaultWebhookBindPort                = 9443
+	defaultMaxIngressConcurrentReconciles = 3
+	defaultPrintVersion                   = false
+	defaultEnableLeaderElection           = false
+	defaultEnableAdmissionWebhook         = false
 )
 
 var (
@@ -57,20 +74,35 @@ func main() {
 	var (
 		printVersion            bool
 		metricsAddr             string
+		leaderElectionID        string
+		leaderElectionNamespace string
 		enableLeaderElection    bool
 		enableAdmissionWebhook  bool
 		probeAddr               string
 		maxConcurrentReconciles int
+		watchNamespace          string
+		webhookBindPort         int
+		syncPeriod              time.Duration
 	)
 
-	pflag.BoolVar(&printVersion, "version", false, "Show version and quit")
-	pflag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	pflag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	pflag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	pflag.BoolVar(&printVersion, "version", defaultPrintVersion, "Show version and quit")
+	pflag.StringVar(&metricsAddr, "metrics-bind-address", defaultMetricsBindAddr, "The address the metric endpoint binds to.")
+	pflag.StringVar(&probeAddr, "health-probe-bind-address", defaultHealthProbeBindAddr, "The address the probe endpoint binds to.")
+	pflag.StringVar(&leaderElectionID, "leader-election-id", defaultLeaderElectionID,
+		"Name of the leader election ID to use for this controller")
+	pflag.StringVar(&leaderElectionNamespace, "leader-election-namespace", defaultLeaderElectionNamespace,
+		"Namespace in which the leader election resource will be created.")
+	pflag.BoolVar(&enableLeaderElection, "enable-leader-election", defaultEnableLeaderElection,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	pflag.BoolVar(&enableAdmissionWebhook, "admission-webhook", false, "Enable admission webhook for controller manager. ")
-	pflag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 2, "The max concurrent reconciles.")
+	pflag.BoolVar(&enableAdmissionWebhook, "admission-webhook", defaultEnableAdmissionWebhook, "Enable admission webhook for controller manager. ")
+	pflag.IntVar(&webhookBindPort, "webhook-bind-port", defaultWebhookBindPort,
+		"The TCP port the Webhook server binds to.")
+	pflag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", defaultMaxIngressConcurrentReconciles, "The max concurrent reconciles.")
+	pflag.StringVar(&watchNamespace, "watch-namespace", defaultWatchNamespace,
+		"Namespace the controller watches for updates to Kubernetes objects, If empty, all namespaces are watched.")
+	pflag.DurationVar(&syncPeriod, "sync-period", defaultSyncPeriod,
+		"Period at which the controller forces the repopulation  of its local object stores.")
 	opts := logging.Options{
 		Development:     true,
 		StacktraceLevel: zap.NewAtomicLevelAt(zap.FatalLevel),
@@ -93,12 +125,16 @@ func main() {
 	log.Info("Nebula Operator Version", "version", version.Version())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "467c28e9.nebula-graph.io",
+		Scheme:                     scheme,
+		MetricsBindAddress:         metricsAddr,
+		Port:                       webhookBindPort,
+		HealthProbeBindAddress:     probeAddr,
+		LeaderElection:             enableLeaderElection,
+		LeaderElectionResourceLock: resourcelock.ConfigMapsLeasesResourceLock,
+		LeaderElectionNamespace:    leaderElectionNamespace,
+		LeaderElectionID:           leaderElectionID,
+		Namespace:                  watchNamespace,
+		SyncPeriod:                 &syncPeriod,
 	})
 	if err != nil {
 		log.Error(err, "unable to start controller-manager")

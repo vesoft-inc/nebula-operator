@@ -83,8 +83,8 @@ func (in *GraphdSpec) DeepCopyInto(out *GraphdSpec) {
 		*out = new(GraphdServiceSpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.StorageClaim != nil {
-		in, out := &in.StorageClaim, &out.StorageClaim
+	if in.LogVolumeClaim != nil {
+		in, out := &in.LogVolumeClaim, &out.LogVolumeClaim
 		*out = new(StorageClaim)
 		(*in).DeepCopyInto(*out)
 	}
@@ -116,8 +116,13 @@ func (in *MetadSpec) DeepCopyInto(out *MetadSpec) {
 		*out = new(ServiceSpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.StorageClaim != nil {
-		in, out := &in.StorageClaim, &out.StorageClaim
+	if in.LogVolumeClaim != nil {
+		in, out := &in.LogVolumeClaim, &out.LogVolumeClaim
+		*out = new(StorageClaim)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DataVolumeClaim != nil {
+		in, out := &in.DataVolumeClaim, &out.DataVolumeClaim
 		*out = new(StorageClaim)
 		(*in).DeepCopyInto(*out)
 	}
@@ -411,8 +416,13 @@ func (in *StoragedSpec) DeepCopyInto(out *StoragedSpec) {
 		*out = new(ServiceSpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.StorageClaim != nil {
-		in, out := &in.StorageClaim, &out.StorageClaim
+	if in.LogVolumeClaim != nil {
+		in, out := &in.LogVolumeClaim, &out.LogVolumeClaim
+		*out = new(StorageClaim)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DataVolumeClaim != nil {
+		in, out := &in.DataVolumeClaim, &out.DataVolumeClaim
 		*out = new(StorageClaim)
 		(*in).DeepCopyInto(*out)
 	}

@@ -53,6 +53,7 @@ const (
 	defaultPrintVersion                   = false
 	defaultEnableLeaderElection           = false
 	defaultEnableAdmissionWebhook         = false
+  defaultEnableKruise                   = false
 )
 
 var (
@@ -63,7 +64,6 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(clientgoscheme.Scheme))
-	utilruntime.Must(kruise.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -76,6 +76,7 @@ func main() {
 		metricsAddr             string
 		leaderElectionID        string
 		leaderElectionNamespace string
+		enableKruise            bool
 		enableLeaderElection    bool
 		enableAdmissionWebhook  bool
 		probeAddr               string
@@ -103,6 +104,7 @@ func main() {
 		"Namespace the controller watches for updates to Kubernetes objects, If empty, all namespaces are watched.")
 	pflag.DurationVar(&syncPeriod, "sync-period", defaultSyncPeriod,
 		"Period at which the controller forces the repopulation  of its local object stores.")
+	pflag.BoolVar(&enableKruise, "enable-kruise", defaultEnableKruise, "Enable openkruise scheme for controller manager.")
 	opts := logging.Options{
 		Development:     true,
 		StacktraceLevel: zap.NewAtomicLevelAt(zap.FatalLevel),
@@ -119,6 +121,11 @@ func main() {
 	if printVersion {
 		log.Info("Nebula Operator Version", "version", version.Version())
 		os.Exit(0)
+	}
+
+	if enableKruise {
+		utilruntime.Must(kruise.AddToScheme(scheme))
+		log.Info("register openkruise scheme")
 	}
 
 	log.Info("Welcome to Nebula Operator.")
@@ -141,7 +148,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	nebulaClusterReconciler, err := nebulacluster.NewClusterReconciler(mgr)
+	nebulaClusterReconciler, err := nebulacluster.NewClusterReconciler(mgr, enableKruise)
 	if err != nil {
 		log.Error(err, "unable to create nebula cluster reconciler", "controller", "NebulaCluster")
 		os.Exit(1)

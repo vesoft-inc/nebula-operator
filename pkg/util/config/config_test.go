@@ -101,6 +101,35 @@ func TestAppendCustomConfig(t *testing.T) {
 --enable_optimizer=true
 `,
 		},
+		{
+			name: "multi custom parameter not in template",
+			data: template,
+			custom: map[string]string{
+				"enable_optimizer":     "true",
+				"max_log_size":         "100",
+				"logtostderr":          "true",
+				"log_dir":              "logs",
+				"symbolize_stacktrace": "false",
+			},
+			want: `
+########## authorization ##########
+# Enable authorization
+--enable_authorize=false
+
+########## Authentication ##########
+# User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
+--auth_type=password
+
+--rocksdb_compression_per_level=
+
+########## Custom ##########
+--enable_optimizer=true
+--log_dir=logs
+--logtostderr=true
+--max_log_size=100
+--symbolize_stacktrace=false
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

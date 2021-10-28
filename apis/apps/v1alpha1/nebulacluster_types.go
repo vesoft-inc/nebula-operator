@@ -172,9 +172,9 @@ type GraphdSpec struct {
 	// +optional
 	Service *GraphdServiceSpec `json:"service,omitempty"`
 
-	// K8S persistent volume claim for Graphd data storage.
+	// K8S persistent volume claim for Graphd log volume.
 	// +optional
-	StorageClaim *StorageClaim `json:"storageClaim,omitempty"`
+	LogVolumeClaim *StorageClaim `json:"logVolumeClaim,omitempty"`
 }
 
 // MetadSpec defines the desired state of Metad
@@ -188,9 +188,13 @@ type MetadSpec struct {
 	// +optional
 	Service *ServiceSpec `json:"service,omitempty"`
 
-	// K8S persistent volume claim for Metad data storage.
+	// K8S persistent volume claim for Metad log volume.
 	// +optional
-	StorageClaim *StorageClaim `json:"storageClaim,omitempty"`
+	LogVolumeClaim *StorageClaim `json:"logVolumeClaim,omitempty"`
+
+	// K8S persistent volume claim for Metad data volume.
+	// +optional
+	DataVolumeClaim *StorageClaim `json:"dataVolumeClaim,omitempty"`
 }
 
 // StoragedSpec defines the desired state of Storaged
@@ -204,9 +208,13 @@ type StoragedSpec struct {
 	// +optional
 	Service *ServiceSpec `json:"service,omitempty"`
 
-	// K8S persistent volume claim for Storaged data storage.
+	// K8S persistent volume claim for Storaged log volume.
 	// +optional
-	StorageClaim *StorageClaim `json:"storageClaim,omitempty"`
+	LogVolumeClaim *StorageClaim `json:"logVolumeClaim,omitempty"`
+
+	// K8S persistent volume claim for Storaged data volume.
+	// +optional
+	DataVolumeClaim *StorageClaim `json:"dataVolumeClaim,omitempty"`
 }
 
 // PodSpec is a common set of k8s resource configs for nebula components.

@@ -17,7 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -77,16 +80,28 @@ func (c *storagedComponent) GetResources() *corev1.ResourceRequirements {
 	return getResources(c.nc.Spec.Storaged.Resources)
 }
 
-func (c *storagedComponent) GetStorageClass() *string {
-	scName := c.nc.Spec.Storaged.StorageClaim.StorageClassName
+func (c *storagedComponent) GetLogStorageClass() *string {
+	scName := c.nc.Spec.Storaged.LogVolumeClaim.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil
 	}
 	return scName
 }
 
-func (c *storagedComponent) GetStorageResources() *corev1.ResourceRequirements {
-	return c.nc.Spec.Storaged.StorageClaim.Resources.DeepCopy()
+func (c *storagedComponent) GetDataStorageClass() *string {
+	scName := c.nc.Spec.Storaged.LogVolumeClaim.StorageClassName
+	if scName == nil || *scName == "" {
+		return nil
+	}
+	return scName
+}
+
+func (c *storagedComponent) GetLogStorageResources() *corev1.ResourceRequirements {
+	return c.nc.Spec.Storaged.LogVolumeClaim.Resources.DeepCopy()
+}
+
+func (c *storagedComponent) GetDataStorageResources() *corev1.ResourceRequirements {
+	return c.nc.Spec.Storaged.LogVolumeClaim.Resources.DeepCopy()
 }
 
 func (c *storagedComponent) GetPodEnvVars() []corev1.EnvVar {
@@ -188,11 +203,11 @@ func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	componentType := c.Type().String()
 	return []corev1.VolumeMount{
 		{
-			Name:      componentType,
+			Name:      logVolume(componentType),
 			MountPath: "/usr/local/nebula/logs",
 			SubPath:   "logs",
 		}, {
-			Name:      componentType,
+			Name:      dataVolume(componentType),
 			MountPath: "/usr/local/nebula/data",
 			SubPath:   "data",
 		},
@@ -203,14 +218,61 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 	componentType := c.Type().String()
 	return []corev1.Volume{
 		{
-			Name: componentType,
+			Name: logVolume(componentType),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: componentType,
+					ClaimName: logVolume(componentType),
+				},
+			},
+		},
+		{
+			Name: dataVolume(componentType),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: dataVolume(componentType),
 				},
 			},
 		},
 	}
+}
+
+func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
+	componentType := c.Type().String()
+	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()
+	logReq, err := parseStorageRequest(logRes.Requests)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse storage request for %s log volume, error: %v", componentType, err)
+	}
+
+	datSC, dataRes := c.GetDataStorageClass(), c.GetDataStorageResources()
+	dataReq, err := parseStorageRequest(dataRes.Requests)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse storage request for %s data volume, error: %v", componentType, err)
+	}
+
+	claims := []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: logVolume(componentType),
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources:        logReq,
+				StorageClassName: logSC,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: dataVolume(componentType),
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources:        dataReq,
+				StorageClassName: datSC,
+			},
+		},
+	}
+	return claims, nil
 }
 
 func (c *storagedComponent) GenerateWorkload(

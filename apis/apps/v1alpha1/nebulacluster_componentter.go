@@ -36,8 +36,6 @@ type NebulaClusterComponentter interface {
 	GetConfig() map[string]string
 	GetConfigMapKey() string
 	GetResources() *corev1.ResourceRequirements
-	GetStorageClass() *string
-	GetStorageResources() *corev1.ResourceRequirements
 	GetPodEnvVars() []corev1.EnvVar
 	GetPodAnnotations() map[string]string
 	GetPodLabels() map[string]string
@@ -58,6 +56,7 @@ type NebulaClusterComponentter interface {
 	GenerateContainerPorts() []corev1.ContainerPort
 	GenerateVolumeMounts() []corev1.VolumeMount
 	GenerateVolumes() []corev1.Volume
+	GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error)
 	GenerateWorkload(gvk schema.GroupVersionKind, cm *corev1.ConfigMap, enableEvenPodsSpread bool) (*unstructured.Unstructured, error)
 	GenerateService() *corev1.Service
 	GenerateConfigMap() *corev1.ConfigMap

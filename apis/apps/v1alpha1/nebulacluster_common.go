@@ -154,6 +154,14 @@ func getConfigKey(componentType string) string {
 	return fmt.Sprintf("nebula-%s.conf", componentType)
 }
 
+func logVolume(componentType string) string {
+	return componentType + "-log"
+}
+
+func dataVolume(componentType string) string {
+	return componentType + "-data"
+}
+
 func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, error) {
 	if res == nil {
 		return corev1.ResourceRequirements{}, nil
@@ -277,10 +285,9 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		}
 	}
 
-	scName, storageRes := c.GetStorageClass(), c.GetStorageResources()
-	storageRequest, err := parseStorageRequest(storageRes.Requests)
+	volumeClaim, err := c.GenerateVolumeClaim()
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse storage request for %s, error: %v", err, componentType)
+		return nil, err
 	}
 
 	replicas := c.GetReplicas()
@@ -309,18 +316,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 					Partition: &replicas,
 				},
 			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: componentType,
-					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-						Resources:        storageRequest,
-						StorageClassName: scName,
-					},
-				},
-			},
+			VolumeClaimTemplates: volumeClaim,
 		},
 	}
 

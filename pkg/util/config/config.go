@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -66,8 +67,14 @@ func AppendCustomConfig(data string, custom map[string]string) string {
 	if len(custom) > 0 {
 		_, _ = b.WriteString("\n########## Custom ##########\n")
 	}
-	for k, v := range custom {
-		_, _ = b.WriteString(fmt.Sprintf("--%s=%s\n", k, v))
+
+	var sortedKeys []string
+	for k := range custom {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+	for _, k := range sortedKeys {
+		_, _ = b.WriteString(fmt.Sprintf("--%s=%s\n", k, custom[k]))
 	}
 
 	return b.String()

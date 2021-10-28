@@ -46,7 +46,6 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(clientgoscheme.Scheme))
-	utilruntime.Must(kruise.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -57,6 +56,7 @@ func main() {
 	var (
 		printVersion            bool
 		metricsAddr             string
+		enableKruise            bool
 		enableLeaderElection    bool
 		enableAdmissionWebhook  bool
 		probeAddr               string
@@ -66,10 +66,11 @@ func main() {
 	pflag.BoolVar(&printVersion, "version", false, "Show version and quit")
 	pflag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	pflag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	pflag.BoolVar(&enableKruise, "enable-kruise", false, "Enable openkruise scheme for controller manager.")
 	pflag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	pflag.BoolVar(&enableAdmissionWebhook, "admission-webhook", false, "Enable admission webhook for controller manager. ")
+	pflag.BoolVar(&enableAdmissionWebhook, "admission-webhook", false, "Enable admission webhook for controller manager.")
 	pflag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 2, "The max concurrent reconciles.")
 	opts := logging.Options{
 		Development:     true,
@@ -89,6 +90,11 @@ func main() {
 		os.Exit(0)
 	}
 
+	if enableKruise {
+		utilruntime.Must(kruise.AddToScheme(scheme))
+		log.Info("register openkruise scheme")
+	}
+
 	log.Info("Welcome to Nebula Operator.")
 	log.Info("Nebula Operator Version", "version", version.Version())
 
@@ -105,7 +111,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	nebulaClusterReconciler, err := nebulacluster.NewClusterReconciler(mgr)
+	nebulaClusterReconciler, err := nebulacluster.NewClusterReconciler(mgr, enableKruise)
 	if err != nil {
 		log.Error(err, "unable to create nebula cluster reconciler", "controller", "NebulaCluster")
 		os.Exit(1)

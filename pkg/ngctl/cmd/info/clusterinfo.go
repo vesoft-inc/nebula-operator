@@ -247,9 +247,14 @@ func setComponentInfo(info *NebulaComponentInfo, c appsv1alpha1.NebulaClusterCom
 			info.Memory = *memory
 		}
 	}
-	if res := c.GetStorageResources(); res != nil {
+	if res := c.GetLogStorageResources(); res != nil {
 		if storage := res.Requests.Storage(); storage != nil {
 			info.Storage = *storage
+		}
+	}
+	if res := c.GetDataStorageResources(); res != nil {
+		if storage := res.Requests.Storage(); storage != nil {
+			info.Storage.Add(*storage)
 		}
 	}
 	info.Image = c.GetImage()

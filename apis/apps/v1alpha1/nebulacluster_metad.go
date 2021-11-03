@@ -258,6 +258,7 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 	}
 }
 
+// nolint: dupl
 func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
 	componentType := c.Type().String()
 	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()

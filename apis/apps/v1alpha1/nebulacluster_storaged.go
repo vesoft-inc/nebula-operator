@@ -264,6 +264,7 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 	}
 }
 
+// nolint: dupl
 func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
 	componentType := c.Type().String()
 	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()

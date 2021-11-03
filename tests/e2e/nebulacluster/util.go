@@ -37,7 +37,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nebula "github.com/vesoft-inc/nebula-go"
+	nebula "github.com/vesoft-inc/nebula-go/v2"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	e2econfig "github.com/vesoft-inc/nebula-operator/tests/e2e/config"
@@ -60,7 +60,7 @@ func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1al
 					Image:    "vesoft/nebula-graphd",
 					Version:  nebulaVersion,
 				},
-				StorageClaim: &v1alpha1.StorageClaim{
+				LogVolumeClaim: &v1alpha1.StorageClaim{
 					StorageClassName: &storageClassName,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
@@ -75,7 +75,15 @@ func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1al
 					Image:    "vesoft/nebula-metad",
 					Version:  nebulaVersion,
 				},
-				StorageClaim: &v1alpha1.StorageClaim{
+				LogVolumeClaim: &v1alpha1.StorageClaim{
+					StorageClassName: &storageClassName,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: resource.MustParse("1Gi"),
+						},
+					},
+				},
+				DataVolumeClaim: &v1alpha1.StorageClaim{
 					StorageClassName: &storageClassName,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
@@ -90,7 +98,15 @@ func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1al
 					Image:    "vesoft/nebula-storaged",
 					Version:  nebulaVersion,
 				},
-				StorageClaim: &v1alpha1.StorageClaim{
+				LogVolumeClaim: &v1alpha1.StorageClaim{
+					StorageClassName: &storageClassName,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: resource.MustParse("1Gi"),
+						},
+					},
+				},
+				DataVolumeClaim: &v1alpha1.StorageClaim{
 					StorageClassName: &storageClassName,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{

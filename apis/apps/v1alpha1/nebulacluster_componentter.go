@@ -40,6 +40,11 @@ type NebulaClusterComponentter interface {
 	GetPodAnnotations() map[string]string
 	GetPodLabels() map[string]string
 	NodeSelector() map[string]string
+	Affinity() *corev1.Affinity
+	Tolerations() []corev1.Toleration
+	SidecarContainers() []corev1.Container
+	SidecarVolumes() []corev1.Volume
+	ReadinessProbe() *corev1.Probe
 	IsHeadlessService() bool
 	GetServiceSpec() *ServiceSpec
 	GetServiceName() string

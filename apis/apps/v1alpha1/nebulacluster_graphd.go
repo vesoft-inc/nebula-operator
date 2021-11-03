@@ -113,6 +113,34 @@ func (c *graphdComponent) NodeSelector() map[string]string {
 	return selector
 }
 
+func (c *graphdComponent) Affinity() *corev1.Affinity {
+	affinity := c.nc.Spec.Graphd.PodSpec.Affinity
+	if affinity == nil {
+		affinity = c.nc.Spec.Affinity
+	}
+	return affinity
+}
+
+func (c *graphdComponent) Tolerations() []corev1.Toleration {
+	tolerations := c.nc.Spec.Graphd.PodSpec.Tolerations
+	if len(tolerations) == 0 {
+		return c.nc.Spec.Tolerations
+	}
+	return tolerations
+}
+
+func (c *graphdComponent) SidecarContainers() []corev1.Container {
+	return c.nc.Spec.Graphd.PodSpec.SidecarContainers
+}
+
+func (c *graphdComponent) SidecarVolumes() []corev1.Volume {
+	return c.nc.Spec.Graphd.PodSpec.SidecarVolumes
+}
+
+func (c *graphdComponent) ReadinessProbe() *corev1.Probe {
+	return c.nc.Spec.Graphd.PodSpec.ReadinessProbe
+}
+
 func (c *graphdComponent) IsHeadlessService() bool {
 	return false
 }

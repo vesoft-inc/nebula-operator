@@ -53,7 +53,7 @@ const (
 	defaultPrintVersion                   = false
 	defaultEnableLeaderElection           = false
 	defaultEnableAdmissionWebhook         = false
-  defaultEnableKruise                   = false
+	defaultEnableKruise                   = false
 )
 
 var (

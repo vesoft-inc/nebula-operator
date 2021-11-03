@@ -125,6 +125,34 @@ func (c *metadComponent) NodeSelector() map[string]string {
 	return selector
 }
 
+func (c *metadComponent) Affinity() *corev1.Affinity {
+	affinity := c.nc.Spec.Metad.PodSpec.Affinity
+	if affinity == nil {
+		affinity = c.nc.Spec.Affinity
+	}
+	return affinity
+}
+
+func (c *metadComponent) Tolerations() []corev1.Toleration {
+	tolerations := c.nc.Spec.Metad.PodSpec.Tolerations
+	if len(tolerations) == 0 {
+		return c.nc.Spec.Tolerations
+	}
+	return tolerations
+}
+
+func (c *metadComponent) SidecarContainers() []corev1.Container {
+	return c.nc.Spec.Metad.PodSpec.SidecarContainers
+}
+
+func (c *metadComponent) SidecarVolumes() []corev1.Volume {
+	return c.nc.Spec.Metad.PodSpec.SidecarVolumes
+}
+
+func (c *metadComponent) ReadinessProbe() *corev1.Probe {
+	return c.nc.Spec.Metad.PodSpec.ReadinessProbe
+}
+
 func (c *metadComponent) IsHeadlessService() bool {
 	return true
 }

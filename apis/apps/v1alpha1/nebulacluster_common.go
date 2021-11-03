@@ -209,7 +209,12 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		Env:          c.GetPodEnvVars(),
 		Ports:        ports,
 		VolumeMounts: mounts,
-		ReadinessProbe: &corev1.Probe{
+	}
+
+	if c.ReadinessProbe() != nil {
+		container.ReadinessProbe = c.ReadinessProbe()
+	} else {
+		container.ReadinessProbe = &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/status",
@@ -217,10 +222,10 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},
-			InitialDelaySeconds: int32(20),
+			InitialDelaySeconds: int32(10),
 			TimeoutSeconds:      int32(5),
 			PeriodSeconds:       int32(10),
-		},
+		}
 	}
 
 	resources := c.GetResources()
@@ -234,6 +239,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 	}
 
 	containers = append(containers, container)
+	containers = append(containers, c.SidecarContainers()...)
 
 	return containers
 }
@@ -265,6 +271,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 			},
 		})
 	}
+	volumes = append(volumes, c.SidecarVolumes()...)
 
 	podSpec := corev1.PodSpec{
 		SchedulerName:    nc.Spec.SchedulerName,
@@ -272,6 +279,8 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		Containers:       containers,
 		Volumes:          volumes,
 		ImagePullSecrets: nc.Spec.ImagePullSecrets,
+		Affinity: c.Affinity(),
+		Tolerations: c.Tolerations(),
 	}
 
 	if nc.Spec.SchedulerName == corev1.DefaultSchedulerName && enableEvenPodsSpread {

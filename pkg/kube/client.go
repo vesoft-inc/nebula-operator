@@ -29,6 +29,7 @@ type ClientSet interface {
 	Pod() Pod
 	Endpoint() Endpoint
 	Service() Service
+	Ingress() Ingress
 	Workload() Workload
 	NebulaCluster() NebulaCluster
 }
@@ -40,6 +41,7 @@ type clientSet struct {
 	podClient      Pod
 	epClient       Endpoint
 	svcClient      Service
+	ingressClient  Ingress
 	workloadClient Workload
 	nebulaClient   NebulaCluster
 }
@@ -56,6 +58,7 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		podClient:      NewPod(cli),
 		epClient:       NewEndpointClient(cli),
 		svcClient:      NewService(cli),
+		ingressClient:  NewIngress(cli),
 		workloadClient: NewWorkload(cli),
 		nebulaClient:   NewNebulaCluster(cli),
 	}, nil
@@ -83,6 +86,10 @@ func (c *clientSet) Endpoint() Endpoint {
 
 func (c *clientSet) Service() Service {
 	return c.svcClient
+}
+
+func (c *clientSet) Ingress() Ingress {
+	return c.ingressClient
 }
 
 func (c *clientSet) Workload() Workload {

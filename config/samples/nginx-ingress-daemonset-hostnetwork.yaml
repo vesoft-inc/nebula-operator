@@ -12,7 +12,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: tcp-services
-  namespace: ingress-nginx
+  namespace: nginx-ingress
 data:
   9669: "default/nebula-graphd-svc:9669"
 ---

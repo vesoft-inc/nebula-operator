@@ -99,16 +99,6 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	if nc.Status.Metad.Version != "" {
-		oldImage := nc.Spec.Metad.Image + ":" + nc.Status.Metad.Version
-		if err := extender.SetContainerImage(
-			newWorkload,
-			nc.MetadComponent().Type().String(),
-			oldImage); err != nil {
-			return err
-		}
-	}
-
 	if err := extender.SetTemplateAnnotations(
 		newWorkload,
 		map[string]string{annotation.AnnPodConfigMapHash: cmHash}); err != nil {

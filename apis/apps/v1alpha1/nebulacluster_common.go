@@ -279,8 +279,8 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		Containers:       containers,
 		Volumes:          volumes,
 		ImagePullSecrets: nc.Spec.ImagePullSecrets,
-		Affinity: c.Affinity(),
-		Tolerations: c.Tolerations(),
+		Affinity:         c.Affinity(),
+		Tolerations:      c.Tolerations(),
 	}
 
 	if nc.Spec.SchedulerName == corev1.DefaultSchedulerName && enableEvenPodsSpread {

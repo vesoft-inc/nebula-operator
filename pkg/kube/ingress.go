@@ -94,7 +94,7 @@ func (i *ingressClient) CreateOrUpdateIngress(ingress *networkingv1.Ingress) err
 }
 
 func (i *ingressClient) GetIngress(namespace, ingressName string) (*networkingv1.Ingress, error) {
-	return i.GetIngress(namespace, ingressName)
+	return i.getIngress(client.ObjectKey{Namespace: namespace, Name: ingressName})
 }
 
 func (i *ingressClient) getIngress(objKey client.ObjectKey) (*networkingv1.Ingress, error) {

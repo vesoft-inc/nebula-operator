@@ -79,6 +79,12 @@ type NebulaClusterSpec struct {
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// +optional
+	Tolerations []corev1.Toleration `json:"toleration,omitempty"`
+
 	// UpdatePolicy indicates how pods should be updated
 	// +optional
 	UpdatePolicy string `json:"strategy,omitempty"`
@@ -249,6 +255,21 @@ type PodSpec struct {
 	// K8S nodeSelector.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// +optional
+	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
+
+	// +optional
+	SidecarVolumes []corev1.Volume `json:"sidecarVolumes,omitempty"`
+
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 }
 
 // StorageClaim contains details of storages

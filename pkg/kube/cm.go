@@ -28,6 +28,8 @@ import (
 
 type ConfigMap interface {
 	CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error
+	GetConfigMap(namespace, cmName string) (*corev1.ConfigMap, error)
+	DeleteConfigMap(namespace, cmName string) error
 }
 
 type cmClient struct {
@@ -64,8 +66,13 @@ func (c *cmClient) CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error {
 				}
 			}
 		}
+		return err
 	}
 	return nil
+}
+
+func (c *cmClient) GetConfigMap(namespace, cmName string) (*corev1.ConfigMap, error) {
+	return c.getConfigMap(client.ObjectKey{Namespace: namespace, Name: cmName})
 }
 
 func (c *cmClient) updateConfigMap(cm *corev1.ConfigMap) error {
@@ -87,4 +94,14 @@ func (c *cmClient) getConfigMap(objKey client.ObjectKey) (*corev1.ConfigMap, err
 		return nil, err
 	}
 	return configMap, err
+}
+
+func (c *cmClient) DeleteConfigMap(namespace, cmName string) error {
+	log := getLog().WithValues("namespace", namespace, "name", cmName)
+	cm, err := c.getConfigMap(client.ObjectKey{Namespace: namespace, Name: cmName})
+	if err != nil {
+		return err
+	}
+	log.Info("configMap deleted")
+	return c.kubecli.Delete(context.TODO(), cm)
 }

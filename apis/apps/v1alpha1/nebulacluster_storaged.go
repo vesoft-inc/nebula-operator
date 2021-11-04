@@ -127,6 +127,34 @@ func (c *storagedComponent) NodeSelector() map[string]string {
 	return selector
 }
 
+func (c *storagedComponent) Affinity() *corev1.Affinity {
+	affinity := c.nc.Spec.Storaged.PodSpec.Affinity
+	if affinity == nil {
+		affinity = c.nc.Spec.Affinity
+	}
+	return affinity
+}
+
+func (c *storagedComponent) Tolerations() []corev1.Toleration {
+	tolerations := c.nc.Spec.Storaged.PodSpec.Tolerations
+	if len(tolerations) == 0 {
+		return c.nc.Spec.Tolerations
+	}
+	return tolerations
+}
+
+func (c *storagedComponent) SidecarContainers() []corev1.Container {
+	return c.nc.Spec.Storaged.PodSpec.SidecarContainers
+}
+
+func (c *storagedComponent) SidecarVolumes() []corev1.Volume {
+	return c.nc.Spec.Storaged.PodSpec.SidecarVolumes
+}
+
+func (c *storagedComponent) ReadinessProbe() *corev1.Probe {
+	return c.nc.Spec.Storaged.PodSpec.ReadinessProbe
+}
+
 func (c *storagedComponent) IsHeadlessService() bool {
 	return true
 }
@@ -236,6 +264,7 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 	}
 }
 
+// nolint: dupl
 func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
 	componentType := c.Type().String()
 	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()

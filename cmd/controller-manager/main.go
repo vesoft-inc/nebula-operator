@@ -96,10 +96,10 @@ func main() {
 	pflag.BoolVar(&enableLeaderElection, "enable-leader-election", defaultEnableLeaderElection,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	pflag.BoolVar(&enableAdmissionWebhook, "admission-webhook", defaultEnableAdmissionWebhook, "Enable admission webhook for controller manager. ")
+	pflag.BoolVar(&enableAdmissionWebhook, "admission-webhook", defaultEnableAdmissionWebhook, "Enable admission webhook for controller manager. ") // nolint: revive
 	pflag.IntVar(&webhookBindPort, "webhook-bind-port", defaultWebhookBindPort,
 		"The TCP port the Webhook server binds to.")
-	pflag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", defaultMaxIngressConcurrentReconciles, "The max concurrent reconciles.")
+	pflag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", defaultMaxIngressConcurrentReconciles, "The max concurrent reconciles.") // nolint: revive
 	pflag.StringVar(&watchNamespace, "watch-namespace", defaultWatchNamespace,
 		"Namespace the controller watches for updates to Kubernetes objects, If empty, all namespaces are watched.")
 	pflag.DurationVar(&syncPeriod, "sync-period", defaultSyncPeriod,

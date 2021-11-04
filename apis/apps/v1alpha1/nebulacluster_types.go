@@ -221,6 +221,10 @@ type StoragedSpec struct {
 	// K8S persistent volume claim for Storaged data volume.
 	// +optional
 	DataVolumeClaim *StorageClaim `json:"dataVolumeClaim,omitempty"`
+
+	// Flag to enable/disable auto balance data and leader while the nebula storaged scale out , default false
+	// +optional
+	EnableAutoBalance *bool `json:"enableAutoBalance,omitempty"`
 }
 
 // PodSpec is a common set of k8s resource configs for nebula components.

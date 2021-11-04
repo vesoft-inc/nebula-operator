@@ -19,6 +19,7 @@ package component
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nebulago "github.com/vesoft-inc/nebula-go/nebula"
@@ -61,6 +62,11 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 
 	if !nc.StoragedComponent().IsReady() {
 		log.Info("storage cluster status not ready", "storage", nc.StoragedComponent().GetName())
+		return nil
+	}
+
+	if pointer.BoolPtrDerefOr(nc.Spec.Storaged.EnableAutoBalance, false) {
+		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}
 

@@ -35,6 +35,7 @@ spec:
             {{- if .Values.watchNamespace }}
             - --watch-namespace={{ .Values.watchNamespace }}
             {{- end }}
+            - --enable-kruise={{ .Values.enableKruise | default false }}
             {{- if .Values.syncPeriod }}
             - --sync-period={{ .Values.syncPeriod }}
             {{- end }}

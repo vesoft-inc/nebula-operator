@@ -35,6 +35,7 @@ import (
 	e2eframework "github.com/vesoft-inc/nebula-operator/tests/e2e/framework"
 )
 
+// nolint:dupl
 var _ = ginkgo.Describe("NebulaCluster", func() {
 	f := e2eframework.NewDefaultFramework("nebulacluster")
 
@@ -49,50 +50,66 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 	})
 
 	ginkgo.Describe("difference spec", func() {
-		kruiseReference := v1alpha1.WorkloadReference{
-			Name:    "statefulsets.apps.kruise.io",
-			Version: "v1alpha1",
-		}
-		nebulaSchedulerName := "nebula-scheduler"
+		var (
+			kruiseReference = v1alpha1.WorkloadReference{
+				Name:    "statefulsets.apps.kruise.io",
+				Version: "v1alpha1",
+			}
+			nebulaSchedulerName = "nebula-scheduler"
+			defaultUser         = "root"
+			defaultPassword     = "vesoft"
+		)
 
 		testCases := []struct {
-			Name             string
-			GraphdReplicas   int32
-			MetadReplicas    int32
-			StoragedReplicas int32
-			Reference        *v1alpha1.WorkloadReference
-			SchedulerName    string
+			Name                      string
+			GraphdReplicas            int32
+			MetadReplicas             int32
+			StoragedReplicas          int32
+			StoragedEnableAutoBalance bool
+			Reference                 *v1alpha1.WorkloadReference
+			SchedulerName             string
+			EnablePVReclaim           bool
 		}{
 			{
-				Name:             "test1-1-3",
-				GraphdReplicas:   1,
-				MetadReplicas:    1,
-				StoragedReplicas: 3,
+				Name:                      "test1-1-3",
+				GraphdReplicas:            1,
+				MetadReplicas:             1,
+				StoragedReplicas:          3,
+				StoragedEnableAutoBalance: false,
+				EnablePVReclaim:           true,
 			}, {
-				Name:             "test1-1-3",
-				GraphdReplicas:   1,
-				MetadReplicas:    1,
-				StoragedReplicas: 3,
-				Reference:        &kruiseReference,
-				SchedulerName:    nebulaSchedulerName,
+				Name:                      "test1-1-3",
+				GraphdReplicas:            1,
+				MetadReplicas:             1,
+				StoragedReplicas:          3,
+				StoragedEnableAutoBalance: true,
+				Reference:                 &kruiseReference,
+				SchedulerName:             nebulaSchedulerName,
+				EnablePVReclaim:           false,
 			}, {
-				Name:             "test1-3-3",
-				GraphdReplicas:   1,
-				MetadReplicas:    3,
-				StoragedReplicas: 3,
-				SchedulerName:    nebulaSchedulerName,
+				Name:                      "test1-3-3",
+				GraphdReplicas:            1,
+				MetadReplicas:             3,
+				StoragedReplicas:          3,
+				StoragedEnableAutoBalance: true,
+				SchedulerName:             nebulaSchedulerName,
+				EnablePVReclaim:           true,
 			}, {
-				Name:             "test1-3-3",
-				GraphdReplicas:   1,
-				MetadReplicas:    3,
-				StoragedReplicas: 3,
-				Reference:        &kruiseReference,
+				Name:                      "test1-3-3",
+				GraphdReplicas:            1,
+				MetadReplicas:             3,
+				StoragedReplicas:          3,
+				StoragedEnableAutoBalance: true,
+				Reference:                 &kruiseReference,
+				EnablePVReclaim:           true,
 			}, {
-				Name:             "test2-3-4",
-				GraphdReplicas:   2,
-				MetadReplicas:    3,
-				StoragedReplicas: 4,
-				SchedulerName:    nebulaSchedulerName,
+				Name:                      "test2-3-4",
+				GraphdReplicas:            2,
+				MetadReplicas:             3,
+				StoragedReplicas:          4,
+				StoragedEnableAutoBalance: true,
+				SchedulerName:             nebulaSchedulerName,
+				EnablePVReclaim:           true,
 			},
 		}
 
@@ -108,12 +125,14 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 					nc.Spec.Graphd.Replicas = pointer.Int32Ptr(tc.GraphdReplicas)
 					nc.Spec.Metad.Replicas = pointer.Int32Ptr(tc.MetadReplicas)
 					nc.Spec.Storaged.Replicas = pointer.Int32Ptr(tc.StoragedReplicas)
+					nc.Spec.Storaged.EnableAutoBalance = pointer.BoolPtr(tc.StoragedEnableAutoBalance)
 					if tc.Reference != nil {
 						nc.Spec.Reference = *tc.Reference
 					}
 					if tc.SchedulerName != "" {
 						nc.Spec.SchedulerName = tc.SchedulerName
 					}
+					nc.Spec.EnablePVReclaim = pointer.BoolPtr(tc.EnablePVReclaim)
 
 					err = runtimeClient.Create(context.TODO(), nc)
 					framework.ExpectNoError(err, "failed to create NebulaCluster %s/%s", ns, nc.Name)
@@ -145,8 +164,8 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"USE e2e_test;" +
 						"CREATE TAG IF NOT EXISTS person(name string, age int);" +
 						"CREATE EDGE IF NOT EXISTS like(likeness double);"
-					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
-						graphLocalAddress, graphLocalPort, "root", "vesoft", executeSchema)
+					err = waitForExecuteNebulaSchema(2*time.Minute, 2*time.Second,
+						graphLocalAddress, graphLocalPort, defaultUser, defaultPassword, executeSchema)
 					framework.ExpectNoError(err, "failed to init space after deploy for NebulaCluster %s/%s, executeSchema: %s",
 						ns, nc.Name, executeSchema)
 					time.Sleep(10 * time.Second)
@@ -160,17 +179,71 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"'John':('John', 11);" +
 						"INSERT EDGE like(likeness) VALUES " +
 						"'Bob'->'Lily':(80.0);"
-					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
-						graphLocalAddress, graphLocalPort, "root", "vesoft", executeSchema)
+					err = waitForExecuteNebulaSchema(2*time.Minute, 2*time.Second,
+						graphLocalAddress, graphLocalPort, defaultUser, defaultPassword, executeSchema)
 					framework.ExpectNoError(err, "failed to insert samples after deploy for NebulaCluster %s/%s, executeSchema: %s",
 						ns, nc.Name, executeSchema)
+
+					scaleScope := int32(2)
+					ginkgo.By("Scale out NebulaCluster")
+					for i := int32(1); i <= scaleScope; i++ {
+						err = updateNebulaCluster(nc, runtimeClient, func() error {
+							nc.Spec.Graphd.Replicas = pointer.Int32Ptr(tc.GraphdReplicas + i)
+							nc.Spec.Storaged.Replicas = pointer.Int32Ptr(tc.StoragedReplicas + i)
+							return nil
+						})
+						framework.ExpectNoError(err, "failed to update NebulaCluster %s/%s", ns, nc.Name)
+
+						framework.Logf("scale out NebulaCluster to replicas(Graphd %d, Metad %d, Storaged %d)",
+							*nc.Spec.Graphd.Replicas, *nc.Spec.Metad.Replicas, *nc.Spec.Storaged.Replicas)
+
+						err = waitForNebulaClusterReady(nc, 30*time.Minute, 30*time.Second, runtimeClient)
+						framework.ExpectNoError(err, "failed to wait for NebulaCluster %s/%s ready", ns, nc.Name)
+					}
+
+					ginkgo.By("Insert sample data NebulaCluster after scale out")
+
+					time.Sleep(2 * time.Second)
+					executeSchema = "USE e2e_test;" +
+						"INSERT EDGE like(likeness) VALUES " +
+						"'Bob'->'Tom':(70.0)," +
+						"'Lily'->'Jerry':(84.0);"
+					err = waitForExecuteNebulaSchema(2*time.Minute, 2*time.Second, graphLocalAddress, graphLocalPort,
+						defaultUser, defaultPassword, executeSchema)
+					framework.ExpectNoError(err, "failed to insert samples after scale out for NebulaCluster %s/%s", ns, nc.Name)
+
+					ginkgo.By("Scale in NebulaCluster")
+					for i := scaleScope - 1; i >= int32(0); i-- {
+						err = updateNebulaCluster(nc, runtimeClient, func() error {
+							nc.Spec.Graphd.Replicas = pointer.Int32Ptr(tc.GraphdReplicas + i)
+							nc.Spec.Storaged.Replicas = pointer.Int32Ptr(tc.StoragedReplicas + i)
+							return nil
+						})
+						framework.ExpectNoError(err, "failed to update NebulaCluster %s/%s", ns, nc.Name)
+
+						framework.Logf("scale in NebulaCluster to replicas(Graphd %d, Metad %d, Storaged %d)",
+							*nc.Spec.Graphd.Replicas, *nc.Spec.Metad.Replicas, *nc.Spec.Storaged.Replicas)
+
+						err = waitForNebulaClusterReady(nc, 30*time.Minute, 30*time.Second, runtimeClient)
+						framework.ExpectNoError(err, "failed to wait for NebulaCluster %s/%s ready", ns, nc.Name)
+					}
+
+					ginkgo.By("Insert sample data NebulaCluster after scale in")
+					time.Sleep(2 * time.Second)
+					executeSchema = "USE e2e_test;" +
+						"INSERT EDGE like(likeness) VALUES " +
+						"'Tom'->'Jerry':(68.3), " +
+						"'Bob'->'John':(97.2);"
+					err = waitForExecuteNebulaSchema(2*time.Minute, 2*time.Second, graphLocalAddress, graphLocalPort,
+						defaultUser, defaultPassword, executeSchema)
+					framework.ExpectNoError(err, "failed to insert samples after scale in for NebulaCluster %s/%s", ns, nc.Name)
 
 					ginkgo.By("Query from NebulaCluster")
 					time.Sleep(2 * time.Second)
 					executeSchema = "USE e2e_test;" +
 						"GO FROM 'Bob' OVER like YIELD $^.person.name, $^.person.age, like.likeness;"
-					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
-						graphLocalAddress, graphLocalPort, "root", "vesoft", executeSchema)
+					err = waitForExecuteNebulaSchema(2*time.Minute, 2*time.Second,
+						graphLocalAddress, graphLocalPort, defaultUser, defaultPassword, executeSchema)
 					framework.ExpectNoError(err, "failed to insert samples after scale out for NebulaCluster %s/%s executeSchema: %s",
 						ns, nc.Name, executeSchema)
 

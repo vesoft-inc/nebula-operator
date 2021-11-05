@@ -42,31 +42,32 @@ func NewConfigMap(kubecli client.Client) ConfigMap {
 
 func (c *cmClient) CreateOrUpdateConfigMap(cm *corev1.ConfigMap) error {
 	if err := c.kubecli.Create(context.TODO(), cm); err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			merge := func(existing, desired *corev1.ConfigMap) error {
-				existing.Data = desired.Data
-				existing.Labels = desired.Labels
-				for k, v := range desired.Annotations {
-					existing.Annotations[k] = v
-				}
-				return nil
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+		merge := func(existing, desired *corev1.ConfigMap) error {
+			existing.Data = desired.Data
+			existing.Labels = desired.Labels
+			for k, v := range desired.Annotations {
+				existing.Annotations[k] = v
 			}
-			key := client.ObjectKeyFromObject(cm)
-			existing, err := c.getConfigMap(key)
-			if err != nil {
+			return nil
+		}
+		key := client.ObjectKeyFromObject(cm)
+		existing, err := c.getConfigMap(key)
+		if err != nil {
+			return err
+		}
+		mutated := existing.DeepCopy()
+		if err := merge(mutated, cm); err != nil {
+			return err
+		}
+		if !apiequality.Semantic.DeepEqual(existing, mutated) {
+			if err := c.updateConfigMap(mutated); err != nil {
 				return err
-			}
-			mutated := existing.DeepCopy()
-			if err := merge(mutated, cm); err != nil {
-				return err
-			}
-			if !apiequality.Semantic.DeepEqual(existing, mutated) {
-				if err := c.updateConfigMap(mutated); err != nil {
-					return err
-				}
 			}
 		}
-		return err
+		return nil
 	}
 	return nil
 }

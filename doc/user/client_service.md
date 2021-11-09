@@ -15,7 +15,7 @@ The client service is of type `ClusterIP` and accessible only from within the Ku
 For example, access the service from a pod in the cluster:
 
 ```shell script
-$ kubectl run --rm -ti --image vesoft/nebula-console:v2 --restart=Never -- /bin/sh
+$ kubectl run --rm -ti --image vesoft/nebula-console:v2.5.0 --restart=Never -- /bin/sh
 / # nebula-console -u user -p password --address=nebula-graphd-svc --port=9669
 2021/04/12 08:16:30 [INFO] connection pool is initialized successfully
 
@@ -77,12 +77,67 @@ nebula-metad-headless          ClusterIP   None           <none>        9559/TCP
 nebula-storaged-headless       ClusterIP   None           <none>        9779/TCP,19779/TCP,19780/TCP,9778/TCP            23h
 ```
 
-The graphd client API should now be accessible from outside the Kubernetes cluster:
+Now test the connection outside the Kubernetes cluster:
 
 ```shell script
-/ # nebula-console -u user -p password --address=192.168.8.26 --port=9669
+/ # nebula-console -u user -p password --address=192.168.8.26 --port=32236
 2021/04/12 08:50:32 [INFO] connection pool is initialized successfully
 
 Welcome to Nebula Graph!
 (user@nebula) [(none)]> 
+```
+
+## Accessing the service via nginx-ingress-controller
+Nginx Ingress is an implementation of Kubernetes Ingress. It watch the Ingress resources of the Kubernetes cluster then translate the Ingress rules into Nginx configurations, enabling Nginx to forward layer 7 traffic.
+
+We provide an scenario to replace `NodePort` service, it runs in hostNetwork + daemonSet mode.
+
+As hostNetwork is used, the Nginx Ingress pods cannot be scheduled to the same node. In order to avoid listening port conflicts, some nodes can be selected and labeled as edge nodes in advance, which are specially used to deploy Nginx Ingress.  Nginx Ingress is then deployed on these nodes in DaemonSet mode.
+
+Ingress does not support TCP or UDP services. For this reason the nginx-ingress-controller uses the flags --tcp-services-configmap and --udp-services-configmap to point to an existing config map where the key is the external port to use and the value indicates the service to expose using the format: `<namespace/service name>:<service port>`.
+
+```shell script
+$ cat config/samples/nginx-ingress-daemonset-hostnetwork.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tcp-services
+  namespace: nginx-ingress
+data:
+  # update 
+  9669: "default/nebula-graphd-svc:9669"
+```  
+
+If ConfigMap tcp-services is configured, then these ports need to be exposed in the Service defined for the Ingress.
+
+```shell script
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx-ingress
+    component: default-backend
+  name: nginx-ingress-proxy-tcp
+  namespace: nginx-ingress
+spec:
+  ports:
+    - name: proxied-tcp
+      port: 9669
+      protocol: TCP
+      targetPort: 9669
+  selector:
+    app: nginx-ingress
+    component: default-backend
+  type: "ClusterIP"
+```
+
+Now test the connection outside the Kubernetes cluster:
+
+```shell script
+/ # nebula-console -addr 192.168.8.25 -port 9669 -u root -p nebula
+2021/11/08 14:53:56 [INFO] connection pool is initialized successfully
+
+Welcome to Nebula Graph!
+
+(root@nebula) [(none)]> 
 ```

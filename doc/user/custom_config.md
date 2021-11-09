@@ -1,6 +1,6 @@
 # configure custom parameter
 
-For each component has a configuration entry, it defines in crd as config which is a map structure, it will be loaded by configamap.
+For each component has a configuration entry, it defines in crd as config which is a map structure, it will be loaded by configmap.
 ```go
 // Config defines a graphd configuration load into ConfigMap
 Config map[string]string `json:"config,omitempty"`
@@ -24,7 +24,7 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-graphd
-    version: v2.0.1
+    version: v2.6.1
     storageClaim:
       resources:
         requests:

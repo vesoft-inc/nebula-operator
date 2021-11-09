@@ -128,6 +128,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 			if err := metaClient.RemoveHost(hosts); err != nil {
 				return err
 			}
+			log.Info("remove hosts %s successfully", "host", hosts)
 		}
 	}
 
@@ -135,11 +136,13 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		return err
 	}
 
-	var deleted bool
-	pvcName := ordinalPVCName(nc.StoragedComponent().Type(), nc.StoragedComponent().GetName(), newReplicas)
-	_, err = ss.clientSet.PVC().GetPVC(nc.GetNamespace(), pvcName)
-	if apierrors.IsNotFound(err) {
-		deleted = true
+	var deleted = true
+	pvcNames := ordinalPVCNames(nc.StoragedComponent().Type(), nc.StoragedComponent().GetName(), newReplicas)
+	for _, pvcName := range pvcNames {
+		_, err = ss.clientSet.PVC().GetPVC(nc.GetNamespace(), pvcName)
+		if !apierrors.IsNotFound(err) {
+			deleted = false
+		}
 	}
 
 	if deleted && nc.StoragedComponent().IsReady() {

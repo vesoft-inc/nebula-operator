@@ -108,9 +108,7 @@ func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.P
 		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_SPACE_NOT_FOUND {
 			return errors.Errorf("space %d not found", partID)
 		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_LEADER_CHANGED {
-			log.Info("request leader changed",
-				"host", resp.Result_.FailedParts[0].Leader.Host,
-				"port", resp.Result_.FailedParts[0].Leader.Port)
+			log.Info("request leader changed", "result", resp.Result_.FailedParts[0].String())
 			return nil
 		} else {
 			return errors.Errorf("TransLeader space %d part %d code %d", spaceID, partID, resp.Result_.FailedParts[0].Code)

@@ -199,6 +199,9 @@ func (m *metaClient) GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, 
 		if err != nil {
 			return nil, err
 		}
+		if spaceDetail.Properties.ReplicaFactor == 1 {
+			continue
+		}
 		var partIDs []nebula.PartitionID
 		for partID := int32(1); partID <= spaceDetail.Properties.PartitionNum; partID++ {
 			partIDs = append(partIDs, partID)

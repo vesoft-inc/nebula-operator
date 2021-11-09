@@ -39,7 +39,7 @@ const (
 	// TransLeaderBeginTime is the key of trans Leader begin time
 	TransLeaderBeginTime = "transLeaderBeginTime"
 	// TransLeaderTimeout is the timeout limit of trans leader
-	TransLeaderTimeout = 3 * time.Minute
+	TransLeaderTimeout = 5 * time.Minute
 )
 
 type storagedUpdater struct {
@@ -65,11 +65,6 @@ func (s *storagedUpdater) Update(
 		nc.Status.Storaged.Phase == v1alpha1.ScaleOutPhase ||
 		nc.Status.Metad.Phase == v1alpha1.UpdatePhase {
 		return setLastConfig(oldUnstruct, newUnstruct)
-	}
-
-	nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
-	if err := s.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
-		return err
 	}
 
 	if !extender.PodTemplateEqual(newUnstruct, oldUnstruct) {

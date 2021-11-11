@@ -19,7 +19,7 @@ nebula:
       limits:
         cpu: "1"
         memory: "500Mi"
-    logStorage: "1Gi"
+    logStorage: "500Mi"
 
   metad:
     image: vesoft/nebula-metad

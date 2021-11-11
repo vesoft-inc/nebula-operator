@@ -75,7 +75,7 @@ The following table lists is the configurable parameters of the chart and their 
 | Parameter | Description | Default |
 |:---------|:-----------|:-------|
 | `nameOverride` | Override the name of the chart | `nil` |
-| `nebula.version` | Nebula version | `v2.0.1` |
+| `nebula.version` | Nebula version | `v2.6.1` |
 | `nebula.imagePullPolicy` | Nebula image pull policy | `Always` |
 | `nebula.storageClassName` | PersistentVolume class, default to use the default StorageClass | `nil` |
 | `nebula.schedulerName` | Scheduler for nebula component | `default-scheduler` |
@@ -86,15 +86,17 @@ The following table lists is the configurable parameters of the chart and their 
 | `nebula.graphd.replicas` | Graphd replica number | `2` |
 | `nebula.graphd.env` | Graphd env | `[]` |
 | `nebula.graphd.resources` | Graphd resources | `{"resources":{"requests":{"cpu":"500m","memory":"500Mi"},"limits":{"cpu":"1","memory":"1Gi"}}}`|
-| `nebula.graphd.storage` | Graphd storage size | `1Gi` |
+| `nebula.graphd.logStorage` | Graphd log volume size | `500Mi` |
 | `nebula.metad.image` | Metad container image without tag, and use `nebula.version` as tag | `vesoft/nebula-metad` |
 | `nebula.metad.replicas` | Metad replica number | `3` |
 | `nebula.metad.env` | Metad env | `[]` |
 | `nebula.metad.resources` | Metad resources | `{"resources":{"requests":{"cpu":"500m","memory":"500Mi"},"limits":{"cpu":"1","memory":"1Gi"}}}`|
-| `nebula.metad.storage` | Metad storage size | `1Gi` |
+| `nebula.metad.logStorage` | Metad log volume size | `500Mi` |
+| `nebula.metad.dataStorage` | Metad data volume size | `1Gi` |
 | `nebula.storaged.image` | Storaged container image without tag, and use `nebula.version` as tag | `vesoft/nebula-storaged` |
 | `nebula.storaged.replicas` | Storaged replica number | `3` |
 | `nebula.storaged.env` | Storaged env | `[]` |
 | `nebula.storaged.resources` | Storaged resources | `{"resources":{"requests":{"cpu":"500m","memory":"500Mi"},"limits":{"cpu":"1","memory":"1Gi"}}}`|
-| `nebula.storaged.storage` | Storaged storage size | `1Gi` |
+| `nebula.storaged.logStorage` | Storaged log volume size | `500Mi` |
+| `nebula.storaged.dataStorage` | Storaged data volume size | `1Gi` |
 | `imagePullSecrets` | The secret to use for pulling the images | `[]`  |

@@ -197,13 +197,13 @@ Nebula Operator <-> NebulaGraph
 |                         | NebulaGraph v2.5 | NebulaGraph v2.6 |
 |----------------------- |------------------|------------------|
 | `v0.8.0`              | ✓                | -                |
-| `v0.9.0`             | ✓                | +                |
+| `v0.9.0`*            | ✓                | ✓                |
 
 Key:
 
 * `✓` Compatible.
 * `-` Not Compatible.
-* `+` Some features can't support, if you upgrade from v2.5 to v2.6, please notice.
+* `*` Please notice that the StorageClaim is split into LogVolumeClaim and DataVolumeClaim in crd. v0.9.0 can't forward compatible.
 
 ## FAQ
 

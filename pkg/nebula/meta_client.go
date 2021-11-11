@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
 	"github.com/vesoft-inc/nebula-go/v2/nebula"
 	"github.com/vesoft-inc/nebula-go/v2/nebula/meta"
 

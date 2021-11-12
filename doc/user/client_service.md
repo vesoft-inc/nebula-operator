@@ -108,30 +108,7 @@ data:
   9669: "default/nebula-graphd-svc:9669"
 ```  
 
-If ConfigMap tcp-services is configured, then these ports need to be exposed in the Service defined for the Ingress.
-
-```shell script
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: nginx-ingress
-    component: default-backend
-  name: nginx-ingress-proxy-tcp
-  namespace: nginx-ingress
-spec:
-  ports:
-    - name: proxied-tcp
-      port: 9669
-      protocol: TCP
-      targetPort: 9669
-  selector:
-    app: nginx-ingress
-    component: default-backend
-  type: "ClusterIP"
-```
-
-Now test the connection outside the Kubernetes cluster:
+If ConfigMap tcp-services is configured, then test the connection outside the Kubernetes cluster:
 
 ```shell script
 / # nebula-console -addr 192.168.8.25 -port 9669 -u root -p nebula

@@ -1,8 +1,12 @@
 ## Scale storage nodes and Balance
 
-Scaling out Storage is divided into two stages. In the first stage, you need to wait for the status of all newly created Pods to be Ready. 
+Scaling out Storage is divided into two stages. 
 
-In the second stage, the BALANCE DATA and BALANCE LEADER command is executed. We provide a parameter `enableAutoBalance` in crd to control whether to automatically balance data and leader.
+* In the first stage, you need to wait for the status of all newly created Pods to be Ready. 
+
+* In the second stage, the BALANCE DATA and BALANCE LEADER command is executed. 
+
+We provide a parameter `enableAutoBalance` in crd to control whether to automatically balance data and leader.
 
 Through both stages, the scaling process of the controller replicas is decoupled from the balancing data process and user executing it at low traffic. 
 

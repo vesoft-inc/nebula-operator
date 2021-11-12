@@ -57,7 +57,7 @@ func syncComponentStatus(
 	}
 
 	image := getContainerImage(workload, component.Type().String())
-	if image != "" && strings.Contains(image, ":") && status.Version == "" {
+	if image != "" && strings.Contains(image, ":") {
 		status.Version = strings.Split(image, ":")[1]
 	}
 

@@ -146,7 +146,7 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"CREATE TAG IF NOT EXISTS person(name string, age int);" +
 						"CREATE EDGE IF NOT EXISTS like(likeness double);"
 					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
-						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
+						graphLocalAddress, graphLocalPort, "root", "vesoft", executeSchema)
 					framework.ExpectNoError(err, "failed to init space after deploy for NebulaCluster %s/%s, executeSchema: %s",
 						ns, nc.Name, executeSchema)
 					time.Sleep(10 * time.Second)
@@ -161,7 +161,7 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 						"INSERT EDGE like(likeness) VALUES " +
 						"'Bob'->'Lily':(80.0);"
 					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
-						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
+						graphLocalAddress, graphLocalPort, "root", "vesoft", executeSchema)
 					framework.ExpectNoError(err, "failed to insert samples after deploy for NebulaCluster %s/%s, executeSchema: %s",
 						ns, nc.Name, executeSchema)
 
@@ -170,13 +170,13 @@ var _ = ginkgo.Describe("NebulaCluster", func() {
 					executeSchema = "USE e2e_test;" +
 						"GO FROM 'Bob' OVER like YIELD $^.person.name, $^.person.age, like.likeness;"
 					err = waitForExecuteNebulaSchema(30*time.Second, 2*time.Second,
-						graphLocalAddress, graphLocalPort, "user", "pass", executeSchema)
+						graphLocalAddress, graphLocalPort, "root", "vesoft", executeSchema)
 					framework.ExpectNoError(err, "failed to insert samples after scale out for NebulaCluster %s/%s executeSchema: %s",
 						ns, nc.Name, executeSchema)
 
 					ginkgo.By("Delete NebulaCluster")
 					err = runtimeClient.Delete(context.TODO(), nc)
-					framework.ExpectNoError(err, "failed to create NebulaCluster %s/%s", ns, nc.Name)
+					framework.ExpectNoError(err, "failed to delete NebulaCluster %s/%s", ns, nc.Name)
 
 					ginkgo.By("Wait for NebulaCluster to be deleted")
 					err = waitForNebulaClusterDeleted(nc, 10*time.Minute, 10*time.Second, runtimeClient)

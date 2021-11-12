@@ -3,7 +3,7 @@ module github.com/vesoft-inc/nebula-operator
 go 1.15
 
 require (
-	github.com/facebook/fbthrift v0.0.0-20190922225929-2f9839604e25
+	github.com/facebook/fbthrift v0.31.1-0.20210223140454-614a73a42488
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-logr/logr v0.3.0
 	github.com/google/go-cmp v0.5.2
@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/vesoft-inc/nebula-go v0.0.0-20210322063004-e37085b865d6
+	github.com/vesoft-inc/nebula-go/v2 v2.5.1
 	go.uber.org/zap v1.15.0
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2

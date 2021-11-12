@@ -57,26 +57,35 @@ func PvcMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClus
 	componentName := component.GetName()
 	log := getLog().WithValues("namespace", component.GetNamespace(), "name", componentName)
 	for i := oldReplicas - 1; i >= newReplicas; i-- {
-		pvcName := ordinalPVCName(component.Type(), componentName, i)
-		pvc, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
-		if err != nil {
-			return fmt.Errorf("get pvc %s for cluster %s/%s failed: %s", pvcName, component.GetNamespace(), component.GetClusterName(), err)
-		}
+		pvcNames := ordinalPVCNames(component.Type(), componentName, i)
+		for _, pvcName := range pvcNames {
+			pvc, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
+			if err != nil {
+				return fmt.Errorf("get pvc %s for cluster %s/%s failed: %s",
+					pvcName, component.GetNamespace(), component.GetClusterName(), err)
+			}
 
-		if pvc.Annotations == nil {
-			pvc.Annotations = map[string]string{}
+			if pvc.Annotations == nil {
+				pvc.Annotations = map[string]string{}
+			}
+			now := time.Now().Format(time.RFC3339)
+			pvc.Annotations[annotation.AnnPVCDeferDeletingKey] = now
+			if err := pvcClient.UpdatePVC(pvc); err != nil {
+				log.Error(err, "failed to set pvc annotation", "pvcName", pvcName)
+				return err
+			}
+			log.Info("set pvc annotation succeed", "pvcName", pvcName)
 		}
-		now := time.Now().Format(time.RFC3339)
-		pvc.Annotations[annotation.AnnPVCDeferDeletingKey] = now
-		if err := pvcClient.UpdatePVC(pvc); err != nil {
-			log.Error(err, "failed to set pvc annotation", "pvcName", pvcName)
-			return err
-		}
-		log.Info("set pvc annotation succeed", "pvcName", pvcName)
 	}
 	return nil
 }
 
-func ordinalPVCName(componentType v1alpha1.ComponentType, setName string, ordinal int32) string {
-	return fmt.Sprintf("%s-%s-%d", componentType, setName, ordinal)
+func ordinalPVCNames(componentType v1alpha1.ComponentType, setName string, ordinal int32) []string {
+	// TODO: here need a unified function to get logPVC and dataPVC name
+	logPVC := fmt.Sprintf("%s-log-%s-%d", componentType, setName, ordinal)
+	dataPVC := fmt.Sprintf("%s-data-%s-%d", componentType, setName, ordinal)
+	if componentType == v1alpha1.GraphdComponentType {
+		return []string{logPVC}
+	}
+	return []string{logPVC, dataPVC}
 }

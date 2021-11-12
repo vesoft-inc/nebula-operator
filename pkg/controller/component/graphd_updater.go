@@ -49,7 +49,6 @@ func (g *graphUpdater) Update(
 		return setLastConfig(oldUnstruct, newUnstruct)
 	}
 
-	nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
 	// template had been changed
 	if !extender.PodTemplateEqual(newUnstruct, oldUnstruct) {
 		return nil

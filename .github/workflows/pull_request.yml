@@ -34,10 +34,3 @@ jobs:
           export PATH=$PATH:$GOPATH/bin
           make test
         working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
-
-      - name: Auto commit after test
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: auto commit after make test
-          branch: ${{ github.head_ref }}
-          repository: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}

@@ -21,13 +21,13 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/vesoft-inc/nebula-go/nebula"
-	"github.com/vesoft-inc/nebula-go/nebula/storage"
+	"github.com/vesoft-inc/nebula-go/v2/nebula"
+	"github.com/vesoft-inc/nebula-go/v2/nebula/storage"
 )
 
 var ErrNoAvailableStoragedEndpoints = errors.New("storagedclient: no available endpoints")
 
-var _ StorageInterface = &storageClient{}
+var _ StorageInterface = (*storageClient)(nil)
 
 type StorageInterface interface {
 	TransLeader(spaceID nebula.GraphSpaceID, partID nebula.PartitionID, newLeader *nebula.HostAddr) error
@@ -67,11 +67,11 @@ func newStorageConnection(endpoint string, options ...Option) (*storageClient, e
 
 func (s *storageClient) connect() error {
 	log := getLog()
-	if err := s.client.Transport.Open(); err != nil {
+	if err := s.client.Open(); err != nil {
 		log.Error(err, "open transport failed")
 		return err
 	}
-	log.Info("storaged connection opened", "isOpen", s.client.Transport.IsOpen())
+	log.Info("storaged connection opened", "isOpen", s.client.IsOpen())
 	return nil
 }
 
@@ -103,14 +103,12 @@ func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.P
 	}
 
 	if len(resp.Result_.FailedParts) > 0 {
-		if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_PART_NOT_FOUND {
+		if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_PART_NOT_FOUND {
 			return errors.Errorf("part %d not found", partID)
-		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_SPACE_NOT_FOUND {
+		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_SPACE_NOT_FOUND {
 			return errors.Errorf("space %d not found", partID)
-		} else if resp.Result_.FailedParts[0].Code == storage.ErrorCode_E_LEADER_CHANGED {
-			log.Info("request leader changed",
-				"host", resp.Result_.FailedParts[0].Leader.Host,
-				"port", resp.Result_.FailedParts[0].Leader.Port)
+		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_LEADER_CHANGED {
+			log.Info("request leader changed", "result", resp.Result_.FailedParts[0].String())
 			return nil
 		} else {
 			return errors.Errorf("TransLeader space %d part %d code %d", spaceID, partID, resp.Result_.FailedParts[0].Code)

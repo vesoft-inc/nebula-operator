@@ -17,15 +17,18 @@ limitations under the License.
 package component
 
 import (
+	"fmt"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nebulago "github.com/vesoft-inc/nebula-go/nebula"
+	nebulago "github.com/vesoft-inc/nebula-go/v2/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 )
 
@@ -117,7 +120,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 
 	if oldReplicas-newReplicas > 0 {
 		hosts := make([]*nebulago.HostAddr, 0, oldReplicas-newReplicas)
-		port := nebulago.Port(nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift))
+		port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 		for i := oldReplicas - 1; i >= newReplicas; i-- {
 			hosts = append(hosts, &nebulago.HostAddr{
 				Host: nc.StoragedComponent().GetPodFQDN(i),
@@ -128,6 +131,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 			if err := metaClient.RemoveHost(hosts); err != nil {
 				return err
 			}
+			log.Info("remove hosts %s successfully", "host", hosts)
 		}
 	}
 
@@ -135,14 +139,22 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		return err
 	}
 
-	var deleted bool
-	pvcName := ordinalPVCName(nc.StoragedComponent().Type(), nc.StoragedComponent().GetName(), newReplicas)
-	_, err = ss.clientSet.PVC().GetPVC(nc.GetNamespace(), pvcName)
-	if apierrors.IsNotFound(err) {
-		deleted = true
+	deleted := true
+	pvcNames := ordinalPVCNames(nc.StoragedComponent().Type(), nc.StoragedComponent().GetName(), newReplicas)
+	for _, pvcName := range pvcNames {
+		if _, err = ss.clientSet.PVC().GetPVC(nc.GetNamespace(), pvcName); err != nil {
+			if !apierrors.IsNotFound(err) {
+				deleted = false
+				break
+			}
+		}
+	}
+	if !deleted {
+		return &utilerrors.ReconcileError{Msg: fmt.Sprintf("pvc reclaim %s still in progress",
+			nc.StoragedComponent().GetName())}
 	}
 
-	if deleted && nc.StoragedComponent().IsReady() {
+	if nc.StoragedComponent().IsReady() {
 		log.Info("all used pvcs were reclaimed", "storage", nc.StoragedComponent().GetName())
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	}

@@ -65,11 +65,6 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 	var errs []error
 	oldStatus := nc.Status.DeepCopy()
 
-	c.resetImage(nc)
-	if err := c.nebulaClient.UpdateNebulaCluster(nc.DeepCopy()); err != nil {
-		errs = append(errs, err)
-	}
-
 	if err := c.updateNebulaCluster(nc); err != nil {
 		errs = append(errs, err)
 	}
@@ -115,18 +110,6 @@ func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaClu
 	}
 
 	return nil
-}
-
-func (c *defaultNebulaClusterControl) resetImage(nc *v1alpha1.NebulaCluster) {
-	if nc.Status.Graphd.Version != "" {
-		nc.Spec.Graphd.Version = nc.Status.Graphd.Version
-	}
-	if nc.Status.Metad.Version != "" {
-		nc.Spec.Metad.Version = nc.Status.Metad.Version
-	}
-	if nc.Status.Storaged.Version != "" {
-		nc.Spec.Storaged.Version = nc.Status.Storaged.Version
-	}
 }
 
 type FakeClusterControl struct {

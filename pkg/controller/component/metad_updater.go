@@ -45,7 +45,6 @@ func (m *metadUpdater) Update(
 		return nil
 	}
 
-	nc.Status.Metad.Phase = v1alpha1.UpdatePhase
 	if !extender.PodTemplateEqual(newUnstruct, oldUnstruct) {
 		return nil
 	}

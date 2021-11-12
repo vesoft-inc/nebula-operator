@@ -17,11 +17,14 @@ limitations under the License.
 package nebula
 
 import (
+	"math"
+
 	"github.com/facebook/fbthrift/thrift/lib/go/thrift"
 )
 
 const (
 	defaultBufferSize = 128 << 10
+	frameMaxLength    = math.MaxUint32
 )
 
 func buildClientTransport(endpoint string, options ...Option) (thrift.Transport, thrift.ProtocolFactory, error) {
@@ -32,7 +35,8 @@ func buildClientTransport(endpoint string, options ...Option) (thrift.Transport,
 	if err != nil {
 		return nil, nil, err
 	}
-	transport := thrift.NewBufferedTransport(sock, defaultBufferSize)
+	bufferedTranFactory := thrift.NewBufferedTransportFactory(defaultBufferSize)
+	transport := thrift.NewFramedTransportMaxLength(bufferedTranFactory.GetTransport(sock), frameMaxLength)
 	pf := thrift.NewBinaryProtocolFactoryDefault()
 
 	return transport, pf, nil

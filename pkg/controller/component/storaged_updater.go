@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ng "github.com/vesoft-inc/nebula-go/nebula"
+	ng "github.com/vesoft-inc/nebula-go/v2/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
@@ -39,7 +39,7 @@ const (
 	// TransLeaderBeginTime is the key of trans Leader begin time
 	TransLeaderBeginTime = "transLeaderBeginTime"
 	// TransLeaderTimeout is the timeout limit of trans leader
-	TransLeaderTimeout = 3 * time.Minute
+	TransLeaderTimeout = 5 * time.Minute
 )
 
 type storagedUpdater struct {
@@ -65,11 +65,6 @@ func (s *storagedUpdater) Update(
 		nc.Status.Storaged.Phase == v1alpha1.ScaleOutPhase ||
 		nc.Status.Metad.Phase == v1alpha1.UpdatePhase {
 		return setLastConfig(oldUnstruct, newUnstruct)
-	}
-
-	nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
-	if err := s.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
-		return err
 	}
 
 	if !extender.PodTemplateEqual(newUnstruct, oldUnstruct) {
@@ -256,16 +251,6 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 		return err
 	}
 
-	hostItem, err := mc.ListHosts()
-	if err != nil {
-		return err
-	}
-	if !mc.IsBalanced(hostItem) {
-		if err := mc.BalanceLeader(); err != nil {
-			return err
-		}
-	}
-
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
 }
@@ -273,7 +258,7 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 func getNewLeader(nc *v1alpha1.NebulaCluster, replicas, ordinal int32) *ng.HostAddr {
 	var podFQDN string
 	newLeader := &ng.HostAddr{
-		Port: ng.Port(nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)),
+		Port: nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift),
 	}
 
 	if replicas == 3 || replicas > 3 && replicas&1 == 0 {

@@ -7,6 +7,7 @@ It evolved from [NebulaGraph Cloud Service](https://www.nebula-cloud.io/), makes
 - [Install Nebula Operator](#install-nebula-operator)
 - [Create and Destroy](#create-and-destroy-a-nebula-cluster)
 - [Resize](#resize-a-nebula-cluster)
+- [Rolling Upgrade](#upgrade-a-nebula-cluster)
 - [Failover](#failover)
 
 ### install nebula operator
@@ -18,7 +19,7 @@ $ kubectl create -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 A none ha-mode nebula cluster will be created.
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          1m
 nebula-metad-0      1/1     Running   0          1m
@@ -63,7 +64,7 @@ Modify the file and change `replicas` from 3 to 5.
         memory: "1Gi"
     replicas: 5
     image: vesoft/nebula-storaged
-    version: v2.0.1
+    version: v2.6.1
     storageClaim:
       resources:
         requests:
@@ -78,7 +79,7 @@ $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 
 The storaged cluster will scale to 5 members (5 pods):
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          2m
 nebula-metad-0      1/1     Running   0          2m
@@ -101,17 +102,18 @@ Similarly we can decrease the size of the cluster from 5 back to 3 by changing t
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v2.0.1
+    version: v2.6.1
     storageClaim:
       resources:
         requests:
           storage: 2Gi
       storageClassName: fast-disks
 ```
+
 We should see that storaged cluster will eventually reduce to 3 pods:
 
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          10m
 nebula-metad-0      1/1     Running   0          10m
@@ -121,6 +123,46 @@ nebula-storaged-2   1/1     Running   0          10m
 ```
 
 In addition, you can [Install Nebula Cluster with helm](doc/user/nebula_cluster_helm_guide.md).
+
+### Upgrade a nebula cluster
+Create a nebula cluster with the version specified (v2.5.1):
+
+```bash
+$ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
+NAME                READY   STATUS    RESTARTS   AGE
+nebula-graphd-0     1/1     Running   0          25m
+nebula-metad-0      1/1     Running   0          26m
+nebula-storaged-0   1/1     Running   0          22m
+nebula-storaged-1   1/1     Running   0          24m
+nebula-storaged-2   1/1     Running   0          25m
+```
+
+The container image version should be v2.5.1:
+
+```
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
+      1 vesoft/nebula-graphd:v2.5.1
+      1 vesoft/nebula-metad:v2.5.1
+      3 vesoft/nebula-storaged:v2.5.1
+```
+
+Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v2.5.1 to v2.6.1:
+
+Apply the version change to the cluster CR:
+
+```
+$ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
+```
+
+Wait 2 minutes. The container image version should be updated to v2.6.1:
+
+```
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
+      1 vesoft/nebula-graphd:v2.6.1
+      1 vesoft/nebula-metad:v2.6.1
+      3 vesoft/nebula-storaged:v2.6.1
+```
 
 ### Failover
 If the minority of nebula components crash, the nebula operator will automatically recover the failure. Let's walk through this in the following steps.  
@@ -139,7 +181,7 @@ $ kubectl delete pod nebula-storaged-2 --now
 The nebula operator will recover the failure by creating a new pod `nebula-storaged-2`:
 
 ```bash
-$ kubectl get pods -l app.kubernetes.io/instance=nebula
+$ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          15m
 nebula-metad-0      1/1     Running   0          15m
@@ -147,6 +189,21 @@ nebula-storaged-0   1/1     Running   0          15m
 nebula-storaged-1   1/1     Running   0          15m
 nebula-storaged-2   1/1     Running   0          19s
 ```
+
+## Compatibility matrix
+
+Nebula Operator <-> NebulaGraph
+
+|                         | NebulaGraph v2.5 | NebulaGraph v2.6 |
+|----------------------- |------------------|------------------|
+| `v0.8.0`              | ✓                | -                |
+| `v0.9.0`*            | ✓                | ✓                |
+
+Key:
+
+* `✓` Compatible.
+* `-` Not Compatible.
+* `*` Please notice that the StorageClaim is split into LogVolumeClaim and DataVolumeClaim in crd. v0.9.0 can't forward compatible.
 
 ## FAQ
 

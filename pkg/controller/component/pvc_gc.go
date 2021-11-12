@@ -61,7 +61,8 @@ func PvcMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClus
 		for _, pvcName := range pvcNames {
 			pvc, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
 			if err != nil {
-				return fmt.Errorf("get pvc %s for cluster %s/%s failed: %s", pvcName, component.GetNamespace(), component.GetClusterName(), err)
+				return fmt.Errorf("get pvc %s for cluster %s/%s failed: %s",
+					pvcName, component.GetNamespace(), component.GetClusterName(), err)
 			}
 
 			if pvc.Annotations == nil {

@@ -12,6 +12,7 @@ nebula:
     image: vesoft/nebula-graphd
     replicas: 2
     env: []
+    config: {}
     resources:
       requests:
         cpu: "500m"

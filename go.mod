@@ -22,7 +22,6 @@ require (
 	k8s.io/cli-runtime v0.19.2
 	k8s.io/client-go v0.19.2
 	k8s.io/code-generator v0.19.2
-	k8s.io/klog/v2 v2.2.0
 	k8s.io/kube-scheduler v0.19.2
 	k8s.io/kubectl v0.19.2
 	k8s.io/kubernetes v1.19.2

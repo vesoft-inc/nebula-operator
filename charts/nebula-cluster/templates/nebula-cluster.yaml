@@ -22,8 +22,32 @@ spec:
     {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
     {{- end }}
-    labels: {{ toYaml .Values.nebula.podLabels | nindent 6 }}
-    annotations: {{ toYaml .Values.nebula.podAnnotations | nindent 6 }}
+    labels: {{ toYaml .Values.nebula.graphd.podLabels | nindent 6 }}
+    annotations: {{ toYaml .Values.nebula.graphd.podAnnotations | nindent 6 }}
+    {{- with .Values.nebula.graphd.nodeSelector }}
+    nodeSelector:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.affinity }}
+    affinity:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.tolerations }}
+    tolerations:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.readinessProbe }}
+    readinessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.sidecarContainers }}
+    sidecarContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.sidecarVolumes }}
+    sidecarVolumes:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
   metad:
     replicas: {{ .Values.nebula.metad.replicas }}
     resources: {{ toYaml .Values.nebula.metad.resources | nindent 6 }}
@@ -44,8 +68,32 @@ spec:
       {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
-    labels: {{ toYaml .Values.nebula.podLabels | nindent 6 }}
-    annotations: {{ toYaml .Values.nebula.podAnnotations | nindent 6 }}
+    labels: {{ toYaml .Values.nebula.metad.podLabels | nindent 6 }}
+    annotations: {{ toYaml .Values.nebula.metad.podAnnotations | nindent 6 }}
+    {{- with .Values.nebula.metad.nodeSelector }}
+    nodeSelector:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.affinity }}
+    affinity:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.tolerations }}
+    tolerations:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.readinessProbe }}
+    readinessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.sidecarContainers }}
+    sidecarContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.sidecarVolumes }}
+    sidecarVolumes:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
   storaged:
     replicas: {{ .Values.nebula.storaged.replicas }}
     resources: {{ toYaml .Values.nebula.storaged.resources | nindent 6 }}
@@ -66,8 +114,32 @@ spec:
       {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
-    labels: {{ toYaml .Values.nebula.podLabels | nindent 6 }}
-    annotations: {{ toYaml .Values.nebula.podAnnotations | nindent 6 }}
+    labels: {{ toYaml .Values.nebula.storaged.podLabels | nindent 6 }}
+    annotations: {{ toYaml .Values.nebula.storaged.podAnnotations | nindent 6 }}
+    {{- with .Values.nebula.storaged.nodeSelector }}
+    nodeSelector:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.affinity }}
+    affinity:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.tolerations }}
+    tolerations:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.readinessProbe }}
+    readinessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.sidecarContainers }}
+    sidecarContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.sidecarVolumes }}
+    sidecarVolumes:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
   reference: {{ toYaml .Values.nebula.reference | nindent 4 }}
   imagePullPolicy: {{ .Values.nebula.imagePullPolicy }}
   {{- if .Values.imagePullSecrets }}

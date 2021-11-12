@@ -80,23 +80,45 @@ The following table lists is the configurable parameters of the chart and their 
 | `nebula.storageClassName` | PersistentVolume class, default to use the default StorageClass | `nil` |
 | `nebula.schedulerName` | Scheduler for nebula component | `default-scheduler` |
 | `nebula.reference` | Reference for nebula component | `{"name": "statefulsets.apps", "version": "v1"}` |
-| `nebula.podLabels` | Labels for nebula component | `{}` |
-| `nebula.podAnnotations` | Annotations for nebula component | `{}` |
 | `nebula.graphd.image` | Graphd container image without tag, and use `nebula.version` as tag | `vesoft/nebula-graphd` |
 | `nebula.graphd.replicas` | Graphd replica number | `2` |
 | `nebula.graphd.env` | Graphd env | `[]` |
 | `nebula.graphd.resources` | Graphd resources | `{"resources":{"requests":{"cpu":"500m","memory":"500Mi"},"limits":{"cpu":"1","memory":"1Gi"}}}`|
 | `nebula.graphd.logStorage` | Graphd log volume size | `500Mi` |
+| `nebula.graphd.podLabels` | Graphd pod labels | `{}` |
+| `nebula.graphd.podAnnotations` | Graphd pod annotations | `{}` |
+| `nebula.graphd.nodeSelector` | Graphd nodeSelector | `{}` |
+| `nebula.graphd.tolerations` | Graphd pod tolerations | `{}` |
+| `nebula.graphd.affinity` | Graphd affinity | `{}` |
+| `nebula.graphd.readinessProbe` | Graphd pod readinessProbe | `{}` |
+| `nebula.graphd.sidecarContainers` | Graphd pod sidecarContainers | `{}` |
+| `nebula.graphd.sidecarVolumes` | Graphd pod sidecarVolumes | `{}` |
 | `nebula.metad.image` | Metad container image without tag, and use `nebula.version` as tag | `vesoft/nebula-metad` |
 | `nebula.metad.replicas` | Metad replica number | `3` |
 | `nebula.metad.env` | Metad env | `[]` |
 | `nebula.metad.resources` | Metad resources | `{"resources":{"requests":{"cpu":"500m","memory":"500Mi"},"limits":{"cpu":"1","memory":"1Gi"}}}`|
 | `nebula.metad.logStorage` | Metad log volume size | `500Mi` |
 | `nebula.metad.dataStorage` | Metad data volume size | `1Gi` |
+| `nebula.metad.podLabels` | Metad pod labels | `{}` |
+| `nebula.metad.podAnnotations` | Metad pod annotations | `{}` |
+| `nebula.metad.nodeSelector` | Metad nodeSelector | `{}` |
+| `nebula.metad.tolerations` | Metad pod tolerations | `{}` |
+| `nebula.metad.affinity` | Metad affinity | `{}` |
+| `nebula.metad.readinessProbe` | Metad pod readinessProbe | `{}` |
+| `nebula.metad.sidecarContainers` | Metad pod sidecarContainers | `{}` |
+| `nebula.metad.sidecarVolumes` | Metad pod sidecarVolumes | `{}` |
 | `nebula.storaged.image` | Storaged container image without tag, and use `nebula.version` as tag | `vesoft/nebula-storaged` |
 | `nebula.storaged.replicas` | Storaged replica number | `3` |
 | `nebula.storaged.env` | Storaged env | `[]` |
 | `nebula.storaged.resources` | Storaged resources | `{"resources":{"requests":{"cpu":"500m","memory":"500Mi"},"limits":{"cpu":"1","memory":"1Gi"}}}`|
 | `nebula.storaged.logStorage` | Storaged log volume size | `500Mi` |
 | `nebula.storaged.dataStorage` | Storaged data volume size | `1Gi` |
+| `nebula.storaged.podLabels` | Storaged pod labels | `{}` |
+| `nebula.storaged.podAnnotations` | Storaged pod annotations | `{}` |
+| `nebula.storaged.nodeSelector` | Storaged nodeSelector | `{}` |
+| `nebula.storaged.tolerations` | Storaged pod tolerations | `{}` |
+| `nebula.storaged.affinity` | Storaged affinity | `{}` |
+| `nebula.storaged.readinessProbe` | Storaged pod readinessProbe | `{}` |
+| `nebula.storaged.sidecarContainers` | Storaged pod sidecarContainers | `{}` |
+| `nebula.storaged.sidecarVolumes` | Storaged pod sidecarVolumes | `{}` |
 | `imagePullSecrets` | The secret to use for pulling the images | `[]`  |

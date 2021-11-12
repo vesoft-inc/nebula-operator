@@ -17,6 +17,8 @@ limitations under the License.
 package component
 
 import (
+	"fmt"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -26,6 +28,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 )
 
@@ -139,13 +142,19 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	var deleted = true
 	pvcNames := ordinalPVCNames(nc.StoragedComponent().Type(), nc.StoragedComponent().GetName(), newReplicas)
 	for _, pvcName := range pvcNames {
-		_, err = ss.clientSet.PVC().GetPVC(nc.GetNamespace(), pvcName)
-		if !apierrors.IsNotFound(err) {
-			deleted = false
+		if _, err = ss.clientSet.PVC().GetPVC(nc.GetNamespace(), pvcName); err != nil {
+			if !apierrors.IsNotFound(err) {
+				deleted = false
+				break
+			}
 		}
 	}
+	if !deleted {
+		return &utilerrors.ReconcileError{Msg: fmt.Sprintf("pvc reclaim %s still in progress",
+			nc.StoragedComponent().GetName())}
+	}
 
-	if deleted && nc.StoragedComponent().IsReady() {
+	if nc.StoragedComponent().IsReady() {
 		log.Info("all used pvcs were reclaimed", "storage", nc.StoragedComponent().GetName())
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	}

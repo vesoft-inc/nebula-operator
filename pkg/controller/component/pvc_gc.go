@@ -80,6 +80,7 @@ func PvcMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClus
 }
 
 func ordinalPVCNames(componentType v1alpha1.ComponentType, setName string, ordinal int32) []string {
+	// TODO: here need a unified function to get logPVC and dataPVC name
 	logPVC := fmt.Sprintf("%s-log-%s-%d", componentType, setName, ordinal)
 	dataPVC := fmt.Sprintf("%s-data-%s-%d", componentType, setName, ordinal)
 	if componentType == v1alpha1.GraphdComponentType {

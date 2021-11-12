@@ -26,10 +26,24 @@ spec:
           command:
             - /usr/local/bin/controller-manager
           args:
-            - --health-probe-bind-address=:8081
-            - --metrics-bind-address=127.0.0.1:8080
-            - --leader-elect
-            - --admission-webhook={{ .Values.admissionWebhook.create }}
+            {{- if .Values.healthProbeBindAddr }}
+            - --health-probe-bind-address={{ .Values.healthProbeBindAddr }}
+            {{- end }}
+            {{- if .Values.metricsBindAddr }}
+            - --metrics-bind-address={{ .Values.metricsBindAddr }}
+            {{- end }}
+            {{- if .Values.watchNamespace }}
+            - --watch-namespace={{ .Values.watchNamespace }}
+            {{- end }}
+            {{- if .Values.syncPeriod }}
+            - --sync-period={{ .Values.syncPeriod }}
+            {{- end }}
+            {{- if .Values.maxConcurrentReconciles }}
+            - --max-concurrent-reconciles={{ .Values.maxConcurrentReconciles }}
+            {{- end }}
+            - --enable-leader-election
+            - --leader-election-namespace={{ template "nebula-operator.namespace" . }}
+            - --admission-webhook={{ .Values.admissionWebhook.create | default false }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
             {{- if .Values.kubernetesClusterDomain }}
@@ -40,7 +54,7 @@ spec:
           {{- end }}
           {{- if .Values.admissionWebhook.create }}
           ports:
-            - containerPort: 9443
+            - containerPort: {{ .Values.webhookBindPort | default 9443 }}
               name: webhook-server
               protocol: TCP
           {{- end }}
@@ -49,13 +63,13 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8081
+              port: {{ (split ":" .Values.healthProbeBindAddr)._1 | default 8081 }}
             initialDelaySeconds: 15
             periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 8081
+              port: {{ (split ":" .Values.healthProbeBindAddr)._1 | default 8081 }}
             initialDelaySeconds: 5
             periodSeconds: 10
           securityContext:
@@ -89,6 +103,18 @@ spec:
       securityContext:
         runAsNonRoot: true
       terminationGracePeriodSeconds: 10
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.admissionWebhook.create }}
       volumes:
         - name: cert

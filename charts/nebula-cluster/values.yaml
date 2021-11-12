@@ -1,13 +1,11 @@
 nebula:
-  version: v2.0.1
+  version: v.2.6.1
   imagePullPolicy: Always
   storageClassName: ""
   schedulerName: default-scheduler # nebula-scheduler
   reference:
     name: statefulsets.apps
     version: v1
-  podLabels: {}
-  podAnnotations: {}
   graphd:
     image: vesoft/nebula-graphd
     replicas: 2
@@ -18,8 +16,16 @@ nebula:
         memory: "500Mi"
       limits:
         cpu: "1"
-        memory: "1Gi"
-    storage: "1Gi"
+        memory: "500Mi"
+    logStorage: "500Mi"
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    readinessProbe: {}
+    sidecarContainers: []
+    sidecarVolumes: []
 
   metad:
     image: vesoft/nebula-metad
@@ -32,7 +38,16 @@ nebula:
       limits:
         cpu: "1"
         memory: "1Gi"
-    storage: "1Gi"
+    logStorage: "500Mi"
+    dataStorage: "1Gi"
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    readinessProbe: {}
+    sidecarContainers: []
+    sidecarVolumes: []
 
   storaged:
     image: vesoft/nebula-storaged
@@ -45,7 +60,17 @@ nebula:
       limits:
         cpu: "1"
         memory: "1Gi"
-    storage: "1Gi"
+    logStorage: "500Mi"
+    dataStorage: "1Gi"
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    readinessProbe: {}
+    sidecarContainers: []
+    sidecarVolumes: []
+
 
 imagePullSecrets: []
 nameOverride: ""

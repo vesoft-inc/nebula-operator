@@ -1,5 +1,4 @@
 {{- if .Values.scheduler.create }}
-{{- if .Values.scheduler.create }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -63,4 +62,4 @@ spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
 {{- end }}
-{{- end }}
+

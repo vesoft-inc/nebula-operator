@@ -298,6 +298,9 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 		} else if resp.Code == nebula.ErrorCode_E_BALANCED {
 			log.Info("the cluster is balanced")
 			return nil
+		} else if resp.Code == nebula.ErrorCode_E_NO_HOSTS {
+			log.Info("the host is removed")
+			return nil
 		} else if resp.Code == nebula.ErrorCode_E_BALANCER_RUNNING {
 			return errors.Errorf("the cluster balance job is running")
 		}

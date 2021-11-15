@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo"
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -38,9 +39,8 @@ import (
 func setupSuite() {
 	framework.Logf("running BeforeSuite actions on node 1")
 
-	ginkgo.By("Add NebulaCluster scheme")
-	err := v1alpha1.AddToScheme(scheme.Scheme)
-	framework.ExpectNoError(err, "failed to add NebulaCluster scheme")
+	ginkgo.By("Register scheme")
+	registerScheme()
 
 	ginkgo.By("Setup kubernetes")
 	setupKubernetes()
@@ -69,6 +69,16 @@ func cleanupSuite() {
 
 func cleanupSuitePerGinkgoNode() {
 	framework.Logf("running AfterSuite actions on node 1")
+}
+
+func registerScheme() {
+	var err error
+	err = scheme.AddToScheme(scheme.Scheme)
+	framework.ExpectNoError(err, "failed to add scheme")
+	err = v1alpha1.AddToScheme(scheme.Scheme)
+	framework.ExpectNoError(err, "failed to add NebulaCluster scheme")
+	err = kruisev1alpha1.AddToScheme(scheme.Scheme)
+	framework.ExpectNoError(err, "failed to add openkruise scheme")
 }
 
 func setupKubernetes() {
@@ -162,6 +172,8 @@ func setupNebulaOperator() {
 		path.Join(framework.TestContext.RepoRoot, "charts/nebula-operator"),
 		"--namespace", helmNamespace,
 		"--create-namespace",
+		"--set", "enableKruise=true",
+		"--set", "scheduler.create=true",
 	}
 	helmInstall(helmName, helmNamespace, workloadNamespaces, helmArgs...)
 }

@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 	storageutil "k8s.io/kubernetes/pkg/apis/storage/util"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/utils/pointer"
@@ -217,6 +219,8 @@ func waitForNebulaClusterDeleted(
 		switch v := list.(type) {
 		case *appsv1.StatefulSetList:
 			return len(v.Items) == 0, nil
+		case *kruisev1alpha1.StatefulSetList:
+			return len(v.Items) == 0, nil
 		case *corev1.ServiceList:
 			return len(v.Items) == 0, nil
 		case *corev1.PersistentVolumeClaimList:
@@ -227,13 +231,18 @@ func waitForNebulaClusterDeleted(
 
 	objectLists := []client.ObjectList{
 		&appsv1.StatefulSetList{},
+		&kruisev1alpha1.StatefulSetList{},
 		&corev1.ServiceList{},
-		&corev1.PersistentVolumeClaimList{},
+	}
+
+	if nc.IsPVReclaimEnabled() {
+		objectLists = append(objectLists, &corev1.PersistentVolumeClaimList{})
 	}
 
 	return wait.PollImmediate(pollInterval, timeout, func() (bool, error) {
 		var err error
 		var actual v1alpha1.NebulaCluster
+		framework.Logf("Waiting for NebulaCluster %s to be deleted", key)
 		err = runtimeClient.Get(context.TODO(), key, &actual)
 		if !apierrors.IsNotFound(err) {
 			return false, nil
@@ -241,11 +250,29 @@ func waitForNebulaClusterDeleted(
 
 		for _, list := range objectLists {
 			if ok, _ := checkIfDeleted(list); !ok {
+				framework.Logf("Waiting for NebulaCluster %s to be deleted, %T is not deleted", key, list)
 				return false, nil
 			}
 		}
 
 		return true, nil
+	})
+}
+
+func updateNebulaCluster(
+	nc *v1alpha1.NebulaCluster,
+	runtimeClient client.Client,
+	updateFunc func() error,
+) error {
+	key := client.ObjectKeyFromObject(nc)
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := runtimeClient.Get(context.TODO(), key, nc); err != nil {
+			return err
+		}
+		if err := updateFunc(); err != nil {
+			return err
+		}
+		return runtimeClient.Update(context.TODO(), nc)
 	})
 }
 
@@ -256,6 +283,7 @@ func (l nebulaLog) Warn(msg string)  { framework.Logf(msg) }
 func (l nebulaLog) Error(msg string) { framework.Logf(msg) }
 func (l nebulaLog) Fatal(msg string) { framework.Logf(msg) }
 
+// nolint: unparam
 func waitForExecuteNebulaSchema(
 	timeout, pollInterval time.Duration,
 	address string,

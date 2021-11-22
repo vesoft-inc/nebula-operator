@@ -299,6 +299,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		return nil, err
 	}
 
+	mergeLabels := mergeStringMaps(true, componentLabel, c.GetPodLabels())
 	replicas := c.GetReplicas()
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -309,10 +310,10 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{MatchLabels: componentLabel},
+			Selector: &metav1.LabelSelector{MatchLabels: mergeLabels},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      mergeStringMaps(false, componentLabel, c.GetPodLabels()),
+					Labels:      mergeLabels,
 					Annotations: c.GetPodAnnotations(),
 				},
 				Spec: podSpec,

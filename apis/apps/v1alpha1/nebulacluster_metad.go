@@ -79,6 +79,9 @@ func (c *metadComponent) GetResources() *corev1.ResourceRequirements {
 }
 
 func (c *metadComponent) GetLogStorageClass() *string {
+	if c.nc.Spec.Metad.LogVolumeClaim == nil {
+		return nil
+	}
 	scName := c.nc.Spec.Metad.LogVolumeClaim.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil
@@ -87,6 +90,9 @@ func (c *metadComponent) GetLogStorageClass() *string {
 }
 
 func (c *metadComponent) GetDataStorageClass() *string {
+	if c.nc.Spec.Metad.DataVolumeClaim == nil {
+		return nil
+	}
 	scName := c.nc.Spec.Metad.DataVolumeClaim.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil

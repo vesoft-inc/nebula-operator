@@ -79,6 +79,9 @@ func (c *graphdComponent) GetResources() *corev1.ResourceRequirements {
 }
 
 func (c *graphdComponent) GetLogStorageClass() *string {
+	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
+		return nil
+	}
 	scName := c.nc.Spec.Graphd.LogVolumeClaim.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil

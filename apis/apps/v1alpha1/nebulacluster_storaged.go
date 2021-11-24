@@ -81,6 +81,9 @@ func (c *storagedComponent) GetResources() *corev1.ResourceRequirements {
 }
 
 func (c *storagedComponent) GetLogStorageClass() *string {
+	if c.nc.Spec.Storaged.LogVolumeClaim == nil {
+		return nil
+	}
 	scName := c.nc.Spec.Storaged.LogVolumeClaim.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil
@@ -89,7 +92,10 @@ func (c *storagedComponent) GetLogStorageClass() *string {
 }
 
 func (c *storagedComponent) GetDataStorageClass() *string {
-	scName := c.nc.Spec.Storaged.LogVolumeClaim.StorageClassName
+	if c.nc.Spec.Storaged.DataVolumeClaim == nil {
+		return nil
+	}
+	scName := c.nc.Spec.Storaged.DataVolumeClaim.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil
 	}

@@ -196,7 +196,15 @@ func (c *graphdComponent) IsReady() bool {
 }
 
 func (c *graphdComponent) GenerateLabels() map[string]string {
-	return label.New().Cluster(c.GetClusterName()).Graphd()
+	labels := make(map[string]string)
+	for k, v := range c.nc.Spec.Labels {
+		labels[k] = v
+	}
+	genLabels := label.New().Cluster(c.GetClusterName()).Graphd()
+	for k, v := range genLabels {
+		labels[k] = v
+	}
+	return labels
 }
 
 func (c *graphdComponent) GenerateContainerPorts() []corev1.ContainerPort {

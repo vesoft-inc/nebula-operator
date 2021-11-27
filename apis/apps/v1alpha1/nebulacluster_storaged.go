@@ -209,6 +209,14 @@ func (c *storagedComponent) IsReady() bool {
 }
 
 func (c *storagedComponent) GenerateLabels() map[string]string {
+	labels := make(map[string]string)
+	for k, v := range c.nc.Spec.Labels {
+		labels[k] = v
+	}
+	genLabels := label.New().Cluster(c.GetClusterName()).Storaged()
+	for k, v := range genLabels {
+		labels[k] = v
+	}
 	return label.New().Cluster(c.GetClusterName()).Storaged()
 }
 

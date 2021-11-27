@@ -207,6 +207,14 @@ func (c *metadComponent) IsReady() bool {
 }
 
 func (c *metadComponent) GenerateLabels() map[string]string {
+	labels := make(map[string]string)
+	for k, v := range c.nc.Spec.Labels {
+		labels[k] = v
+	}
+	genLabels := label.New().Cluster(c.GetClusterName()).Metad()
+	for k, v := range genLabels {
+		labels[k] = v
+	}
 	return label.New().Cluster(c.GetClusterName()).Metad()
 }
 

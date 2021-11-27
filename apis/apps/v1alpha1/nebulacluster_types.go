@@ -77,6 +77,9 @@ type NebulaClusterSpec struct {
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// +optional

@@ -2047,6 +2047,10 @@ spec:
                       type: string
                   type: object
                 type: array
+              labels:
+                additionalProperties:
+                  type: string
+                type: object
               metad:
                 properties:
                   affinity:

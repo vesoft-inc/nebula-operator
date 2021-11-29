@@ -207,6 +207,11 @@ func (c *metadComponent) IsReady() bool {
 }
 
 func (c *metadComponent) GenerateLabels() map[string]string {
+	clusterID, ok := c.nc.Spec.Labels[label.MonitorLabelKey]
+	if ok {
+		return label.New().Cluster(c.GetClusterName()).Metad().Monitor(clusterID)
+	}
+
 	return label.New().Cluster(c.GetClusterName()).Metad()
 }
 

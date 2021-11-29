@@ -196,6 +196,11 @@ func (c *graphdComponent) IsReady() bool {
 }
 
 func (c *graphdComponent) GenerateLabels() map[string]string {
+	clusterID, ok := c.nc.Spec.Labels[label.MonitorLabelKey]
+	if ok {
+		return label.New().Cluster(c.GetClusterName()).Graphd().Monitor(clusterID)
+	}
+
 	return label.New().Cluster(c.GetClusterName()).Graphd()
 }
 

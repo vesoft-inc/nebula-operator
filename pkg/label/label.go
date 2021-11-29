@@ -37,6 +37,8 @@ const (
 	ComponentLabelKey string = "app.kubernetes.io/component"
 	// ClusterLabelKey represents a unique name identifying the cluster of an application
 	ClusterLabelKey string = "app.kubernetes.io/cluster"
+	// MonitorLabelKey represents a unique name identifying the sample of prometheus metrics
+	MonitorLabelKey string = "monitoring.coreos.com/cluster"
 
 	// NebulaOperator is ManagedByLabelKey label value
 	NebulaOperator string = "nebula-operator"
@@ -65,6 +67,11 @@ func (l Label) Cluster(name string) Label {
 
 func (l Label) Component(name string) Label {
 	l[ComponentLabelKey] = name
+	return l
+}
+
+func (l Label) Monitor(name string) Label {
+	l[MonitorLabelKey] = name
 	return l
 }
 

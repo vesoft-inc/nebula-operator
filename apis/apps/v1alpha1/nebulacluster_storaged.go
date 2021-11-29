@@ -209,6 +209,11 @@ func (c *storagedComponent) IsReady() bool {
 }
 
 func (c *storagedComponent) GenerateLabels() map[string]string {
+	clusterID, ok := c.nc.Spec.Labels[label.MonitorLabelKey]
+	if ok {
+		return label.New().Cluster(c.GetClusterName()).Storaged().Monitor(clusterID)
+	}
+
 	return label.New().Cluster(c.GetClusterName()).Storaged()
 }
 

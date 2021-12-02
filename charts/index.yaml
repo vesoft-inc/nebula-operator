@@ -102,7 +102,7 @@ entries:
     version: 0.9.0
   - apiVersion: v2
     appVersion: 0.8.0
-    created: "2021-11-15T18:00:37.437445958+08:00"
+    created: "2021-12-02T18:40:22.614490813+08:00"
     description: Nebula Operator Helm chart for Kubernetes
     digest: 9fb689a95d626b6cc421c35c2991f695c799922cc30e36c2155e51d73d76d490
     home: https://nebula-graph.io

@@ -32,7 +32,7 @@ If you are working with [kubeadm locally](https://kubernetes.io/docs/reference/s
 ```shell script
 $ kubectl create -f config/samples/graphd-nodeport-service.yaml
 
-/ # nebula-console -u user -p password --address=192.168.8.26 --port=32236
+# nebula-console -u user -p password --address=192.168.8.26 --port=32236
 2021/04/15 16:50:23 [INFO] connection pool is initialized successfully
 
 Welcome to Nebula Graph!

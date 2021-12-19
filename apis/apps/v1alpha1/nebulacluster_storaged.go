@@ -107,7 +107,7 @@ func (c *storagedComponent) GetLogStorageResources() *corev1.ResourceRequirement
 }
 
 func (c *storagedComponent) GetDataStorageResources() *corev1.ResourceRequirements {
-	return c.nc.Spec.Storaged.LogVolumeClaim.Resources.DeepCopy()
+	return c.nc.Spec.Storaged.DataVolumeClaim.Resources.DeepCopy()
 }
 
 func (c *storagedComponent) GetPodEnvVars() []corev1.EnvVar {

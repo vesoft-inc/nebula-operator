@@ -5549,6 +5549,9 @@ spec:
                       type: string
                   type: object
                 type: array
+              unsatisfiableAction:
+                default: DoNotSchedule
+                type: string
             required:
             - graphd
             - metad

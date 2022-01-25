@@ -66,6 +66,10 @@ type NebulaClusterSpec struct {
 	// +optional
 	SchedulerName string `json:"schedulerName"`
 
+	// +kubebuilder:default=DoNotSchedule
+	// +optional
+	UnsatisfiableAction corev1.UnsatisfiableConstraintAction `json:"unsatisfiableAction"`
+
 	// Flag to enable/disable pv reclaim while the nebula cluster deleted , default false
 	// +optional
 	EnablePVReclaim *bool `json:"enablePVReclaim,omitempty"`

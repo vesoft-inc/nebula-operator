@@ -288,7 +288,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 			{
 				MaxSkew:           int32(1),
 				TopologyKey:       label.NodeHostnameLabelKey,
-				WhenUnsatisfiable: corev1.ScheduleAnyway,
+				WhenUnsatisfiable: nc.Spec.UnsatisfiableAction,
 				LabelSelector:     label.Label(componentLabel).LabelSelector(),
 			},
 		}

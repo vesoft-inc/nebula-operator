@@ -1,5 +1,5 @@
 nebula:
-  version: v2.6.1
+  version: v2.6.2
   imagePullPolicy: Always
   storageClassName: ""
   schedulerName: default-scheduler # nebula-scheduler

@@ -64,7 +64,7 @@ Modify the file and change `replicas` from 3 to 5.
         memory: "1Gi"
     replicas: 5
     image: vesoft/nebula-storaged
-    version: v2.6.1
+    version: v2.6.2
     storageClaim:
       resources:
         requests:
@@ -102,7 +102,7 @@ Similarly we can decrease the size of the cluster from 5 back to 3 by changing t
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v2.6.1
+    version: v2.6.2
     storageClaim:
       resources:
         requests:
@@ -147,7 +147,7 @@ $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].
       3 vesoft/nebula-storaged:v2.5.1
 ```
 
-Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v2.5.1 to v2.6.1:
+Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v2.5.1 to v2.6.2:
 
 Apply the version change to the cluster CR:
 
@@ -155,13 +155,13 @@ Apply the version change to the cluster CR:
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 
-Wait 2 minutes. The container image version should be updated to v2.6.1:
+Wait 2 minutes. The container image version should be updated to v2.6.2:
 
 ```
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
-      1 vesoft/nebula-graphd:v2.6.1
-      1 vesoft/nebula-metad:v2.6.1
-      3 vesoft/nebula-storaged:v2.6.1
+      1 vesoft/nebula-graphd:v2.6.2
+      1 vesoft/nebula-metad:v2.6.2
+      3 vesoft/nebula-storaged:v2.6.2
 ```
 
 ### Failover

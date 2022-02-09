@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"path"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -229,7 +230,7 @@ func (c *metadComponent) GenerateContainerPorts() []corev1.ContainerPort {
 
 func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	componentType := c.Type().String()
-	return []corev1.VolumeMount{
+	mounts := []corev1.VolumeMount{
 		{
 			Name:      logVolume(componentType),
 			MountPath: "/usr/local/nebula/logs",
@@ -240,11 +241,22 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 			SubPath:   "data",
 		},
 	}
+
+	if licensePath, ok := c.nc.Spec.Metad.Config["license_path"]; ok {
+		dir := path.Dir(licensePath)
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      "nebula-license",
+			ReadOnly:  true,
+			MountPath: dir,
+		})
+	}
+
+	return mounts
 }
 
 func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 	componentType := c.Type().String()
-	return []corev1.Volume{
+	volumes := []corev1.Volume{
 		{
 			Name: logVolume(componentType),
 			VolumeSource: corev1.VolumeSource{
@@ -262,6 +274,27 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 			},
 		},
 	}
+
+	if c.nc.Spec.Metad.Config["license_path"] != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "nebula-license",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "nebula-license",
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "nebula.license",
+							Path: "nebula.license",
+						},
+					},
+				},
+			},
+		})
+	}
+
+	return volumes
 }
 
 // nolint: dupl

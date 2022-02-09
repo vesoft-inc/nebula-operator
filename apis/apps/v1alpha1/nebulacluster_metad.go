@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"path"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -242,12 +241,11 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 		},
 	}
 
-	if licensePath, ok := c.nc.Spec.Metad.Config["license_path"]; ok {
-		dir := path.Dir(licensePath)
+	if c.nc.Spec.Metad.License != nil {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      "nebula-license",
 			ReadOnly:  true,
-			MountPath: dir,
+			MountPath: "/usr/local/nebula/share/resources",
 		})
 	}
 
@@ -275,18 +273,16 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 		},
 	}
 
-	if c.nc.Spec.Metad.Config["license_path"] != "" {
+	if c.nc.Spec.Metad.License != nil {
 		volumes = append(volumes, corev1.Volume{
 			Name: "nebula-license",
 			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "nebula-license",
-					},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: c.nc.Spec.Metad.License.SecretName,
 					Items: []corev1.KeyToPath{
 						{
-							Key:  "nebula.license",
-							Path: "nebula.license",
+							Key:  c.nc.Spec.Metad.License.LicenseKey,
+							Path: c.nc.Spec.Metad.License.LicenseKey,
 						},
 					},
 				},

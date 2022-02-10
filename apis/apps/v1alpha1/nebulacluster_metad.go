@@ -229,7 +229,7 @@ func (c *metadComponent) GenerateContainerPorts() []corev1.ContainerPort {
 
 func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	componentType := c.Type().String()
-	return []corev1.VolumeMount{
+	mounts := []corev1.VolumeMount{
 		{
 			Name:      logVolume(componentType),
 			MountPath: "/usr/local/nebula/logs",
@@ -240,11 +240,21 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 			SubPath:   "data",
 		},
 	}
+
+	if c.nc.Spec.Metad.License != nil {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      "nebula-license",
+			ReadOnly:  true,
+			MountPath: "/usr/local/nebula/share/resources",
+		})
+	}
+
+	return mounts
 }
 
 func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 	componentType := c.Type().String()
-	return []corev1.Volume{
+	volumes := []corev1.Volume{
 		{
 			Name: logVolume(componentType),
 			VolumeSource: corev1.VolumeSource{
@@ -262,6 +272,25 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 			},
 		},
 	}
+
+	if c.nc.Spec.Metad.License != nil {
+		volumes = append(volumes, corev1.Volume{
+			Name: "nebula-license",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: c.nc.Spec.Metad.License.SecretName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  c.nc.Spec.Metad.License.LicenseKey,
+							Path: c.nc.Spec.Metad.License.LicenseKey,
+						},
+					},
+				},
+			},
+		})
+	}
+
+	return volumes
 }
 
 // nolint: dupl

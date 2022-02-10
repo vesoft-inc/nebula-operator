@@ -171,6 +171,13 @@ type WorkloadReference struct {
 	Version string `json:"version,omitempty"`
 }
 
+type LicenseSpec struct {
+	// Name of the license secret name.
+	SecretName string `json:"secretName,omitempty"`
+	// The key to nebula license file.
+	LicenseKey string `json:"licenseKey,omitempty"`
+}
+
 // GraphdSpec defines the desired state of Graphd
 type GraphdSpec struct {
 	PodSpec `json:",inline"`
@@ -205,6 +212,9 @@ type MetadSpec struct {
 	// K8S persistent volume claim for Metad data volume.
 	// +optional
 	DataVolumeClaim *StorageClaim `json:"dataVolumeClaim,omitempty"`
+
+	// License defines a nebula license load into Secret
+	License *LicenseSpec `json:"license,omitempty"`
 }
 
 // StoragedSpec defines the desired state of Storaged

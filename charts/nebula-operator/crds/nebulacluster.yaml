@@ -2410,6 +2410,13 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    license:
+                      properties:
+                        licenseKey:
+                          type: string
+                        secretName:
+                          type: string
+                      type: object
                     logVolumeClaim:
                       properties:
                         resources:

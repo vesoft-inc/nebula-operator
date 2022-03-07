@@ -32,6 +32,7 @@ nebula:
     image: vesoft/nebula-metad
     replicas: 3
     env: []
+    config: {}
     resources:
       requests:
         cpu: "500m"
@@ -54,6 +55,7 @@ nebula:
     image: vesoft/nebula-storaged
     replicas: 3
     env: []
+    config: {}
     resources:
       requests:
         cpu: "500m"

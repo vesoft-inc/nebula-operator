@@ -12,6 +12,7 @@ spec:
     image: {{ .Values.nebula.graphd.image }}
     version: {{ .Values.nebula.version }}
     env: {{ toYaml .Values.nebula.graphd.env | nindent 6 }}
+    config: {{ toYaml .Values.nebula.graphd.config | nindent 6 }}
     service:
       type: NodePort
       externalTrafficPolicy: Local
@@ -54,6 +55,7 @@ spec:
     image: {{ .Values.nebula.metad.image }}
     version: {{ .Values.nebula.version }}
     env: {{ toYaml .Values.nebula.metad.env | nindent 6 }}
+    config: {{ toYaml .Values.nebula.metad.config | nindent 6 }}
     logVolumeClaim:
       resources:
         requests:
@@ -100,6 +102,7 @@ spec:
     image: {{ .Values.nebula.storaged.image }}
     version: {{ .Values.nebula.version }}
     env: {{ toYaml .Values.nebula.storaged.env | nindent 6 }}
+    config: {{ toYaml .Values.nebula.storaged.config | nindent 6 }}
     logVolumeClaim:
       resources:
         requests:

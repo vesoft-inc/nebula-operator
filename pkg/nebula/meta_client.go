@@ -17,41 +17,49 @@ limitations under the License.
 package nebula
 
 import (
+	"context"
 	"fmt"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/vesoft-inc/nebula-go/v2/nebula"
-	"github.com/vesoft-inc/nebula-go/v2/nebula/meta"
-	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
+	"github.com/vesoft-inc/nebula-go/v3/nebula"
+	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/retry"
 )
 
 var ErrNoAvailableMetadEndpoints = errors.New("metadclient: no available endpoints")
 
 var _ MetaInterface = (*metaClient)(nil)
 
-type MetaInterface interface {
-	GetSpace(spaceName string) (*meta.SpaceItem, error)
-	ListSpaces() ([]*meta.IdName, error)
-	ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error)
-	GetPartsAlloc(spaceID nebula.GraphSpaceID) (map[nebula.PartitionID][]*nebula.HostAddr, error)
-	ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.PartitionID) ([]*meta.PartItem, error)
-	GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, error)
-	GetLeaderCount(leaderHost string) (int, error)
-	Balance(req *meta.BalanceReq) (*meta.BalanceResp, error)
-	BalanceStatus(id int64) error
-	BalanceLeader() error
-	BalanceData() error
-	RemoveHost(endpoints []*nebula.HostAddr) error
-	BalanceStop(stop bool) error
-	Disconnect() error
-}
+type (
+	ExecFn func(req interface{}) (*meta.ExecResp, error)
 
-type metaClient struct {
-	mutex  sync.Mutex
-	client *meta.MetaServiceClient
-}
+	MetaInterface interface {
+		GetSpace(spaceName string) (*meta.SpaceItem, error)
+		ListSpaces() ([]*meta.IdName, error)
+		AddHosts(endpoints []*nebula.HostAddr) error
+		DropHosts(endpoints []*nebula.HostAddr) error
+		ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error)
+		GetPartsAlloc(spaceID nebula.GraphSpaceID) (map[nebula.PartitionID][]*nebula.HostAddr, error)
+		ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.PartitionID) ([]*meta.PartItem, error)
+		GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, error)
+		GetLeaderCount(leaderHost string) (int, error)
+		Balance(req *meta.AdminJobReq) (*meta.AdminJobResp, error)
+		BalanceStatus(jobID int32, space []byte) error
+		BalanceLeader(space []byte) error
+		BalanceData(space []byte) error
+		RemoveHost(space []byte, endpoints []*nebula.HostAddr) error
+		Disconnect() error
+	}
+
+	metaClient struct {
+		mutex  sync.Mutex
+		client *meta.MetaServiceClient
+	}
+)
 
 func NewMetaClient(endpoints []string, options ...Option) (MetaInterface, error) {
 	if len(endpoints) == 0 {
@@ -136,6 +144,26 @@ func (m *metaClient) ListSpaces() ([]*meta.IdName, error) {
 		return nil, errors.Errorf("ListSpaces code %d", resp.Code)
 	}
 	return resp.Spaces, nil
+}
+
+func (m *metaClient) AddHosts(hosts []*nebula.HostAddr) error {
+	req := &meta.AddHostsReq{
+		Hosts: hosts,
+	}
+	return m.retryOnError(req, func(req interface{}) (*meta.ExecResp, error) {
+		resp, err := m.client.AddHosts(req.(*meta.AddHostsReq))
+		return resp, err
+	})
+}
+
+func (m *metaClient) DropHosts(hosts []*nebula.HostAddr) error {
+	req := &meta.DropHostsReq{
+		Hosts: hosts,
+	}
+	return m.retryOnError(req, func(req interface{}) (*meta.ExecResp, error) {
+		resp, err := m.client.DropHosts(req.(*meta.DropHostsReq))
+		return resp, err
+	})
 }
 
 func (m *metaClient) ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error) {
@@ -237,10 +265,14 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 	return count, nil
 }
 
-func (m *metaClient) BalanceLeader() error {
+func (m *metaClient) BalanceLeader(space []byte) error {
 	log := getLog()
-	req := &meta.LeaderBalanceReq{}
-	resp, err := m.client.LeaderBalance(req)
+	req := &meta.AdminJobReq{
+		Op:    meta.AdminJobOp_ADD,
+		Cmd:   meta.AdminCmd_LEADER_BALANCE,
+		Paras: [][]byte{space},
+	}
+	resp, err := m.client.RunAdminJob(req)
 	if err != nil {
 		return err
 	}
@@ -251,7 +283,7 @@ func (m *metaClient) BalanceLeader() error {
 			if err := m.reconnect(leader); err != nil {
 				return errors.Errorf("update client failed: %v", err)
 			}
-			resp, err := m.client.LeaderBalance(req)
+			resp, err := m.client.RunAdminJob(req)
 			if err != nil {
 				return err
 			}
@@ -268,15 +300,15 @@ func (m *metaClient) BalanceLeader() error {
 	return nil
 }
 
-func (m *metaClient) balance(req *meta.BalanceReq) error {
+func (m *metaClient) balance(space []byte, req *meta.AdminJobReq) error {
 	log := getLog()
-	log.Info("start balance")
-	resp, err := m.client.Balance(req)
+	log.Info("start balance job")
+	resp, err := m.client.RunAdminJob(req)
 	if err != nil {
 		log.Info("balance failed")
 		return err
 	}
-	log = log.WithValues("balanceID", resp.Id)
+	log = log.WithValues("BalanceJobID", resp.GetResult_().JobID)
 	if resp.Code != nebula.ErrorCode_SUCCEEDED {
 		if resp.Code == nebula.ErrorCode_E_LEADER_CHANGED {
 			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
@@ -284,15 +316,15 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 			if err := m.reconnect(leader); err != nil {
 				return errors.Errorf("update client failed: %v", err)
 			}
-			resp, err := m.Balance(req)
+			resp, err := m.client.RunAdminJob(req)
 			if err != nil {
 				return err
 			}
 			if resp.Code != nebula.ErrorCode_SUCCEEDED {
 				return errors.Errorf("retry balance code %d", resp.Code)
 			}
-			log.Info("balance plan running now")
-			return m.BalanceStatus(resp.Id)
+			log.Info("balance job running now")
+			return m.BalanceStatus(*resp.GetResult_().JobID, space)
 		} else if resp.Code == nebula.ErrorCode_E_NO_VALID_HOST {
 			return errors.Errorf("the cluster no valid host to balance")
 		} else if resp.Code == nebula.ErrorCode_E_BALANCED {
@@ -306,68 +338,78 @@ func (m *metaClient) balance(req *meta.BalanceReq) error {
 		}
 		return errors.Errorf("balance code %d", resp.Code)
 	}
-	log.Info("balance plan running now")
-	return m.BalanceStatus(resp.Id)
+	log.Info("balance job running now")
+	return m.BalanceStatus(*resp.GetResult_().JobID, space)
 }
 
-func (m *metaClient) BalanceData() error {
-	req := &meta.BalanceReq{}
-
-	return m.balance(req)
-}
-
-func (m *metaClient) RemoveHost(endpoints []*nebula.HostAddr) error {
-	req := &meta.BalanceReq{
-		HostDel: endpoints,
+func (m *metaClient) BalanceData(space []byte) error {
+	req := &meta.AdminJobReq{
+		Cmd:   meta.AdminCmd_DATA_BALANCE,
+		Op:    meta.AdminJobOp_ADD,
+		Paras: [][]byte{space},
 	}
 
-	return m.balance(req)
+	return m.balance(space, req)
 }
 
-func (m *metaClient) Balance(req *meta.BalanceReq) (*meta.BalanceResp, error) {
-	return m.client.Balance(req)
+func (m *metaClient) RemoveHost(space []byte, endpoints []*nebula.HostAddr) error {
+	paras := make([][]byte, 0)
+	for _, endpoint := range endpoints {
+		paras = append(paras, []byte(fmt.Sprintf("%s:%d", endpoint.Host, endpoint.Port)))
+	}
+	paras = append(paras, space)
+	req := &meta.AdminJobReq{
+		Cmd:   meta.AdminCmd_DATA_BALANCE,
+		Op:    meta.AdminJobOp_ADD,
+		Paras: paras,
+	}
+
+	return m.balance(space, req)
 }
 
-func (m *metaClient) BalanceStatus(id int64) error {
-	resp, err := m.Balance(&meta.BalanceReq{Id: &id})
+func (m *metaClient) Balance(req *meta.AdminJobReq) (*meta.AdminJobResp, error) {
+	return m.client.RunAdminJob(req)
+}
+
+func (m *metaClient) BalanceStatus(jobID int32, space []byte) error {
+	statusFn := func(ctx context.Context) (bool, error) {
+		req := &meta.AdminJobReq{
+			Op:    meta.AdminJobOp_SHOW,
+			Cmd:   meta.AdminCmd_STATS,
+			Paras: [][]byte{[]byte(strconv.FormatInt(int64(jobID), 10)), space},
+		}
+		resp, err := m.client.RunAdminJob(req)
+		if err != nil {
+			return false, err
+		}
+		if resp.Result_.JobDesc[0].Status == meta.JobStatus_FINISHED {
+			return true, nil
+		}
+		return false, nil
+	}
+	return retry.Until(context.Background(), 5*time.Second, statusFn)
+}
+
+func (m *metaClient) retryOnError(req interface{}, fn ExecFn) error {
+	resp, err := fn(req)
 	if err != nil {
 		return err
 	}
 	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		return errors.Errorf("BalanceStatus code %d", resp.Code)
-	}
-	log := getLog().WithValues("balanceID", id)
-	log.Info("Get balance plan status")
-	done := 0
-	for _, task := range resp.Tasks {
-		if task.Result_ == meta.TaskResult__SUCCEEDED {
-			done++
-		} else if task.Result_ == meta.TaskResult__IN_PROGRESS {
-			continue
-		} else if task.Result_ == meta.TaskResult__FAILED || task.Result_ == meta.TaskResult__INVALID {
-			return errors.Errorf("task %s status %s", task.Id, task.Result_.String())
+		if resp.Code == nebula.ErrorCode_E_LEADER_CHANGED {
+			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
+			if err := m.reconnect(leader); err != nil {
+				return errors.Errorf("update client failed: %v", err)
+			}
+			resp, err := fn(req)
+			if err != nil {
+				return err
+			}
+			if resp.Code != nebula.ErrorCode_SUCCEEDED {
+				return errors.Errorf("retry response code %d", resp.Code)
+			}
 		}
-	}
-	if done == len(resp.Tasks) {
-		log.Info("Balance plan done!")
-		return nil
-	}
-	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("Balance plan %d still in progress", id)}
-}
-
-func (m *metaClient) BalanceStop(stop bool) error {
-	req := &meta.BalanceReq{
-		Stop: &stop,
-	}
-	resp, err := m.client.Balance(req)
-	if err != nil {
-		return err
-	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		if resp.Code == nebula.ErrorCode_E_NO_RUNNING_BALANCE_PLAN {
-			return errors.Errorf("BalanceStop no running balance plan")
-		}
-		return errors.Errorf("BalanceStop code %d", resp.Code)
+		return errors.Errorf("response code %d", resp.Code)
 	}
 	return nil
 }

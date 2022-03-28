@@ -24,7 +24,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nebulago "github.com/vesoft-inc/nebula-go/v2/nebula"
+	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
@@ -69,6 +69,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if pointer.BoolPtrDerefOr(nc.Spec.Storaged.EnableAutoBalance, false) {
+		log.Info("auto balance is disabled", "storage", nc.StoragedComponent().GetName())
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}
@@ -86,13 +87,22 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		}
 	}()
 
-	if err := metaClient.BalanceData(); err != nil {
+	spaces, err := metaClient.ListSpaces()
+	if err != nil {
 		return err
 	}
 
-	if err := metaClient.BalanceLeader(); err != nil {
-		log.Error(err, "unable to balance leader")
-		return err
+	empty := len(spaces) == 0
+	if !empty {
+		for _, space := range spaces {
+			if err := metaClient.BalanceData(space.Name); err != nil {
+				return err
+			}
+			if err := metaClient.BalanceLeader(space.Name); err != nil {
+				log.Error(err, "unable to balance leader")
+				return err
+			}
+		}
 	}
 
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
@@ -118,6 +128,13 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		}
 	}()
 
+	spaces, err := metaClient.ListSpaces()
+	if err != nil {
+		return err
+	}
+
+	empty := len(spaces) == 0
+
 	if oldReplicas-newReplicas > 0 {
 		hosts := make([]*nebulago.HostAddr, 0, oldReplicas-newReplicas)
 		port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
@@ -127,12 +144,18 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 				Port: port,
 			})
 		}
-		if len(hosts) > 0 {
-			if err := metaClient.RemoveHost(hosts); err != nil {
-				return err
+		if !empty {
+			for _, space := range spaces {
+				if err := metaClient.RemoveHost(space.Name, hosts); err != nil {
+					return err
+				}
+				log.Info("remove hosts on space %s successfully", "space", space)
 			}
-			log.Info("remove hosts %s successfully", "host", hosts)
 		}
+		if err := metaClient.DropHosts(hosts); err != nil {
+			return err
+		}
+		log.Info("drop hosts successfully")
 	}
 
 	if err := PvcMark(ss.clientSet.PVC(), nc.StoragedComponent(), oldReplicas, newReplicas); err != nil {

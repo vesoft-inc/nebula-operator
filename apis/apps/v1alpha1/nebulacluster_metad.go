@@ -245,7 +245,8 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      "nebula-license",
 			ReadOnly:  true,
-			MountPath: "/usr/local/nebula/share/resources",
+			MountPath: "/usr/local/nebula/share/nebula.license",
+			SubPath:   "nebula.license",
 		})
 	}
 

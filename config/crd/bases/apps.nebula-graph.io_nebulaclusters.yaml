@@ -4100,6 +4100,7 @@ spec:
                         type: string
                     type: object
                   enableAutoBalance:
+                    default: false
                     type: boolean
                   env:
                     items:
@@ -5590,6 +5591,8 @@ spec:
                 type: array
               graphd:
                 properties:
+                  hostsAdded:
+                    type: boolean
                   phase:
                     type: string
                   version:
@@ -5626,6 +5629,8 @@ spec:
                 type: object
               metad:
                 properties:
+                  hostsAdded:
+                    type: boolean
                   phase:
                     type: string
                   version:
@@ -5662,6 +5667,8 @@ spec:
                 type: object
               storaged:
                 properties:
+                  hostsAdded:
+                    type: boolean
                   phase:
                     type: string
                   version:

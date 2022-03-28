@@ -104,9 +104,10 @@ type NebulaClusterStatus struct {
 
 // ComponentStatus is the status and version of a nebula component.
 type ComponentStatus struct {
-	Version  string         `json:"version,omitempty"`
-	Phase    ComponentPhase `json:"phase,omitempty"`
-	Workload WorkloadStatus `json:"workload,omitempty"`
+	Version    string         `json:"version,omitempty"`
+	Phase      ComponentPhase `json:"phase,omitempty"`
+	HostsAdded bool           `json:"hostsAdded,omitempty"`
+	Workload   WorkloadStatus `json:"workload,omitempty"`
 }
 
 // WorkloadStatus describes the status of a specified workload.
@@ -236,7 +237,8 @@ type StoragedSpec struct {
 	// +optional
 	DataVolumeClaim *StorageClaim `json:"dataVolumeClaim,omitempty"`
 
-	// Flag to enable/disable auto balance data and leader while the nebula storaged scale out , default false
+	// Flag to enable/disable auto balance data and leader while the nebula storaged scale out
+	// +kubebuilder:default=false
 	// +optional
 	EnableAutoBalance *bool `json:"enableAutoBalance,omitempty"`
 }

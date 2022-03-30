@@ -39,7 +39,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nebula "github.com/vesoft-inc/nebula-go/v3"
+	nebulago "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
 	e2econfig "github.com/vesoft-inc/nebula-operator/tests/e2e/config"
@@ -300,11 +300,11 @@ func waitForExecuteNebulaSchema(
 }
 
 func executeNebulaSchema(address string, port int, username, password, schema string) error {
-	hostAddress := nebula.HostAddress{Host: address, Port: port}
-	hostList := []nebula.HostAddress{hostAddress}
-	testPoolConfig := nebula.GetDefaultConf()
+	hostAddress := nebulago.HostAddress{Host: address, Port: port}
+	hostList := []nebulago.HostAddress{hostAddress}
+	testPoolConfig := nebulago.GetDefaultConf()
 
-	pool, err := nebula.NewConnectionPool(hostList, testPoolConfig, nebulaLog{})
+	pool, err := nebulago.NewConnectionPool(hostList, testPoolConfig, nebulaLog{})
 	if err != nil {
 		framework.Logf("failed to initialize the connection pool, host: %s, port: %d, %s", address, port, err.Error())
 		return err

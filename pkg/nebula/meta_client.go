@@ -59,6 +59,7 @@ type (
 	}
 )
 
+// TODO: capture ErrorCode_E_LEADER_CHANGED error for all methods
 func NewMetaClient(endpoints []string, options ...Option) (MetaInterface, error) {
 	if len(endpoints) == 0 {
 		return nil, ErrNoAvailableMetadEndpoints
@@ -376,8 +377,10 @@ func (m *metaClient) BalanceStatus(jobID int32, space []byte) error {
 	if err != nil {
 		return err
 	}
-	if resp.Result_.JobDesc[0].Status == meta.JobStatus_FINISHED {
-		return nil
+	if len(resp.GetResult_().JobDesc) > 0 {
+		if resp.GetResult_().JobDesc[0].Status == meta.JobStatus_FINISHED {
+			return nil
+		}
 	}
 	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("Balance job %d still in progress", jobID)}
 }

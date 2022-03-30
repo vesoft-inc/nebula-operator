@@ -98,8 +98,6 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		return err
 	}
 
-	empty := len(spaces) == 0
-
 	if oldReplicas-newReplicas > 0 {
 		scaleSets := sets.NewString()
 		hosts := make([]*nebulago.HostAddr, 0, oldReplicas-newReplicas)
@@ -112,7 +110,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 			})
 			scaleSets.Insert(host)
 		}
-		if !empty {
+		if len(spaces) > 0 {
 			for _, space := range spaces {
 				leaderSets, err := metaClient.GetSpaceLeaderHosts(space.Name)
 				if err != nil {

@@ -39,12 +39,8 @@ func Until(ctx context.Context, interval time.Duration, fn DoneFunc) error {
 	return wait.PollImmediateUntil(interval, func() (bool, error) {
 		done, err := fn(ctx)
 		if err != nil {
-			if done {
-				return false, err
-			}
-		} else if done {
-			return true, nil
+			return false, err
 		}
-		return false, nil
+		return done, nil
 	}, stop)
 }

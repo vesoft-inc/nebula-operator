@@ -329,5 +329,5 @@ func (c *storagedComponent) GenerateConfigMap() *corev1.ConfigMap {
 }
 
 func (c *storagedComponent) UpdateComponentStatus(status *ComponentStatus) {
-	c.nc.Status.Storaged = *status
+	c.nc.Status.Storaged.ComponentStatus = *status
 }

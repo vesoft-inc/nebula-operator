@@ -80,3 +80,11 @@ func (nc *NebulaCluster) IsPVReclaimEnabled() bool {
 	}
 	return *enabled
 }
+
+func (nc *NebulaCluster) IsAutoBalanceEnabled() bool {
+	enabled := nc.Spec.Storaged.EnableAutoBalance
+	if enabled == nil {
+		return false
+	}
+	return *enabled
+}

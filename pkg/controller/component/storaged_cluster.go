@@ -139,10 +139,10 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		nc.Status.Storaged.HostsAdded = true
 	}
 
-	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
-		log.Error(err, "failed to scale cluster ")
-		return err
-	}
+	//if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
+	//	log.Error(err, "failed to scale cluster ")
+	//	return err
+	//}
 
 	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
 		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
@@ -175,7 +175,7 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 	}
 
 	// TODO: show storaged hosts state with storaged peers
-	return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged, oldWorkload)
+	return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
 }
 
 func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {
@@ -190,10 +190,7 @@ func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplica
 		return err
 	}
 	defer func() {
-		err := metaClient.Disconnect()
-		if err != nil {
-			return
-		}
+		_ = metaClient.Disconnect()
 	}()
 
 	var start int32

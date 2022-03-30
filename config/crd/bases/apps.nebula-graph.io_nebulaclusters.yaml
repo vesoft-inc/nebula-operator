@@ -4100,7 +4100,6 @@ spec:
                         type: string
                     type: object
                   enableAutoBalance:
-                    default: false
                     type: boolean
                   env:
                     items:
@@ -5591,8 +5590,6 @@ spec:
                 type: array
               graphd:
                 properties:
-                  hostsAdded:
-                    type: boolean
                   phase:
                     type: string
                   version:
@@ -5629,8 +5626,6 @@ spec:
                 type: object
               metad:
                 properties:
-                  hostsAdded:
-                    type: boolean
                   phase:
                     type: string
                   version:
@@ -5669,6 +5664,14 @@ spec:
                 properties:
                   hostsAdded:
                     type: boolean
+                  lastBalanceJob:
+                    properties:
+                      jobID:
+                        format: int32
+                        type: integer
+                      space:
+                        type: string
+                    type: object
                   phase:
                     type: string
                   version:

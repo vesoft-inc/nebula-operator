@@ -64,7 +64,7 @@ Modify the file and change `replicas` from 3 to 5.
         memory: "1Gi"
     replicas: 5
     image: vesoft/nebula-storaged
-    version: v2.6.2
+    version: v3.0.2
     storageClaim:
       resources:
         requests:
@@ -102,7 +102,7 @@ Similarly we can decrease the size of the cluster from 5 back to 3 by changing t
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v2.6.2
+    version: v3.0.2
     storageClaim:
       resources:
         requests:
@@ -125,7 +125,7 @@ nebula-storaged-2   1/1     Running   0          10m
 In addition, you can [Install Nebula Cluster with helm](doc/user/nebula_cluster_helm_guide.md).
 
 ### Upgrade a nebula cluster
-Create a nebula cluster with the version specified (v2.5.1):
+Create a nebula cluster with the version specified (v3.0.0):
 
 ```bash
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
@@ -138,16 +138,16 @@ nebula-storaged-1   1/1     Running   0          24m
 nebula-storaged-2   1/1     Running   0          25m
 ```
 
-The container image version should be v2.5.1:
+The container image version should be v3.0.0:
 
 ```
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
-      1 vesoft/nebula-graphd:v2.5.1
-      1 vesoft/nebula-metad:v2.5.1
-      3 vesoft/nebula-storaged:v2.5.1
+      1 vesoft/nebula-graphd:v3.0.0
+      1 vesoft/nebula-metad:v3.0.0
+      3 vesoft/nebula-storaged:v3.0.0
 ```
 
-Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v2.5.1 to v2.6.2:
+Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v3.0.0 to v3.0.2:
 
 Apply the version change to the cluster CR:
 
@@ -155,13 +155,13 @@ Apply the version change to the cluster CR:
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 
-Wait 2 minutes. The container image version should be updated to v2.6.2:
+Wait 2 minutes. The container image version should be updated to v3.0.2:
 
 ```
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
-      1 vesoft/nebula-graphd:v2.6.2
-      1 vesoft/nebula-metad:v2.6.2
-      3 vesoft/nebula-storaged:v2.6.2
+      1 vesoft/nebula-graphd:v3.0.2
+      1 vesoft/nebula-metad:v3.0.2
+      3 vesoft/nebula-storaged:v3.0.2
 ```
 
 ### Failover
@@ -194,16 +194,19 @@ nebula-storaged-2   1/1     Running   0          19s
 
 Nebula Operator <-> NebulaGraph
 
-|                         | NebulaGraph v2.5 | NebulaGraph v2.6 |
-|----------------------- |------------------|------------------|
-| `v0.8.0`              | ✓                | -                |
-| `v0.9.0`*            | ✓                | ✓                |
+|                        | NebulaGraph v2.5 | NebulaGraph v2.6 | NebulaGraph v3.0 |
+|----------------------- |------------------|------------------|------------------|
+| `v0.8.0`               | ✓                | -                | -                |
+| `v0.9.0`*              | ✓                | ✓                | -                |
+| `v1.0.0`*              | -                | -                | ✓                |
 
 Key:
 
 * `✓` Compatible.
 * `-` Not Compatible.
 * `*` Please notice that the StorageClaim is split into LogVolumeClaim and DataVolumeClaim in crd. v0.9.0 can't forward compatible.
+* v1.0.0 does not support storage scaling in nebula community version.
+* v1.0.0 does not support upgrading from v2.x to v3.x.
 
 ## FAQ
 

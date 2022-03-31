@@ -18,7 +18,6 @@ package component
 
 import (
 	"fmt"
-	"net"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -130,10 +129,6 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	newReplicas := extender.GetReplicas(newWorkload)
 	if !nc.Status.Storaged.HostsAdded || *newReplicas > *oldReplicas {
 		if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
-			_, ok := err.(*net.DNSError)
-			if ok {
-				return nil
-			}
 			return err
 		}
 		nc.Status.Storaged.HostsAdded = true

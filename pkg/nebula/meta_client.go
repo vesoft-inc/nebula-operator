@@ -403,6 +403,8 @@ func (m *metaClient) retryOnError(req interface{}, fn ExecFn) error {
 			if resp.Code != nebula.ErrorCode_SUCCEEDED {
 				return errors.Errorf("retry response code %d", resp.Code)
 			}
+		} else if resp.Code == nebula.ErrorCode_E_EXISTED {
+			return nil
 		}
 		return errors.Errorf("response code %d", resp.Code)
 	}

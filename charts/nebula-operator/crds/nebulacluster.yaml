@@ -5662,6 +5662,16 @@ spec:
                   type: object
                 storaged:
                   properties:
+                    hostsAdded:
+                      type: boolean
+                    lastBalanceJob:
+                      properties:
+                        jobID:
+                          format: int32
+                          type: integer
+                        space:
+                          type: string
+                      type: object
                     phase:
                       type: string
                     version:

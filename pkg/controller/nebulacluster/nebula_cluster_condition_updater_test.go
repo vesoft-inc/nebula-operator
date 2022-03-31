@@ -56,10 +56,12 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 							UpdateRevision:  "12",
 						},
 					},
-					Storaged: v1alpha1.ComponentStatus{
-						Workload: v1alpha1.WorkloadStatus{
-							CurrentRevision: "11",
-							UpdateRevision:  "12",
+					Storaged: v1alpha1.StoragedStatus{
+						ComponentStatus: v1alpha1.ComponentStatus{
+							Workload: v1alpha1.WorkloadStatus{
+								CurrentRevision: "11",
+								UpdateRevision:  "12",
+							},
 						},
 					},
 				},
@@ -95,10 +97,12 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 							UpdateRevision:  "12",
 						},
 					},
-					Storaged: v1alpha1.ComponentStatus{
-						Workload: v1alpha1.WorkloadStatus{
-							CurrentRevision: "12",
-							UpdateRevision:  "12",
+					Storaged: v1alpha1.StoragedStatus{
+						ComponentStatus: v1alpha1.ComponentStatus{
+							Workload: v1alpha1.WorkloadStatus{
+								CurrentRevision: "12",
+								UpdateRevision:  "12",
+							},
 						},
 					},
 				},
@@ -140,10 +144,12 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 							UpdateRevision:  "12",
 						},
 					},
-					Storaged: v1alpha1.ComponentStatus{
-						Workload: v1alpha1.WorkloadStatus{
-							CurrentRevision: "12",
-							UpdateRevision:  "12",
+					Storaged: v1alpha1.StoragedStatus{
+						ComponentStatus: v1alpha1.ComponentStatus{
+							Workload: v1alpha1.WorkloadStatus{
+								CurrentRevision: "12",
+								UpdateRevision:  "12",
+							},
 						},
 					},
 				},
@@ -189,12 +195,14 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 							UpdateRevision:  "12",
 						},
 					},
-					Storaged: v1alpha1.ComponentStatus{
-						Workload: v1alpha1.WorkloadStatus{
-							Replicas:        3,
-							ReadyReplicas:   2,
-							CurrentRevision: "12",
-							UpdateRevision:  "12",
+					Storaged: v1alpha1.StoragedStatus{
+						ComponentStatus: v1alpha1.ComponentStatus{
+							Workload: v1alpha1.WorkloadStatus{
+								Replicas:        3,
+								ReadyReplicas:   2,
+								CurrentRevision: "12",
+								UpdateRevision:  "12",
+							},
 						},
 					},
 				},
@@ -240,12 +248,14 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 							UpdateRevision:  "12",
 						},
 					},
-					Storaged: v1alpha1.ComponentStatus{
-						Workload: v1alpha1.WorkloadStatus{
-							Replicas:        3,
-							ReadyReplicas:   3,
-							CurrentRevision: "12",
-							UpdateRevision:  "12",
+					Storaged: v1alpha1.StoragedStatus{
+						ComponentStatus: v1alpha1.ComponentStatus{
+							Workload: v1alpha1.WorkloadStatus{
+								Replicas:        3,
+								ReadyReplicas:   3,
+								CurrentRevision: "12",
+								UpdateRevision:  "12",
+							},
 						},
 					},
 				},

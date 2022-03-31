@@ -26,7 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ng "github.com/vesoft-inc/nebula-go/v2/nebula"
+	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
+	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
@@ -112,7 +113,7 @@ func (s *storagedUpdater) Update(
 		return s.updateStoragedPod(mc, nc, index, newUnstruct, advanced, empty)
 	}
 
-	return s.updateRunningPhase(mc, nc, empty)
+	return s.updateRunningPhase(mc, nc, spaces)
 }
 
 // nolint: revive
@@ -229,9 +230,9 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 func (s *storagedUpdater) transLeader(
 	storageClient nebula.StorageInterface,
 	nc *v1alpha1.NebulaCluster,
-	spaceID ng.GraphSpaceID,
-	partID ng.PartitionID,
-	newLeader *ng.HostAddr,
+	spaceID nebulago.GraphSpaceID,
+	partID nebulago.PartitionID,
+	newLeader *nebulago.HostAddr,
 ) error {
 	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
 	if err := storageClient.TransLeader(spaceID, partID, newLeader); err != nil {
@@ -241,23 +242,25 @@ func (s *storagedUpdater) transLeader(
 	return nil
 }
 
-func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, empty bool) error {
-	if empty {
+func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaces []*meta.IdName) error {
+	if len(spaces) == 0 {
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}
 
-	if err := mc.BalanceLeader(); err != nil {
-		return err
+	for _, space := range spaces {
+		if err := mc.BalanceLeader(space.Name); err != nil {
+			return err
+		}
 	}
 
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
 }
 
-func getNewLeader(nc *v1alpha1.NebulaCluster, replicas, ordinal int32) *ng.HostAddr {
+func getNewLeader(nc *v1alpha1.NebulaCluster, replicas, ordinal int32) *nebulago.HostAddr {
 	var podFQDN string
-	newLeader := &ng.HostAddr{
+	newLeader := &nebulago.HostAddr{
 		Port: nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift),
 	}
 

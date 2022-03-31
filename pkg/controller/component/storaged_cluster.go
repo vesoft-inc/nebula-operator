@@ -23,9 +23,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
@@ -123,10 +125,19 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		return utilerrors.ReconcileErrorf("waiting for storaged cluster %s running", newWorkload.GetName())
 	}
 
-	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
-		log.Error(err, "failed to scale cluster ")
-		return err
+	oldReplicas := extender.GetReplicas(oldWorkload)
+	newReplicas := extender.GetReplicas(newWorkload)
+	if !nc.Status.Storaged.HostsAdded || *newReplicas > *oldReplicas {
+		if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
+			return err
+		}
+		nc.Status.Storaged.HostsAdded = true
 	}
+
+	//if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
+	//	log.Error(err, "failed to scale cluster ")
+	//	return err
+	//}
 
 	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
 		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
@@ -159,12 +170,39 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 	}
 
 	// TODO: show storaged hosts state with storaged peers
-	return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged, oldWorkload)
+	return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
 }
 
 func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {
 	return syncConfigMap(nc.StoragedComponent(), c.clientSet.ConfigMap(), v1alpha1.StoragedConfigTemplate,
 		nc.StoragedComponent().GetConfigMapKey())
+}
+
+func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(endpoints)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = metaClient.Disconnect()
+	}()
+
+	var start int32
+	if newReplicas > oldReplicas {
+		start = oldReplicas
+	}
+
+	port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
+	hosts := make([]*nebulago.HostAddr, 0, newReplicas-start)
+	for i := start; i < newReplicas; i++ {
+		hosts = append(hosts, &nebulago.HostAddr{
+			Host: nc.StoragedComponent().GetPodFQDN(i),
+			Port: port,
+		})
+	}
+
+	return metaClient.AddHosts(hosts)
 }
 
 type FakeStoragedCluster struct {

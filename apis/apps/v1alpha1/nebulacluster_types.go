@@ -98,7 +98,7 @@ type NebulaClusterSpec struct {
 type NebulaClusterStatus struct {
 	Graphd     ComponentStatus          `json:"graphd,omitempty"`
 	Metad      ComponentStatus          `json:"metad,omitempty"`
-	Storaged   ComponentStatus          `json:"storaged,omitempty"`
+	Storaged   StoragedStatus           `json:"storaged,omitempty"`
 	Conditions []NebulaClusterCondition `json:"conditions,omitempty"`
 }
 
@@ -107,6 +107,19 @@ type ComponentStatus struct {
 	Version  string         `json:"version,omitempty"`
 	Phase    ComponentPhase `json:"phase,omitempty"`
 	Workload WorkloadStatus `json:"workload,omitempty"`
+}
+
+// StoragedStatus describes the status and version of nebula storaged.
+type StoragedStatus struct {
+	ComponentStatus `json:",omitempty,inline"`
+	HostsAdded      bool        `json:"hostsAdded,omitempty"`
+	LastBalanceJob  *BalanceJob `json:"lastBalanceJob,omitempty"`
+}
+
+// BalanceJob describes the admin job for balance data.
+type BalanceJob struct {
+	Space string `json:"space,omitempty"`
+	JobID int32  `json:"jobID,omitempty"`
 }
 
 // WorkloadStatus describes the status of a specified workload.
@@ -236,7 +249,7 @@ type StoragedSpec struct {
 	// +optional
 	DataVolumeClaim *StorageClaim `json:"dataVolumeClaim,omitempty"`
 
-	// Flag to enable/disable auto balance data and leader while the nebula storaged scale out , default false
+	// Flag to enable/disable auto balance data and leader while the nebula storaged scale out, default false
 	// +optional
 	EnableAutoBalance *bool `json:"enableAutoBalance,omitempty"`
 }

@@ -100,6 +100,7 @@ type NebulaClusterStatus struct {
 	Metad      ComponentStatus          `json:"metad,omitempty"`
 	Storaged   StoragedStatus           `json:"storaged,omitempty"`
 	Conditions []NebulaClusterCondition `json:"conditions,omitempty"`
+	Version    string                   `json:"version,omitempty"`
 }
 
 // ComponentStatus is the status and version of a nebula component.
@@ -113,13 +114,14 @@ type ComponentStatus struct {
 type StoragedStatus struct {
 	ComponentStatus `json:",omitempty,inline"`
 	HostsAdded      bool        `json:"hostsAdded,omitempty"`
+	BalancedSpaces  []int32     `json:"balancedSpaces,omitempty"`
 	LastBalanceJob  *BalanceJob `json:"lastBalanceJob,omitempty"`
 }
 
 // BalanceJob describes the admin job for balance data.
 type BalanceJob struct {
-	Space string `json:"space,omitempty"`
-	JobID int32  `json:"jobID,omitempty"`
+	SpaceID int32 `json:"spaceID,omitempty"`
+	JobID   int32 `json:"jobID,omitempty"`
 }
 
 // WorkloadStatus describes the status of a specified workload.

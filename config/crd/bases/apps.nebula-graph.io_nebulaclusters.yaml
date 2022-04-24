@@ -5662,6 +5662,11 @@ spec:
                 type: object
               storaged:
                 properties:
+                  balancedSpaces:
+                    items:
+                      format: int32
+                      type: integer
+                    type: array
                   hostsAdded:
                     type: boolean
                   lastBalanceJob:
@@ -5669,8 +5674,9 @@ spec:
                       jobID:
                         format: int32
                         type: integer
-                      space:
-                        type: string
+                      spaceID:
+                        format: int32
+                        type: integer
                     type: object
                   phase:
                     type: string
@@ -5706,6 +5712,8 @@ spec:
                     - updatedReplicas
                     type: object
                 type: object
+              version:
+                type: string
             type: object
         type: object
     served: true

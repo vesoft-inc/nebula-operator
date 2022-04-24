@@ -23,9 +23,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
@@ -127,6 +129,10 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 
+	if err := c.setVersion(nc); err != nil {
+		return err
+	}
+
 	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)
 }
 
@@ -152,6 +158,28 @@ func (c *metadCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, oldWo
 
 func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {
 	return syncConfigMap(nc.MetadComponent(), c.clientSet.ConfigMap(), v1alpha1.MetadhConfigTemplate, nc.MetadComponent().GetConfigMapKey())
+}
+
+func (c *metadCluster) setVersion(nc *v1alpha1.NebulaCluster) error {
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(endpoints)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = metaClient.Disconnect()
+	}()
+
+	hosts, err := metaClient.ListHosts(meta.ListHostType_META)
+	if err != nil {
+		return err
+	}
+	for _, host := range hosts {
+		version := host.Version
+		nc.Status.Version = string(version)
+		break
+	}
+	return nil
 }
 
 type FakeMetadCluster struct {

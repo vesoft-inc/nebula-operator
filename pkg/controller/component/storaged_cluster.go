@@ -18,6 +18,7 @@ package component
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -127,17 +128,26 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	oldReplicas := extender.GetReplicas(oldWorkload)
 	newReplicas := extender.GetReplicas(newWorkload)
-	if !nc.Status.Storaged.HostsAdded || *newReplicas > *oldReplicas {
+	if !nc.Status.Storaged.HostsAdded {
 		if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
 			return err
 		}
 		nc.Status.Storaged.HostsAdded = true
 	}
 
-	//if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
-	//	log.Error(err, "failed to scale cluster ")
-	//	return err
-	//}
+	entVersion := strings.Contains(nc.Status.Version, "ent")
+	if entVersion {
+		if *newReplicas > *oldReplicas {
+			if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
+				return err
+			}
+			log.Info("add storage hosts succeed")
+		}
+		if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
+			log.Error(err, "failed to scale cluster")
+			return err
+		}
+	}
 
 	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
 		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {

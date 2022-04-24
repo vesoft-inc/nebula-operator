@@ -249,7 +249,7 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 	}
 
 	for _, space := range spaces {
-		if err := mc.BalanceLeader(space.Name); err != nil {
+		if err := mc.BalanceLeader(*space.Id.SpaceID); err != nil {
 			return err
 		}
 	}

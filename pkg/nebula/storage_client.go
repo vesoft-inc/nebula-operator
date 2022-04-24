@@ -142,8 +142,5 @@ func (s *storageClient) GetLeaderParts() (map[nebula.GraphSpaceID][]nebula.Parti
 	if err != nil {
 		return nil, err
 	}
-	if len(resp.Result_.FailedParts) > 0 {
-		return nil, errors.Errorf("GetLeaderParts code %d", resp.Result_.FailedParts[0].Code)
-	}
 	return resp.GetLeaderParts(), nil
 }

@@ -46,10 +46,10 @@ type (
 		GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, error)
 		GetSpaceLeaderHosts(space []byte) ([]string, error)
 		GetLeaderCount(leaderHost string) (int, error)
-		BalanceStatus(jobID int32, space []byte) error
-		BalanceLeader(space []byte) error
-		BalanceData(space []byte) (int32, error)
-		RemoveHost(space []byte, endpoints []*nebula.HostAddr) (int32, error)
+		BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) error
+		BalanceLeader(spaceID nebula.GraphSpaceID) error
+		BalanceData(spaceID nebula.GraphSpaceID) (int32, error)
+		RemoveHost(spaceID nebula.GraphSpaceID, endpoints []*nebula.HostAddr) (int32, error)
 		Disconnect() error
 	}
 
@@ -270,12 +270,12 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 	return count, nil
 }
 
-func (m *metaClient) BalanceLeader(space []byte) error {
+func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
 	log := getLog()
 	req := &meta.AdminJobReq{
-		Op:    meta.AdminJobOp_ADD,
-		Cmd:   meta.AdminCmd_LEADER_BALANCE,
-		Paras: [][]byte{space},
+		SpaceID: spaceID,
+		Op:      meta.JobOp_ADD,
+		Type:    meta.JobType_LEADER_BALANCE,
 	}
 	resp, err := m.client.RunAdminJob(req)
 	if err != nil {
@@ -305,7 +305,7 @@ func (m *metaClient) BalanceLeader(space []byte) error {
 	return nil
 }
 
-func (m *metaClient) balance(space []byte, req *meta.AdminJobReq) (int32, error) {
+func (m *metaClient) balance(spaceID nebula.GraphSpaceID, req *meta.AdminJobReq) (int32, error) {
 	log := getLog()
 	log.Info("start balance job")
 	resp, err := m.client.RunAdminJob(req)
@@ -328,7 +328,7 @@ func (m *metaClient) balance(space []byte, req *meta.AdminJobReq) (int32, error)
 				return 0, errors.Errorf("retry balance code %d", resp.Code)
 			}
 			log.Info("balance job running now")
-			return resp.GetResult_().GetJobID(), m.BalanceStatus(*resp.GetResult_().JobID, space)
+			return resp.GetResult_().GetJobID(), m.BalanceStatus(*resp.GetResult_().JobID, spaceID)
 		} else if resp.Code == nebula.ErrorCode_E_BALANCED {
 			log.Info("the cluster is balanced")
 			return 0, nil
@@ -339,39 +339,42 @@ func (m *metaClient) balance(space []byte, req *meta.AdminJobReq) (int32, error)
 		return resp.GetResult_().GetJobID(), errors.Errorf("balance code %d", resp.Code)
 	}
 	log.Info("balance job running now")
-	return resp.GetResult_().GetJobID(), m.BalanceStatus(*resp.GetResult_().JobID, space)
+	return resp.GetResult_().GetJobID(), m.BalanceStatus(*resp.GetResult_().JobID, spaceID)
 }
 
-func (m *metaClient) BalanceData(space []byte) (int32, error) {
+func (m *metaClient) BalanceData(spaceID nebula.GraphSpaceID) (int32, error) {
 	req := &meta.AdminJobReq{
-		Cmd:   meta.AdminCmd_DATA_BALANCE,
-		Op:    meta.AdminJobOp_ADD,
-		Paras: [][]byte{space},
+		SpaceID: spaceID,
+		Op:      meta.JobOp_ADD,
+		Type:    meta.JobType_ZONE_BALANCE,
 	}
 
-	return m.balance(space, req)
+	return m.balance(spaceID, req)
 }
 
-func (m *metaClient) RemoveHost(space []byte, endpoints []*nebula.HostAddr) (int32, error) {
+func (m *metaClient) RemoveHost(spaceID nebula.GraphSpaceID, endpoints []*nebula.HostAddr) (int32, error) {
 	paras := make([][]byte, 0)
 	for _, endpoint := range endpoints {
-		paras = append(paras, []byte(fmt.Sprintf("%s:%d", endpoint.Host, endpoint.Port)))
+		// The back quote need here to consistent with the host addr registered in meta
+		paras = append(paras, []byte(fmt.Sprintf(`"%s":%d`, endpoint.Host, endpoint.Port)))
 	}
-	paras = append(paras, space)
 	req := &meta.AdminJobReq{
-		Cmd:   meta.AdminCmd_DATA_BALANCE,
-		Op:    meta.AdminJobOp_ADD,
-		Paras: paras,
+		SpaceID: spaceID,
+		Op:      meta.JobOp_ADD,
+		Type:    meta.JobType_ZONE_BALANCE,
+		Paras:   paras,
 	}
 
-	return m.balance(space, req)
+	return m.balance(spaceID, req)
 }
 
-func (m *metaClient) BalanceStatus(jobID int32, space []byte) error {
+func (m *metaClient) BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) error {
+	log := getLog().WithValues("JobID", jobID, "SpaceID", spaceID)
 	req := &meta.AdminJobReq{
-		Op:    meta.AdminJobOp_SHOW,
-		Cmd:   meta.AdminCmd_STATS,
-		Paras: [][]byte{[]byte(strconv.FormatInt(int64(jobID), 10)), space},
+		SpaceID: spaceID,
+		Op:      meta.JobOp_SHOW,
+		Type:    meta.JobType_STATS,
+		Paras:   [][]byte{[]byte(strconv.FormatInt(int64(jobID), 10))},
 	}
 	resp, err := m.client.RunAdminJob(req)
 	if err != nil {
@@ -382,6 +385,7 @@ func (m *metaClient) BalanceStatus(jobID int32, space []byte) error {
 			return nil
 		}
 	}
+	log.Info("Balance job in progress")
 	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("Balance job %d still in progress", jobID)}
 }
 

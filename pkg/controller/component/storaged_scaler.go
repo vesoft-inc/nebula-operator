@@ -22,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
@@ -68,8 +69,45 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
-	// TODO: support auto balance across zone
-	log.Info("auto balance is disabled", "storage", nc.StoragedComponent().GetName())
+	if !pointer.BoolPtrDerefOr(nc.Spec.Storaged.EnableAutoBalance, false) {
+		log.Info("auto balance is disabled", "storage", nc.StoragedComponent().GetName())
+		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
+		return nil
+	}
+
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(endpoints)
+	if err != nil {
+		log.Error(err, "create meta client failed", "endpoints", endpoints)
+		return err
+	}
+	defer func() {
+		err := metaClient.Disconnect()
+		if err != nil {
+			log.Error(err, "disconnect meta client failed", "endpoints", endpoints)
+		}
+	}()
+
+	spaces, err := metaClient.ListSpaces()
+	if err != nil {
+		return err
+	}
+
+	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
+		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
+	}
+
+	for _, space := range spaces {
+		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
+			continue
+		}
+		if err := ss.balanceSpace(metaClient, nc, *space.Id.SpaceID); err != nil {
+			return err
+		}
+	}
+
+	nc.Status.Storaged.BalancedSpaces = nil
+	nc.Status.Storaged.LastBalanceJob = nil
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
 }
@@ -120,7 +158,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 				if len(removed) == 0 {
 					continue
 				}
-				if err := ss.removeHost(metaClient, nc, space.Name, hosts); err != nil {
+				if err := ss.removeHost(metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
 					return err
 				}
 				log.Info("remove hosts successfully", "space", space.Name)
@@ -153,58 +191,54 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 
 	if nc.StoragedComponent().IsReady() {
 		log.Info("all used pvcs were reclaimed", "storage", nc.StoragedComponent().GetName())
+		nc.Status.Storaged.LastBalanceJob = nil
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	}
-
 	return nil
 }
 
-func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, space []byte) error {
-	if nc.Status.Storaged.LastBalanceJob != nil {
-		if err := mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, []byte(nc.Status.Storaged.LastBalanceJob.Space)); err != nil {
+func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaceID nebulago.GraphSpaceID) error {
+	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
+		if err := mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
 			return err
 		}
+		if err := mc.BalanceLeader(nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
+			return err
+		}
+		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, nc.Status.Storaged.LastBalanceJob.SpaceID)
+		return nil
 	}
-	jobID, err := mc.BalanceData(space)
+	jobID, err := mc.BalanceData(spaceID)
 	if err != nil {
 		if jobID > 0 {
 			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-				Space: string(space),
-				JobID: jobID,
+				SpaceID: spaceID,
+				JobID:   jobID,
 			}
-			return nil
 		}
 		return err
 	}
-	if err := mc.BalanceLeader(space); err != nil {
-		return err
-	}
-	nc.Status.Storaged.LastBalanceJob = nil
 	return nil
 }
 
 func (ss *storageScaler) removeHost(
 	mc nebula.MetaInterface,
 	nc *v1alpha1.NebulaCluster,
-	space []byte,
+	spaceID nebulago.GraphSpaceID,
 	hosts []*nebulago.HostAddr) error {
-	if nc.Status.Storaged.LastBalanceJob != nil {
-		if err := mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, []byte(nc.Status.Storaged.LastBalanceJob.Space)); err != nil {
-			return err
-		}
+	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
+		return mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
 	}
-	jobID, err := mc.RemoveHost(space, hosts)
+	jobID, err := mc.RemoveHost(spaceID, hosts)
 	if err != nil {
 		if jobID > 0 {
 			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-				Space: string(space),
-				JobID: jobID,
+				SpaceID: spaceID,
+				JobID:   jobID,
 			}
-			return nil
 		}
 		return err
 	}
-	nc.Status.Storaged.LastBalanceJob = nil
 	return nil
 }
 
@@ -215,10 +249,14 @@ func filterRemovedHosts(leaderSets, scaleSets sets.String, scaledHosts []*nebula
 			result.Insert(key)
 		}
 	}
-	for i, host := range scaledHosts {
-		if !result.Has(host.Host) {
-			scaledHosts = append(scaledHosts[:i], scaledHosts[i+1:]...)
+	if len(result) == 0 {
+		return nil
+	}
+	removed := make([]*nebulago.HostAddr, 0)
+	for _, host := range scaledHosts {
+		if result.Has(host.Host) {
+			removed = append(removed, host)
 		}
 	}
-	return scaledHosts
+	return removed
 }

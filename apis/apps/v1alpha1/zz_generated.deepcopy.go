@@ -525,6 +525,11 @@ func (in *StoragedSpec) DeepCopy() *StoragedSpec {
 func (in *StoragedStatus) DeepCopyInto(out *StoragedStatus) {
 	*out = *in
 	in.ComponentStatus.DeepCopyInto(&out.ComponentStatus)
+	if in.BalancedSpaces != nil {
+		in, out := &in.BalancedSpaces, &out.BalancedSpaces
+		*out = make([]int32, len(*in))
+		copy(*out, *in)
+	}
 	if in.LastBalanceJob != nil {
 		in, out := &in.LastBalanceJob, &out.LastBalanceJob
 		*out = new(BalanceJob)

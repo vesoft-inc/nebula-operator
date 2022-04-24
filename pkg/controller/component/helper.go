@@ -266,3 +266,13 @@ func setLastConfig(actual, desired *unstructured.Unstructured) error {
 
 	return extender.SetSpecField(desired, spec["template"], "template")
 }
+
+func contains(ss []int32, lookingFor int32) bool {
+	for _, s := range ss {
+		if lookingFor == s {
+			return true
+		}
+	}
+
+	return false
+}

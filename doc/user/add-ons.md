@@ -22,9 +22,9 @@ cert-manager is used for validating NebulaGraph each component replicas, if you 
 **Note:**
 nebula-operator need advanced features for StatefulSet when it starts. nebula-operator will update nebula cluster pod in-place instead of destroying it.
 
-[openkruise](https://openkruise.io/en-us/)  is a full set of standard extensions for Kubernetes. It works well with original Kubernetes and provides more powerful and efficient features for managing applications Pods, sidecar containers, and even images on Node.
+[openkruise](https://openkruise.io/)  is a full set of standard extensions for Kubernetes. It works well with original Kubernetes and provides more powerful and efficient features for managing applications Pods, sidecar containers, and even images on Node.
 
-Consult the [openkruise installation documentation](https://openkruise.io/en-us/docs/installation.html) to get started.
+Consult the [openkruise installation documentation](https://openkruise.io/docs/installation) to get started.
 
 ## sig-storage-local-static-provisioner
 **Note:**

@@ -210,11 +210,13 @@ func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.Nebu
 	}
 	jobID, err := mc.BalanceData(spaceID)
 	if err != nil {
+		if jobID > 0 {
+			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
+				SpaceID: spaceID,
+				JobID:   jobID,
+			}
+		}
 		return err
-	}
-	nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-		SpaceID: spaceID,
-		JobID:   jobID,
 	}
 	return nil
 }
@@ -229,11 +231,13 @@ func (ss *storageScaler) removeHost(
 	}
 	jobID, err := mc.RemoveHost(spaceID, hosts)
 	if err != nil {
+		if jobID > 0 {
+			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
+				SpaceID: spaceID,
+				JobID:   jobID,
+			}
+		}
 		return err
-	}
-	nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-		SpaceID: spaceID,
-		JobID:   jobID,
 	}
 	return nil
 }

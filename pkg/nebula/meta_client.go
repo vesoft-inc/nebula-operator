@@ -326,12 +326,12 @@ func (m *metaClient) balance(req *meta.AdminJobReq) (int32, error) {
 				return 0, errors.Errorf("retry balance code %d", resp.Code)
 			}
 			log.Info("balance job running now")
-			return resp.GetResult_().GetJobID(), nil
+			return resp.GetResult_().GetJobID(), utilerrors.ReconcileErrorf("waiting for balance job %d finished", resp.GetResult_().GetJobID())
 		}
-		return resp.GetResult_().GetJobID(), errors.Errorf("balance code %d", resp.Code)
+		return 0, errors.Errorf("balance code %d", resp.Code)
 	}
 	log.Info("balance job running now")
-	return resp.GetResult_().GetJobID(), nil
+	return resp.GetResult_().GetJobID(), utilerrors.ReconcileErrorf("waiting for balance job %d finished", resp.GetResult_().GetJobID())
 }
 
 func (m *metaClient) BalanceData(spaceID nebula.GraphSpaceID) (int32, error) {

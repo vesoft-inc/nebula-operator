@@ -572,10 +572,8 @@ github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtX
 github.com/urfave/cli v1.22.2/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
-github.com/vesoft-inc/nebula-go/v3 v3.0.0-20220420060617-5427e0756333 h1:v9VMLnWrvkL1/IadHlD0V3xeConoqsYNYaysNjvJ6KU=
-github.com/vesoft-inc/nebula-go/v3 v3.0.0-20220420060617-5427e0756333/go.mod h1:+sXv05jYQBARdTbTcIEsWVXCnF/6ttOlDK35xQ6m54s=
-github.com/vesoft-inc/nebula-go/v3 v3.0.0 h1:ii5T3vps4xAQZkzPvGn6NuiUWlH/rm1zdIS5VTEA71A=
-github.com/vesoft-inc/nebula-go/v3 v3.0.0/go.mod h1:+sXv05jYQBARdTbTcIEsWVXCnF/6ttOlDK35xQ6m54s=
+github.com/vesoft-inc/nebula-go/v3 v3.1.0 h1:Fp99YPk3/kNY1HERagDfty3To+hdi97dCO73FNwkhwE=
+github.com/vesoft-inc/nebula-go/v3 v3.1.0/go.mod h1:+sXv05jYQBARdTbTcIEsWVXCnF/6ttOlDK35xQ6m54s=
 github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYppBueQtXaqoE=
 github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17pCcGlemwknint6hfoeCVQrEMVwxRLRjXpq+BU=
 github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=

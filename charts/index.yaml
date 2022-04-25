@@ -2,6 +2,31 @@ apiVersion: v1
 entries:
   nebula-cluster:
   - apiVersion: v2
+    appVersion: 1.1.0
+    created: "2022-04-25T20:22:09.570703176+08:00"
+    description: Nebula Cluster Helm chart for Kubernetes
+    digest: a65f3817e4500325d19099ba038169998a5be61466d2bb1fea967fa3aab3008b
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-cluster
+    sources:
+      - https://github.com/vesoft-inc/nebula-graph
+      - https://github.com/vesoft-inc/nebula-storage
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.1.0/nebula-cluster-1.1.0.tgz
+    version: 1.1.0
+  - apiVersion: v2
     appVersion: 1.0.0
     created: "2022-03-31T15:31:42.142029014+08:00"
     description: Nebula Cluster Helm chart for Kubernetes
@@ -102,6 +127,29 @@ entries:
     - https://vesoft-inc.github.io/nebula-operator/charts/nebula-cluster-0.1.0.tgz
     version: 0.1.0
   nebula-operator:
+  - apiVersion: v2
+    appVersion: 1.1.0
+    created: "2022-04-25T20:22:09.572115522+08:00"
+    description: Nebula Operator Helm chart for Kubernetes
+    digest: f374616b29aa53483f13f88c1a96b04bb5f628f66f4fa9d0e3d0d476fd3be961
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-operator
+    sources:
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.1.0/nebula-operator-1.1.0.tgz
+    version: 1.1.0
   - apiVersion: v2
     appVersion: 1.0.0
     created: "2022-03-31T15:31:42.144529751+08:00"

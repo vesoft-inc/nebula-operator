@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
-	github.com/vesoft-inc/nebula-go/v3 v3.0.0-20220420060617-5427e0756333
+	github.com/vesoft-inc/nebula-go/v3 v3.1.0
 	go.uber.org/zap v1.15.0
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2

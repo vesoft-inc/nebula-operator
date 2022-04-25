@@ -271,7 +271,7 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 }
 
 func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
-	log := getLog()
+	log := getLog().WithValues("SpaceID", spaceID)
 	req := &meta.AdminJobReq{
 		SpaceID: spaceID,
 		Op:      meta.JobOp_ADD,
@@ -295,8 +295,6 @@ func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
 			if resp.Code != nebula.ErrorCode_SUCCEEDED {
 				return errors.Errorf("retry balance leader code %d", resp.Code)
 			}
-		} else if resp.Code == nebula.ErrorCode_E_BALANCED {
-			log.Info("cluster is balanced")
 			return nil
 		}
 		return errors.Errorf("BalanceLeader code %d", resp.Code)
@@ -305,7 +303,7 @@ func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
 	return nil
 }
 
-func (m *metaClient) balance(spaceID nebula.GraphSpaceID, req *meta.AdminJobReq) (int32, error) {
+func (m *metaClient) balance(req *meta.AdminJobReq) (int32, error) {
 	log := getLog()
 	log.Info("start balance job")
 	resp, err := m.client.RunAdminJob(req)
@@ -328,18 +326,12 @@ func (m *metaClient) balance(spaceID nebula.GraphSpaceID, req *meta.AdminJobReq)
 				return 0, errors.Errorf("retry balance code %d", resp.Code)
 			}
 			log.Info("balance job running now")
-			return resp.GetResult_().GetJobID(), m.BalanceStatus(*resp.GetResult_().JobID, spaceID)
-		} else if resp.Code == nebula.ErrorCode_E_BALANCED {
-			log.Info("the cluster is balanced")
-			return 0, nil
-		} else if resp.Code == nebula.ErrorCode_E_NO_HOSTS {
-			log.Info("the host is removed")
-			return 0, nil
+			return resp.GetResult_().GetJobID(), nil
 		}
 		return resp.GetResult_().GetJobID(), errors.Errorf("balance code %d", resp.Code)
 	}
 	log.Info("balance job running now")
-	return resp.GetResult_().GetJobID(), m.BalanceStatus(*resp.GetResult_().JobID, spaceID)
+	return resp.GetResult_().GetJobID(), nil
 }
 
 func (m *metaClient) BalanceData(spaceID nebula.GraphSpaceID) (int32, error) {
@@ -349,7 +341,7 @@ func (m *metaClient) BalanceData(spaceID nebula.GraphSpaceID) (int32, error) {
 		Type:    meta.JobType_ZONE_BALANCE,
 	}
 
-	return m.balance(spaceID, req)
+	return m.balance(req)
 }
 
 func (m *metaClient) RemoveHost(spaceID nebula.GraphSpaceID, endpoints []*nebula.HostAddr) (int32, error) {
@@ -365,7 +357,7 @@ func (m *metaClient) RemoveHost(spaceID nebula.GraphSpaceID, endpoints []*nebula
 		Paras:   paras,
 	}
 
-	return m.balance(spaceID, req)
+	return m.balance(req)
 }
 
 func (m *metaClient) BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) error {

@@ -18,6 +18,7 @@ package nebula
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"sync"
 
@@ -34,7 +35,7 @@ var ErrNoAvailableMetadEndpoints = errors.New("metadclient: no available endpoin
 var _ MetaInterface = (*metaClient)(nil)
 
 type (
-	ExecFn func(req interface{}) (*meta.ExecResp, error)
+	Fn func(req interface{}) (interface{}, error)
 
 	MetaInterface interface {
 		GetSpace(spaceName []byte) (*meta.SpaceItem, error)
@@ -59,7 +60,6 @@ type (
 	}
 )
 
-// TODO: capture ErrorCode_E_LEADER_CHANGED error for all methods
 func NewMetaClient(endpoints []string, options ...Option) (MetaInterface, error) {
 	if len(endpoints) == 0 {
 		return nil, ErrNoAvailableMetadEndpoints
@@ -84,99 +84,104 @@ func newMetaConnection(endpoint string, options ...Option) (*metaClient, error) 
 	return mc, nil
 }
 
-func (m *metaClient) reconnect(endpoint string, options ...Option) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	if err := m.disconnect(); err != nil {
+func (m *metaClient) reconnect(endpoint string) error {
+	if err := m.client.Close(); err != nil {
 		return err
 	}
-	if _, err := newMetaConnection(endpoint, options...); err != nil {
+
+	transport, pf, err := buildClientTransport(endpoint)
+	if err != nil {
 		return err
 	}
+
+	metaServiceClient := meta.NewMetaServiceClientFactory(transport, pf)
+	if err := metaServiceClient.Open(); err != nil {
+		return err
+	}
+
+	if !metaServiceClient.IsOpen() {
+		return errors.Errorf("transport is not open")
+	}
+	m.client = metaServiceClient
+
 	return nil
 }
 
 func (m *metaClient) connect() error {
-	log := getLog()
 	if err := m.client.Open(); err != nil {
-		log.Error(err, "open transport failed")
 		return err
 	}
-	log.Info("metad connection opened", "isOpen", m.client.IsOpen())
-	return nil
-}
-
-func (m *metaClient) disconnect() error {
-	if err := m.client.Close(); err != nil {
-		getLog().Error(err, "close transport failed")
+	if !m.client.IsOpen() {
+		return errors.Errorf("transport is not open")
 	}
 	return nil
 }
 
 func (m *metaClient) Disconnect() error {
-	return m.disconnect()
+	return m.client.Close()
 }
 
 func (m *metaClient) GetSpace(spaceName []byte) (*meta.SpaceItem, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	req := &meta.GetSpaceReq{SpaceName: spaceName}
-	resp, err := m.client.GetSpace(req)
+	resp, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.GetSpace(req.(*meta.GetSpaceReq))
+		return resp, err
+	})
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		return nil, errors.Errorf("GetSpace code %d", resp.Code)
-	}
-	return resp.Item, nil
+	return resp.(*meta.GetSpaceResp).Item, nil
 }
 
 func (m *metaClient) ListSpaces() ([]*meta.IdName, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	req := &meta.ListSpacesReq{}
-	resp, err := m.client.ListSpaces(req)
+	resp, err := m.retryOnError(meta.NewListSpacesReq(), func(req interface{}) (interface{}, error) {
+		resp, err := m.client.ListSpaces(req.(*meta.ListSpacesReq))
+		return resp, err
+	})
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		return nil, errors.Errorf("ListSpaces code %d", resp.Code)
-	}
-	return resp.Spaces, nil
+	return resp.(*meta.ListSpacesResp).Spaces, nil
 }
 
 func (m *metaClient) AddHosts(hosts []*nebula.HostAddr) error {
 	req := &meta.AddHostsReq{
 		Hosts: hosts,
 	}
-	return m.retryOnError(req, func(req interface{}) (*meta.ExecResp, error) {
+	_, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
 		resp, err := m.client.AddHosts(req.(*meta.AddHostsReq))
 		return resp, err
 	})
+	return err
 }
 
 func (m *metaClient) DropHosts(hosts []*nebula.HostAddr) error {
 	req := &meta.DropHostsReq{
 		Hosts: hosts,
 	}
-	return m.retryOnError(req, func(req interface{}) (*meta.ExecResp, error) {
+	_, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
 		resp, err := m.client.DropHosts(req.(*meta.DropHostsReq))
 		return resp, err
 	})
+	return err
 }
 
 func (m *metaClient) ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	req := &meta.ListHostsReq{Type: hostType}
-	resp, err := m.client.ListHosts(req)
+	resp, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.ListHosts(req.(*meta.ListHostsReq))
+		return resp, err
+	})
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		return nil, errors.Errorf("ListHosts code %d", resp.Code)
-	}
-	return resp.Hosts, nil
+	return resp.(*meta.ListHostsResp).Hosts, nil
 }
 
 func (m *metaClient) ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.PartitionID) ([]*meta.PartItem, error) {
@@ -186,14 +191,14 @@ func (m *metaClient) ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.Par
 		SpaceID: spaceID,
 		PartIds: partIDs,
 	}
-	resp, err := m.client.ListParts(req)
+	resp, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.ListParts(req.(*meta.ListPartsReq))
+		return resp, err
+	})
 	if err != nil {
 		return nil, err
 	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		return nil, errors.Errorf("ListParts code %d", resp.Code)
-	}
-	return resp.Parts, nil
+	return resp.(*meta.ListPartsResp).Parts, nil
 }
 
 func (m *metaClient) GetSpaceParts() (map[nebula.GraphSpaceID][]*meta.PartItem, error) {
@@ -277,27 +282,12 @@ func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
 		Op:      meta.JobOp_ADD,
 		Type:    meta.JobType_LEADER_BALANCE,
 	}
-	resp, err := m.client.RunAdminJob(req)
+	_, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.RunAdminJob(req.(*meta.AdminJobReq))
+		return resp, err
+	})
 	if err != nil {
 		return err
-	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		if resp.Code == nebula.ErrorCode_E_LEADER_CHANGED {
-			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
-			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
-			if err := m.reconnect(leader); err != nil {
-				return errors.Errorf("update client failed: %v", err)
-			}
-			resp, err := m.client.RunAdminJob(req)
-			if err != nil {
-				return err
-			}
-			if resp.Code != nebula.ErrorCode_SUCCEEDED {
-				return errors.Errorf("retry balance leader code %d", resp.Code)
-			}
-			return nil
-		}
-		return errors.Errorf("BalanceLeader code %d", resp.Code)
 	}
 	log.Info("balance leader successfully")
 	return nil
@@ -306,32 +296,16 @@ func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
 func (m *metaClient) balance(req *meta.AdminJobReq) (int32, error) {
 	log := getLog()
 	log.Info("start balance job")
-	resp, err := m.client.RunAdminJob(req)
+	resp, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.RunAdminJob(req.(*meta.AdminJobReq))
+		return resp, err
+	})
 	if err != nil {
-		log.Info("balance failed")
 		return 0, err
 	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		if resp.Code == nebula.ErrorCode_E_LEADER_CHANGED {
-			log.Info("request leader changed", "host", resp.Leader.Host, "port", resp.Leader.Port)
-			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
-			if err := m.reconnect(leader); err != nil {
-				return 0, errors.Errorf("update client failed: %v", err)
-			}
-			resp, err := m.client.RunAdminJob(req)
-			if err != nil {
-				return 0, err
-			}
-			if resp.Code != nebula.ErrorCode_SUCCEEDED {
-				return 0, errors.Errorf("retry balance code %d", resp.Code)
-			}
-			log.Info("balance job running now")
-			return resp.GetResult_().GetJobID(), utilerrors.ReconcileErrorf("waiting for balance job %d finished", resp.GetResult_().GetJobID())
-		}
-		return 0, errors.Errorf("balance code %d", resp.Code)
-	}
 	log.Info("balance job running now")
-	return resp.GetResult_().GetJobID(), utilerrors.ReconcileErrorf("waiting for balance job %d finished", resp.GetResult_().GetJobID())
+	jobID := resp.(*meta.AdminJobResp).GetResult_().GetJobID()
+	return jobID, utilerrors.ReconcileErrorf("waiting for balance job %d finished", jobID)
 }
 
 func (m *metaClient) BalanceData(spaceID nebula.GraphSpaceID) (int32, error) {
@@ -368,12 +342,16 @@ func (m *metaClient) BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) err
 		Type:    meta.JobType_STATS,
 		Paras:   [][]byte{[]byte(strconv.FormatInt(int64(jobID), 10))},
 	}
-	resp, err := m.client.RunAdminJob(req)
+	resp, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.RunAdminJob(req.(*meta.AdminJobReq))
+		return resp, err
+	})
 	if err != nil {
 		return err
 	}
-	if len(resp.GetResult_().JobDesc) > 0 {
-		if resp.GetResult_().JobDesc[0].Status == meta.JobStatus_FINISHED {
+	jobDesc := resp.(*meta.AdminJobResp).GetResult_().JobDesc
+	if len(jobDesc) > 0 {
+		if jobDesc[0].Status == meta.JobStatus_FINISHED {
 			return nil
 		}
 	}
@@ -381,28 +359,51 @@ func (m *metaClient) BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) err
 	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("Balance job %d still in progress", jobID)}
 }
 
-func (m *metaClient) retryOnError(req interface{}, fn ExecFn) error {
+func (m *metaClient) retryOnError(req interface{}, fn Fn) (interface{}, error) {
 	resp, err := fn(req)
 	if err != nil {
-		return err
+		return resp, err
 	}
-	if resp.Code != nebula.ErrorCode_SUCCEEDED {
-		if resp.Code == nebula.ErrorCode_E_LEADER_CHANGED {
-			leader := fmt.Sprintf("%v:%v", resp.Leader.Host, resp.Leader.Port)
-			if err := m.reconnect(leader); err != nil {
-				return errors.Errorf("update client failed: %v", err)
+
+	code := getResponseCode(resp)
+	leader := getResponseLeader(resp)
+
+	if code != nebula.ErrorCode_SUCCEEDED {
+		if code == nebula.ErrorCode_E_LEADER_CHANGED {
+			newLeader := fmt.Sprintf("%v:%v", leader.Host, leader.Port)
+			// update leader info
+			if err := m.reconnect(newLeader); err != nil {
+				return nil, err
 			}
 			resp, err := fn(req)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			if resp.Code != nebula.ErrorCode_SUCCEEDED {
-				return errors.Errorf("retry response code %d", resp.Code)
+			code := getResponseCode(resp)
+			if code != nebula.ErrorCode_SUCCEEDED {
+				return nil, fmt.Errorf("retry response code %d", code)
+			} else if code == nebula.ErrorCode_E_EXISTED {
+				return resp, nil
 			}
-		} else if resp.Code == nebula.ErrorCode_E_EXISTED {
-			return nil
+			return resp, nil
+		} else if code == nebula.ErrorCode_E_EXISTED {
+			return resp, nil
 		}
-		return errors.Errorf("response code %d", resp.Code)
+		return nil, fmt.Errorf("response code %d", code)
 	}
-	return nil
+	return resp, nil
+}
+
+func getResponseCode(resp interface{}) nebula.ErrorCode {
+	if execResp, ok := resp.(*meta.ExecResp); ok {
+		return execResp.Code
+	}
+	return reflect.ValueOf(resp).Elem().Field(0).Interface().(nebula.ErrorCode)
+}
+
+func getResponseLeader(resp interface{}) *nebula.HostAddr {
+	if execResp, ok := resp.(*meta.ExecResp); ok {
+		return execResp.Leader
+	}
+	return reflect.ValueOf(resp).Elem().Field(1).Interface().(*nebula.HostAddr)
 }

@@ -170,6 +170,19 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		log.Info("drop hosts successfully")
 	}
 
+	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
+		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
+	}
+
+	for _, space := range spaces {
+		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
+			continue
+		}
+		if err := metaClient.BalanceLeader(*space.Id.SpaceID); err != nil {
+			return err
+		}
+	}
+
 	if err := PvcMark(ss.clientSet.PVC(), nc.StoragedComponent(), oldReplicas, newReplicas); err != nil {
 		return err
 	}
@@ -191,6 +204,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 
 	if nc.StoragedComponent().IsReady() {
 		log.Info("all used pvcs were reclaimed", "storage", nc.StoragedComponent().GetName())
+		nc.Status.Storaged.BalancedSpaces = nil
 		nc.Status.Storaged.LastBalanceJob = nil
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	}

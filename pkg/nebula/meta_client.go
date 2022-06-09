@@ -18,7 +18,6 @@ package nebula
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 	"sync"
 
@@ -366,10 +365,12 @@ func (m *metaClient) retryOnError(req interface{}, fn Fn) (interface{}, error) {
 	}
 
 	code := getResponseCode(resp)
-	leader := getResponseLeader(resp)
-
 	if code != nebula.ErrorCode_SUCCEEDED {
 		if code == nebula.ErrorCode_E_LEADER_CHANGED {
+			leader := getResponseLeader(resp)
+			if leader == nil {
+				return nil, fmt.Errorf("get changed leader failed")
+			}
 			newLeader := fmt.Sprintf("%v:%v", leader.Host, leader.Port)
 			// update leader info
 			if err := m.reconnect(newLeader); err != nil {
@@ -395,15 +396,35 @@ func (m *metaClient) retryOnError(req interface{}, fn Fn) (interface{}, error) {
 }
 
 func getResponseCode(resp interface{}) nebula.ErrorCode {
-	if execResp, ok := resp.(*meta.ExecResp); ok {
-		return execResp.Code
+	if r, ok := resp.(*meta.ExecResp); ok {
+		return r.Code
+	} else if r, ok := resp.(*meta.GetSpaceResp); ok {
+		return r.Code
+	} else if r, ok := resp.(*meta.ListSpacesResp); ok {
+		return r.Code
+	} else if r, ok := resp.(*meta.ListHostsResp); ok {
+		return r.Code
+	} else if r, ok := resp.(*meta.ListPartsResp); ok {
+		return r.Code
+	} else if r, ok := resp.(*meta.AdminJobResp); ok {
+		return r.Code
 	}
-	return reflect.ValueOf(resp).Elem().Field(0).Interface().(nebula.ErrorCode)
+	return nebula.ErrorCode_E_UNKNOWN
 }
 
 func getResponseLeader(resp interface{}) *nebula.HostAddr {
-	if execResp, ok := resp.(*meta.ExecResp); ok {
-		return execResp.Leader
+	if r, ok := resp.(*meta.ExecResp); ok {
+		return r.Leader
+	} else if r, ok := resp.(*meta.GetSpaceResp); ok {
+		return r.Leader
+	} else if r, ok := resp.(*meta.ListSpacesResp); ok {
+		return r.Leader
+	} else if r, ok := resp.(*meta.ListHostsResp); ok {
+		return r.Leader
+	} else if r, ok := resp.(*meta.ListPartsResp); ok {
+		return r.Leader
+	} else if r, ok := resp.(*meta.AdminJobResp); ok {
+		return r.Leader
 	}
-	return reflect.ValueOf(resp).Elem().Field(1).Interface().(*nebula.HostAddr)
+	return nil
 }

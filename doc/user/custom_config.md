@@ -6,7 +6,8 @@ For each component has a configuration entry, it defines in crd as config which 
 Config map[string]string `json:"config,omitempty"`
 ```
 
-The below will show you how to configure it.
+The following example will show you how to make configuration chagnes in CRD, i.e for any given options `--foo=bar` in conf files, `.config.foo` could be applied like:
+
 ```yaml
 apiVersion: apps.nebula-graph.io/v1alpha1
 kind: NebulaCluster
@@ -33,7 +34,8 @@ spec:
     config:
       "enable_authorize": "true"
       "auth_type": "password"
+      "foo": "bar"
 ...
 ```
 
-After the custom parameters _enable_authorize_ and _auth_type_ configured, the configmap will overwrite.
+Afterwards, the custom parameters _enable_authorize_, _auth_type_ and _foo_ will be configured and overwritten by configmap.

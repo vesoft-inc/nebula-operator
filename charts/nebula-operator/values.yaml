@@ -1,6 +1,6 @@
 image:
   nebulaOperator:
-    image: vesoft/nebula-operator:v1.1.0
+    image: vesoft/nebula-operator:v1.2.0
     imagePullPolicy: Always
   kubeRBACProxy:
     image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
@@ -28,7 +28,7 @@ admissionWebhook:
   create: true
 
 scheduler:
-  create: true
+  create: false
   schedulerName: nebula-scheduler
   replicas: 2
   env: []

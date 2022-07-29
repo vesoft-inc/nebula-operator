@@ -101,6 +101,7 @@ spec:
     resources: {{ toYaml .Values.nebula.storaged.resources | nindent 6 }}
     image: {{ .Values.nebula.storaged.image }}
     version: {{ .Values.nebula.version }}
+    enableAutoBalance: {{ .Values.nebula.storaged.enableAutoBalance }}
     env: {{ toYaml .Values.nebula.storaged.env | nindent 6 }}
     config: {{ toYaml .Values.nebula.storaged.config | nindent 6 }}
     logVolumeClaim:

@@ -65,6 +65,7 @@ nebula:
         memory: "1Gi"
     logStorage: "500Mi"
     dataStorage: "1Gi"
+    enableAutoBalance: false
     podLabels: {}
     podAnnotations: {}
     nodeSelector: {}

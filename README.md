@@ -1,6 +1,6 @@
 # Nebula Operator
 
-Nebula Operator manages [NebulaGraph](https://github.com/vesoft-inc/nebula-graph) clusters on [Kubernetes](https://kubernetes.io) and automates tasks related to operating a NebulaGraph cluster. 
+Nebula Operator manages [NebulaGraph](https://github.com/vesoft-inc/nebula) clusters on [Kubernetes](https://kubernetes.io) and automates tasks related to operating a NebulaGraph cluster.
 It evolved from [NebulaGraph Cloud Service](https://www.nebula-cloud.io/), makes NebulaGraph a truly cloud-native database.
 
 ## Quick Start
@@ -35,7 +35,7 @@ $ kubectl create -f config/samples/graphd-nodeport-service.yaml
 # nebula-console -u user -p password --address=192.168.8.26 --port=32236
 2021/04/15 16:50:23 [INFO] connection pool is initialized successfully
 
-Welcome to Nebula Graph!
+Welcome to NebulaGraph!
 (user@nebula) [(none)]> 
 ```
 

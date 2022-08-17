@@ -20,8 +20,7 @@ entries:
         name: Kevin Qiao
     name: nebula-cluster
     sources:
-      - https://github.com/vesoft-inc/nebula-graph
-      - https://github.com/vesoft-inc/nebula-storage
+      - https://github.com/vesoft-inc/nebula
       - https://github.com/vesoft-inc/nebula-operator
     urls:
       - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.2.0/nebula-cluster-1.2.0.tgz
@@ -45,8 +44,7 @@ entries:
         name: Kevin Qiao
     name: nebula-cluster
     sources:
-      - https://github.com/vesoft-inc/nebula-graph
-      - https://github.com/vesoft-inc/nebula-storage
+      - https://github.com/vesoft-inc/nebula
       - https://github.com/vesoft-inc/nebula-operator
     urls:
       - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.1.0/nebula-cluster-1.1.0.tgz
@@ -70,8 +68,7 @@ entries:
         name: Kevin Qiao
     name: nebula-cluster
     sources:
-      - https://github.com/vesoft-inc/nebula-graph
-      - https://github.com/vesoft-inc/nebula-storage
+      - https://github.com/vesoft-inc/nebula
       - https://github.com/vesoft-inc/nebula-operator
     urls:
       - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.0.0/nebula-cluster-1.0.0.tgz
@@ -95,8 +92,7 @@ entries:
       name: Kevin Qiao
     name: nebula-cluster
     sources:
-    - https://github.com/vesoft-inc/nebula-graph
-    - https://github.com/vesoft-inc/nebula-storage
+    - https://github.com/vesoft-inc/nebula
     - https://github.com/vesoft-inc/nebula-operator
     urls:
     - https://github.com/vesoft-inc/nebula-operator/releases/download/v0.9.0/nebula-cluster-0.9.0.tgz
@@ -120,8 +116,7 @@ entries:
       name: Kevin Qiao
     name: nebula-cluster
     sources:
-    - https://github.com/vesoft-inc/nebula-graph
-    - https://github.com/vesoft-inc/nebula-storage
+    - https://github.com/vesoft-inc/nebula
     - https://github.com/vesoft-inc/nebula-operator
     urls:
     - https://vesoft-inc.github.io/nebula-operator/charts/nebula-cluster-0.8.0.tgz

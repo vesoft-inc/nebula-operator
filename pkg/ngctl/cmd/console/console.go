@@ -106,8 +106,8 @@ func (o *Options) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().String("image-pull-policy", "",
 		"The image pull policy for the container."+
 			" If left empty, this value will not be specified by the client and defaulted by the server.")
-	cmd.Flags().StringVarP(&o.User, "user", "u", o.User, "The Nebula Graph login user name.")
-	cmd.Flags().StringVarP(&o.Password, "password", "p", o.Password, "The Nebula Graph login password.")
+	cmd.Flags().StringVarP(&o.User, "user", "u", o.User, "The NebulaGraph login user name.")
+	cmd.Flags().StringVarP(&o.Password, "password", "p", o.Password, "The NebulaGraph login password.")
 }
 
 // Complete completes all the required options
@@ -149,11 +149,11 @@ func (o *Options) Validate(cmd *cobra.Command) error {
 	}
 
 	if o.User == "" {
-		return fmt.Errorf("the Nebula Graph login user name cannot be empty")
+		return fmt.Errorf("the NebulaGraph login user name cannot be empty")
 	}
 
 	if o.Password == "" {
-		return fmt.Errorf("the Nebula Graph login password cannot be empty")
+		return fmt.Errorf("the NebulaGraph login password cannot be empty")
 	}
 
 	return nil

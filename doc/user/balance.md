@@ -10,4 +10,4 @@ We provide a parameter `enableAutoBalance` in crd to control whether to automati
 
 Through both stages, the scaling process of the controller replicas is decoupled from the balancing data process and user executing it at low traffic. 
 
-Such an implementation can effectively reduce the impact of data migration on online services, which is in line with the Nebula Graph principle: Balancing data is not fully automated and when to balance data is decided by users.
+Such an implementation can effectively reduce the impact of data migration on online services, which is in line with the NebulaGraph principle: Balancing data is not fully automated and when to balance data is decided by users.

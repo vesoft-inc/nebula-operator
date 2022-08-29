@@ -14,7 +14,7 @@ spec:
     env: {{ toYaml .Values.nebula.graphd.env | nindent 6 }}
     config: {{ toYaml .Values.nebula.graphd.config | nindent 6 }}
     service:
-      type: NodePort
+      type: {{ .Values.nebula.graphd.serviceType }}
       externalTrafficPolicy: Local
     logVolumeClaim:
       resources:

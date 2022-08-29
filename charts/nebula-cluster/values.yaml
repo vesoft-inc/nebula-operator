@@ -9,6 +9,7 @@ nebula:
   graphd:
     image: vesoft/nebula-graphd
     replicas: 2
+    serviceType: NodePort
     env: []
     config: {}
     resources:

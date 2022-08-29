@@ -418,8 +418,13 @@ func generateService(c NebulaClusterComponentter) *corev1.Service {
 	if c.IsHeadlessService() {
 		service.Spec.ClusterIP = corev1.ClusterIPNone
 		service.Spec.PublishNotReadyAddresses = true
-	} else if serviceSpec != nil && serviceSpec.ClusterIP != nil {
-		service.Spec.ClusterIP = *serviceSpec.ClusterIP
+	} else if serviceSpec != nil {
+		if serviceSpec.ClusterIP != nil {
+			service.Spec.ClusterIP = *serviceSpec.ClusterIP
+		}
+		if serviceSpec.Type != "" {
+			service.Spec.Type = serviceSpec.Type
+		}
 	}
 
 	return service

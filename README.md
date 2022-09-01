@@ -27,19 +27,22 @@ nebula-storaged-0   1/1     Running   0          1m
 nebula-storaged-1   1/1     Running   0          1m
 nebula-storaged-2   1/1     Running   0          1m
 ```
+
 See [client service](doc/user/client_service.md) for how to access nebula clusters created by the operator.  
 If you are working with [kubeadm locally](https://kubernetes.io/docs/reference/setup-tools/kubeadm/), create a nodePort service and test that nebula is responding:
-```shell script
+
+```bash
 $ kubectl create -f config/samples/graphd-nodeport-service.yaml
 
-# nebula-console -u user -p password --address=192.168.8.26 --port=32236
+$ nebula-console -u user -p password --address=192.168.8.26 --port=32236
 2021/04/15 16:50:23 [INFO] connection pool is initialized successfully
 
 Welcome to NebulaGraph!
-(user@nebula) [(none)]> 
+(user@nebula) [(none)]>
 ```
 
-Destroy the nebula cluster:  
+Destroy the nebula cluster:
+
 ```bash
 $ kubectl delete -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
@@ -53,6 +56,7 @@ $ kubectl create -f config/samples/apps_v1alpha1_nebulacluster.yaml
 
 In `config/samples/apps_v1alpha1_nebulacluster.yaml` the initial storaged replicas is 3.  
 Modify the file and change `replicas` from 3 to 5.
+
 ```yaml
   storaged:
     resources:
@@ -73,11 +77,13 @@ Modify the file and change `replicas` from 3 to 5.
 ```
 
 Apply the replicas change to the cluster CR:
-```
+
+```bash
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 
 The storaged cluster will scale to 5 members (5 pods):
+
 ```bash
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
@@ -91,6 +97,7 @@ nebula-storaged-4   1/1     Running   0          5m
 ```
 
 Similarly we can decrease the size of the cluster from 5 back to 3 by changing the replicas field again and reapplying the change.
+
 ```yaml
   storaged:
     resources:
@@ -140,7 +147,7 @@ nebula-storaged-2   1/1     Running   0          25m
 
 The container image version should be v3.0.0:
 
-```
+```bash
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
       1 vesoft/nebula-graphd:v3.0.0
       1 vesoft/nebula-metad:v3.0.0
@@ -151,13 +158,13 @@ Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` 
 
 Apply the version change to the cluster CR:
 
-```
+```bash
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 
 Wait 2 minutes. The container image version should be updated to v3.1.0:
 
-```
+```bash
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
       1 vesoft/nebula-graphd:v3.1.0
       1 vesoft/nebula-metad:v3.1.0
@@ -165,9 +172,10 @@ $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].
 ```
 
 ### Failover
-If the minority of nebula components crash, the nebula operator will automatically recover the failure. Let's walk through this in the following steps.  
+If the minority of nebula components crash, the nebula operator will automatically recover the failure. Let's walk through this in the following steps.
 
 Create a nebula cluster:
+
 ```bash
 $ kubectl create -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```

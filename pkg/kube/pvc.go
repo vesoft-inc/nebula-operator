@@ -80,6 +80,9 @@ func (p *pvcClient) UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev
 	if pvc.Annotations == nil {
 		pvc.Annotations = make(map[string]string)
 	}
+	if pvc.Labels == nil {
+		pvc.Labels = make(map[string]string)
+	}
 	pvc.Labels[annotation.AnnPodNameKey] = podName
 	pvc.Annotations[annotation.AnnPodNameKey] = podName
 	pvc.Annotations[annotation.AnnPvReclaimKey] = strconv.FormatBool(isReclaimEnabled)

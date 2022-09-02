@@ -13,7 +13,7 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-graphd
-    version: v3.1.0
+    version: v3.2.0
     service:
       type: NodePort
       externalTrafficPolicy: Local
@@ -32,7 +32,7 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-metad
-    version: v3.1.0
+    version: v3.2.0
     dataVolumeClaim:
       resources:
         requests:
@@ -53,7 +53,7 @@ spec:
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v3.1.0
+    version: v3.2.0
     dataVolumeClaim:
       resources:
         requests:

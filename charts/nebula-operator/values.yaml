@@ -6,7 +6,7 @@ image:
     image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
     imagePullPolicy: Always
   kubeScheduler:
-    image: k8s.gcr.io/kube-scheduler:v1.18.8
+    image: k8s.gcr.io/kube-scheduler:v1.22.12
     imagePullPolicy: Always
 
 imagePullSecrets: []
@@ -25,7 +25,7 @@ controllerManager:
       memory: 100Mi
 
 admissionWebhook:
-  create: true
+  create: false
 
 scheduler:
   create: false

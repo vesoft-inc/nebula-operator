@@ -150,3 +150,4 @@ spec:
   imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 4 }}
   {{- end }}
   schedulerName: {{ .Values.nebula.schedulerName }}
+  unsatisfiableAction: {{ .Values.nebula.unsatisfiableAction }}

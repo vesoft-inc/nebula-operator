@@ -68,7 +68,7 @@ Modify the file and change `replicas` from 3 to 5.
         memory: "1Gi"
     replicas: 5
     image: vesoft/nebula-storaged
-    version: v3.1.0
+    version: v3.2.0
     storageClaim:
       resources:
         requests:
@@ -109,7 +109,7 @@ Similarly we can decrease the size of the cluster from 5 back to 3 by changing t
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v3.1.0
+    version: v3.2.0
     storageClaim:
       resources:
         requests:
@@ -154,7 +154,7 @@ $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].
       3 vesoft/nebula-storaged:v3.0.0
 ```
 
-Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v3.0.0 to v3.1.0:
+Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v3.0.0 to v3.2.0:
 
 Apply the version change to the cluster CR:
 
@@ -162,13 +162,13 @@ Apply the version change to the cluster CR:
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 
-Wait 2 minutes. The container image version should be updated to v3.1.0:
+Wait 2 minutes. The container image version should be updated to v3.2.0:
 
 ```bash
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
-      1 vesoft/nebula-graphd:v3.1.0
-      1 vesoft/nebula-metad:v3.1.0
-      3 vesoft/nebula-storaged:v3.1.0
+      1 vesoft/nebula-graphd:v3.2.0
+      1 vesoft/nebula-metad:v3.2.0
+      3 vesoft/nebula-storaged:v3.2.0
 ```
 
 ### Failover
@@ -202,12 +202,13 @@ nebula-storaged-2   1/1     Running   0          19s
 
 Nebula Operator <-> NebulaGraph
 
-|                        | NebulaGraph v2.5 | NebulaGraph v2.6 | NebulaGraph v3.0 | NebulaGraph v3.1 |
-|----------------------- |------------------|------------------|------------------| ------------------|
-| `v0.8.0`               | ✓                | -                | -                | -                |
-| `v0.9.0`*              | ✓                | ✓                | -                | -                |
-| `v1.0.0`*              | -                | -                | ✓                | ✓                |
-| `v1.1.0`               | -                | -                | ✓                | ✓                |
+|                        | NebulaGraph v2.5 | NebulaGraph v2.6 | NebulaGraph v3.0 | NebulaGraph v3.1 | NebulaGraph v3.2 |
+|----------------------- |------------------|------------------|------------------|------------------|------------------|
+| `v0.8.0`               | ✓                | -                | -                | -                | -                |
+| `v0.9.0`*              | ✓                | ✓                | -                | -                | -                |
+| `v1.0.0`*              | -                | -                | ✓                | ✓                | ✓                |
+| `v1.1.0`               | -                | -                | ✓                | ✓                | ✓                |
+| `v1.2.0`               | -                | -                | ✓                | ✓                | ✓                |
 
 Key:
 

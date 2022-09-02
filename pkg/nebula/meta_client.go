@@ -389,6 +389,8 @@ func (m *metaClient) retryOnError(req interface{}, fn Fn) (interface{}, error) {
 			return resp, nil
 		} else if code == nebula.ErrorCode_E_EXISTED {
 			return resp, nil
+		} else if code == nebula.ErrorCode_E_NO_HOSTS {
+			return resp, nil
 		}
 		return nil, fmt.Errorf("response code %d", code)
 	}

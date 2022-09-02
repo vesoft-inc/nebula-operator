@@ -1,8 +1,9 @@
 nebula:
-  version: v3.1.0
+  version: v3.2.0
   imagePullPolicy: Always
   storageClassName: ""
   schedulerName: default-scheduler # nebula-scheduler
+  unsatisfiableAction: ScheduleAnyway
   reference:
     name: statefulsets.apps
     version: v1

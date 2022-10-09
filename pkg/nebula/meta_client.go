@@ -398,35 +398,39 @@ func (m *metaClient) retryOnError(req interface{}, fn Fn) (interface{}, error) {
 }
 
 func getResponseCode(resp interface{}) nebula.ErrorCode {
-	if r, ok := resp.(*meta.ExecResp); ok {
+	switch r := resp.(type) {
+	case *meta.ExecResp:
 		return r.Code
-	} else if r, ok := resp.(*meta.GetSpaceResp); ok {
+	case *meta.GetSpaceResp:
 		return r.Code
-	} else if r, ok := resp.(*meta.ListSpacesResp); ok {
+	case *meta.ListSpacesResp:
 		return r.Code
-	} else if r, ok := resp.(*meta.ListHostsResp); ok {
+	case *meta.ListHostsResp:
 		return r.Code
-	} else if r, ok := resp.(*meta.ListPartsResp); ok {
+	case *meta.ListPartsResp:
 		return r.Code
-	} else if r, ok := resp.(*meta.AdminJobResp); ok {
+	case *meta.AdminJobResp:
 		return r.Code
+	default:
+		return nebula.ErrorCode_E_UNKNOWN
 	}
-	return nebula.ErrorCode_E_UNKNOWN
 }
 
 func getResponseLeader(resp interface{}) *nebula.HostAddr {
-	if r, ok := resp.(*meta.ExecResp); ok {
+	switch r := resp.(type) {
+	case *meta.ExecResp:
 		return r.Leader
-	} else if r, ok := resp.(*meta.GetSpaceResp); ok {
+	case *meta.GetSpaceResp:
 		return r.Leader
-	} else if r, ok := resp.(*meta.ListSpacesResp); ok {
+	case *meta.ListSpacesResp:
 		return r.Leader
-	} else if r, ok := resp.(*meta.ListHostsResp); ok {
+	case *meta.ListHostsResp:
 		return r.Leader
-	} else if r, ok := resp.(*meta.ListPartsResp); ok {
+	case *meta.ListPartsResp:
 		return r.Leader
-	} else if r, ok := resp.(*meta.AdminJobResp); ok {
+	case *meta.AdminJobResp:
 		return r.Leader
+	default:
+		return nil
 	}
-	return nil
 }

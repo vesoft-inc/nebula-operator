@@ -111,6 +111,9 @@ docker-build: build ## Build docker images.
 docker-push: docker-build ## Push docker images.
 	docker push "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}"
 
+docker-manifest: ## Build all docker images and push it to registry.
+	bash build.sh ${DOCKER_REPO}/nebula-operator ${IMAGE_TAG}
+
 ##@ Deployment
 
 install: manifests $(GOBIN)/kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.

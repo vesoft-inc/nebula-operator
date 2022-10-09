@@ -44,6 +44,7 @@ nebula:
         memory: "1Gi"
     logStorage: "500Mi"
     dataStorage: "1Gi"
+    license: {}
     podLabels: {}
     podAnnotations: {}
     nodeSelector: {}

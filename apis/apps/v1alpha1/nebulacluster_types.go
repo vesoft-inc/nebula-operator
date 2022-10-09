@@ -112,7 +112,7 @@ type ComponentStatus struct {
 
 // StoragedStatus describes the status and version of nebula storaged.
 type StoragedStatus struct {
-	ComponentStatus `json:",omitempty,inline"`
+	ComponentStatus `json:",inline"`
 	HostsAdded      bool        `json:"hostsAdded,omitempty"`
 	BalancedSpaces  []int32     `json:"balancedSpaces,omitempty"`
 	LastBalanceJob  *BalanceJob `json:"lastBalanceJob,omitempty"`
@@ -249,7 +249,7 @@ type StoragedSpec struct {
 
 	// K8S persistent volume claim for Storaged data volume.
 	// +optional
-	DataVolumeClaim *StorageClaim `json:"dataVolumeClaim,omitempty"`
+	DataVolumeClaims []StorageClaim `json:"dataVolumeClaims,omitempty"`
 
 	// Flag to enable/disable auto balance data and leader while the nebula storaged scale out, default false
 	// +optional
@@ -305,7 +305,7 @@ type PodSpec struct {
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 }
 
-// StorageClaim contains details of storages
+// StorageClaim contains details of storage
 type StorageClaim struct {
 	// Resources represents the minimum resources the volume should have.
 	// +optional

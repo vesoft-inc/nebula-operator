@@ -499,10 +499,12 @@ func (in *StoragedSpec) DeepCopyInto(out *StoragedSpec) {
 		*out = new(StorageClaim)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DataVolumeClaim != nil {
-		in, out := &in.DataVolumeClaim, &out.DataVolumeClaim
-		*out = new(StorageClaim)
-		(*in).DeepCopyInto(*out)
+	if in.DataVolumeClaims != nil {
+		in, out := &in.DataVolumeClaims, &out.DataVolumeClaims
+		*out = make([]StorageClaim, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.EnableAutoBalance != nil {
 		in, out := &in.EnableAutoBalance, &out.EnableAutoBalance

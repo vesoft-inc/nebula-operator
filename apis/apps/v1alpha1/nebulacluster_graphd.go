@@ -93,8 +93,8 @@ func (c *graphdComponent) GetLogStorageResources() *corev1.ResourceRequirements 
 	return c.nc.Spec.Graphd.LogVolumeClaim.Resources.DeepCopy()
 }
 
-func (c *graphdComponent) GetDataStorageResources() *corev1.ResourceRequirements {
-	return nil
+func (c *graphdComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
+	return nil, nil
 }
 
 func (c *graphdComponent) GetPodEnvVars() []corev1.EnvVar {

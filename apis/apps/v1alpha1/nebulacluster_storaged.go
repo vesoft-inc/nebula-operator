@@ -92,22 +92,28 @@ func (c *storagedComponent) GetLogStorageClass() *string {
 }
 
 func (c *storagedComponent) GetDataStorageClass() *string {
-	if c.nc.Spec.Storaged.DataVolumeClaim == nil {
-		return nil
-	}
-	scName := c.nc.Spec.Storaged.DataVolumeClaim.StorageClassName
-	if scName == nil || *scName == "" {
-		return nil
-	}
-	return scName
+	return nil
 }
 
 func (c *storagedComponent) GetLogStorageResources() *corev1.ResourceRequirements {
 	return c.nc.Spec.Storaged.LogVolumeClaim.Resources.DeepCopy()
 }
 
-func (c *storagedComponent) GetDataStorageResources() *corev1.ResourceRequirements {
-	return c.nc.Spec.Storaged.DataVolumeClaim.Resources.DeepCopy()
+func (c *storagedComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
+	resources := corev1.ResourceRequirements{}
+	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
+		claim := c.nc.Spec.Storaged.DataVolumeClaims[i]
+		storageRequest, err := parseStorageRequest(claim.Resources.Requests)
+		if err != nil {
+			return nil, err
+		}
+		if i == 0 {
+			resources = storageRequest
+			continue
+		}
+		resources.Requests.Storage().Add(storageRequest.Requests.Storage().DeepCopy())
+	}
+	return &resources, nil
 }
 
 func (c *storagedComponent) GetPodEnvVars() []corev1.EnvVar {
@@ -235,22 +241,36 @@ func (c *storagedComponent) GenerateContainerPorts() []corev1.ContainerPort {
 
 func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	componentType := c.Type().String()
-	return []corev1.VolumeMount{
+	mounts := []corev1.VolumeMount{
 		{
 			Name:      logVolume(componentType),
 			MountPath: "/usr/local/nebula/logs",
 			SubPath:   "logs",
-		}, {
-			Name:      dataVolume(componentType),
-			MountPath: "/usr/local/nebula/data",
-			SubPath:   "data",
 		},
 	}
+	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
+		volumeName := storageDataVolume(componentType, i)
+		mountPath := "/usr/local/nebula/data"
+		if i > 0 {
+			mountPath = fmt.Sprintf("/usr/local/nebula/data%d", i)
+		}
+		subPath := "data"
+		if i > 0 {
+			subPath = fmt.Sprintf("data%d", i)
+		}
+		mount := corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: mountPath,
+			SubPath:   subPath,
+		}
+		mounts = append(mounts, mount)
+	}
+	return mounts
 }
 
 func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 	componentType := c.Type().String()
-	return []corev1.Volume{
+	volumes := []corev1.Volume{
 		{
 			Name: logVolume(componentType),
 			VolumeSource: corev1.VolumeSource{
@@ -259,18 +279,24 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 				},
 			},
 		},
-		{
-			Name: dataVolume(componentType),
+	}
+
+	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
+		volumeName := storageDataVolume(componentType, i)
+		volume := corev1.Volume{
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: dataVolume(componentType),
+					ClaimName: volumeName,
 				},
 			},
-		},
+		}
+		volumes = append(volumes, volume)
 	}
+
+	return volumes
 }
 
-// nolint: dupl
 func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
 	componentType := c.Type().String()
 	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()
@@ -279,10 +305,9 @@ func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClai
 		return nil, fmt.Errorf("cannot parse storage request for %s log volume, error: %v", componentType, err)
 	}
 
-	datSC, dataRes := c.GetDataStorageClass(), c.GetDataStorageResources()
-	dataReq, err := parseStorageRequest(dataRes.Requests)
+	dataClaims, err := storageDataVolumeClaims(c.nc.Spec.Storaged.DataVolumeClaims, componentType)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse storage request for %s data volume, error: %v", componentType, err)
+		return nil, fmt.Errorf("cannot parse storage request for %s data volumes, error: %v", componentType, err)
 	}
 
 	claims := []corev1.PersistentVolumeClaim{
@@ -296,17 +321,9 @@ func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClai
 				StorageClassName: logSC,
 			},
 		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: dataVolume(componentType),
-			},
-			Spec: corev1.PersistentVolumeClaimSpec{
-				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-				Resources:        dataReq,
-				StorageClassName: datSC,
-			},
-		},
 	}
+	claims = append(claims, dataClaims...)
+
 	return claims, nil
 }
 
@@ -330,4 +347,26 @@ func (c *storagedComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *storagedComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Storaged.ComponentStatus = *status
+}
+
+func storageDataVolumeClaims(storageClaims []StorageClaim, componentType string) ([]corev1.PersistentVolumeClaim, error) {
+	var pvcs []corev1.PersistentVolumeClaim
+	for i := range storageClaims {
+		storageRequest, err := parseStorageRequest(storageClaims[i].Resources.Requests)
+		if err != nil {
+			return nil, err
+		}
+		volumeName := storageDataVolume(componentType, i)
+		pvcs = append(pvcs, corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{Name: volumeName},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					corev1.ReadWriteOnce,
+				},
+				StorageClassName: storageClaims[i].StorageClassName,
+				Resources:        storageRequest,
+			},
+		})
+	}
+	return pvcs, nil
 }

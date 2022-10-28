@@ -108,11 +108,13 @@ func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1al
 						},
 					},
 				},
-				DataVolumeClaim: &v1alpha1.StorageClaim{
-					StorageClassName: &storageClassName,
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("1Gi"),
+				DataVolumeClaims: []v1alpha1.StorageClaim{
+					{
+						StorageClassName: &storageClassName,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse("1Gi"),
+							},
 						},
 					},
 				},

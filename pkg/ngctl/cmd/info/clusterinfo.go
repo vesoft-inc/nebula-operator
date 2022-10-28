@@ -96,21 +96,27 @@ func NewNebulaClusterInfo(clusterName, namespace string, runtimeCli client.Clien
 		ReadyReplicas: nc.Status.Graphd.Workload.ReadyReplicas,
 		Image:         nc.GraphdComponent().GetImage(),
 	}
-	setComponentInfo(&graphd, nc.GraphdComponent())
+	if err := setComponentInfo(&graphd, nc.GraphdComponent()); err != nil {
+		return nil, err
+	}
 
 	metad := NebulaComponentInfo{
 		Phase:         string(nc.Status.Metad.Phase),
 		Replicas:      nc.Status.Metad.Workload.Replicas,
 		ReadyReplicas: nc.Status.Metad.Workload.ReadyReplicas,
 	}
-	setComponentInfo(&metad, nc.MetadComponent())
+	if err := setComponentInfo(&metad, nc.MetadComponent()); err != nil {
+		return nil, err
+	}
 
 	storage := NebulaComponentInfo{
 		Phase:         string(nc.Status.Storaged.Phase),
 		Replicas:      nc.Status.Storaged.Workload.Replicas,
 		ReadyReplicas: nc.Status.Storaged.Workload.ReadyReplicas,
 	}
-	setComponentInfo(&storage, nc.StoragedComponent())
+	if err := setComponentInfo(&storage, nc.StoragedComponent()); err != nil {
+		return nil, err
+	}
 
 	nci := &NebulaClusterInfo{
 		Name:              clusterName,
@@ -237,7 +243,7 @@ func (i *NebulaClusterInfo) appendEndpointsClusterIP(svc *corev1.Service) {
 	})
 }
 
-func setComponentInfo(info *NebulaComponentInfo, c appsv1alpha1.NebulaClusterComponentter) {
+func setComponentInfo(info *NebulaComponentInfo, c appsv1alpha1.NebulaClusterComponentter) error {
 	info.Type = string(c.Type())
 	if res := c.GetResources(); res != nil {
 		if cpu := res.Requests.Cpu(); cpu != nil {
@@ -252,10 +258,16 @@ func setComponentInfo(info *NebulaComponentInfo, c appsv1alpha1.NebulaClusterCom
 			info.Storage = *storage
 		}
 	}
-	if res := c.GetDataStorageResources(); res != nil {
+	res, err := c.GetDataStorageResources()
+	if err != nil {
+		return err
+	}
+	if res != nil {
 		if storage := res.Requests.Storage(); storage != nil {
 			info.Storage.Add(*storage)
 		}
 	}
 	info.Image = c.GetImage()
+
+	return nil
 }

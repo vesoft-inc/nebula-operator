@@ -40,7 +40,7 @@ type NebulaClusterComponentter interface {
 	GetPodAnnotations() map[string]string
 	GetPodLabels() map[string]string
 	GetLogStorageResources() *corev1.ResourceRequirements
-	GetDataStorageResources() *corev1.ResourceRequirements
+	GetDataStorageResources() (*corev1.ResourceRequirements, error)
 	NodeSelector() map[string]string
 	Affinity() *corev1.Affinity
 	Tolerations() []corev1.Toleration

@@ -72,6 +72,10 @@ spec:
       {{- end }}
     labels: {{ toYaml .Values.nebula.metad.podLabels | nindent 6 }}
     annotations: {{ toYaml .Values.nebula.metad.podAnnotations | nindent 6 }}
+    {{- with .Values.nebula.metad.license }}
+    license:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.metad.nodeSelector }}
     nodeSelector:
     {{- toYaml . | nindent 6 }}
@@ -111,12 +115,12 @@ spec:
     {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
     {{- end }}
-    dataVolumeClaim:
-      resources:
+    dataVolumeClaims:
+    - resources:
         requests:
           storage: {{ .Values.nebula.storaged.dataStorage }}
       {{- if .Values.nebula.storageClassName }}
-      storageClassName: {{ .Values.nebula.storageClassName }}
+        storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
     labels: {{ toYaml .Values.nebula.storaged.podLabels | nindent 6 }}
     annotations: {{ toYaml .Values.nebula.storaged.podAnnotations | nindent 6 }}
@@ -151,3 +155,4 @@ spec:
   {{- end }}
   schedulerName: {{ .Values.nebula.schedulerName }}
   unsatisfiableAction: {{ .Values.nebula.unsatisfiableAction }}
+  enablePVReclaim: {{ .Values.nebula.enablePVReclaim }}

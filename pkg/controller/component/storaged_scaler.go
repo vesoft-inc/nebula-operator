@@ -112,6 +112,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 	return nil
 }
 
+// nolint: revive
 func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
 	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
 	nc.Status.Storaged.Phase = v1alpha1.ScaleInPhase

@@ -162,6 +162,13 @@ func dataVolume(componentType string) string {
 	return componentType + "-data"
 }
 
+func storageDataVolume(componentType string, index int) string {
+	if index > 0 {
+		return fmt.Sprintf("%s-data-%d", componentType, index)
+	}
+	return dataVolume(componentType)
+}
+
 func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, error) {
 	if res == nil {
 		return corev1.ResourceRequirements{}, nil
@@ -183,14 +190,24 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 
 	containers := make([]corev1.Container, 0, 1)
 
-	metadAddress := strings.Join(nc.GetMetadEndpoints(), ",")
 	cmd := []string{"/bin/bash", "-ecx"}
+
+	var dataPath string
+	volumes := len(nc.Spec.Storaged.DataVolumeClaims)
+	if c.Type() == StoragedComponentType && volumes > 1 {
+		dataPath = " --data_path=data/storage"
+		for i := 1; i < volumes; i++ {
+			dataPath += fmt.Sprintf(",data%d/storage", i)
+		}
+	}
+
+	metadAddress := strings.Join(nc.GetMetadEndpoints(), ",")
 	cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
 		fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+
 		" --meta_server_addrs="+metadAddress+
 		" --local_ip=$(hostname)."+c.GetServiceFQDN()+
 		" --ws_ip=$(hostname)."+c.GetServiceFQDN()+
-		" --daemonize=false")
+		" --daemonize=false"+dataPath)
 
 	mounts := c.GenerateVolumeMounts()
 	if cm != nil {

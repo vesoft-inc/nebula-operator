@@ -79,6 +79,24 @@ func GetContainers(obj *unstructured.Unstructured) []map[string]interface{} {
 	return containers
 }
 
+func GetVolumeClaims(obj *unstructured.Unstructured) []map[string]interface{} {
+	fields := []string{"spec", "volumeClaimTemplates"}
+	volumeClaims := make([]map[string]interface{}, 0)
+	vcs, ok, err := unstructured.NestedFieldCopy(obj.Object, fields...)
+	if err != nil {
+		return nil
+	}
+	if !ok {
+		return nil
+	}
+	vcList := vcs.([]interface{})
+	for _, volumeClaim := range vcList {
+		vc := volumeClaim.(map[string]interface{})
+		volumeClaims = append(volumeClaims, vc)
+	}
+	return volumeClaims
+}
+
 func SetSpecField(obj *unstructured.Unstructured, value interface{}, fields ...string) error {
 	return unstructured.SetNestedField(obj.Object, value, append([]string{"spec"}, fields...)...)
 }

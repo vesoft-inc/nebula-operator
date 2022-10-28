@@ -104,8 +104,8 @@ func (c *metadComponent) GetLogStorageResources() *corev1.ResourceRequirements {
 	return c.nc.Spec.Metad.LogVolumeClaim.Resources.DeepCopy()
 }
 
-func (c *metadComponent) GetDataStorageResources() *corev1.ResourceRequirements {
-	return c.nc.Spec.Metad.DataVolumeClaim.Resources.DeepCopy()
+func (c *metadComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
+	return c.nc.Spec.Metad.DataVolumeClaim.Resources.DeepCopy(), nil
 }
 
 func (c *metadComponent) GetPodEnvVars() []corev1.EnvVar {
@@ -302,7 +302,11 @@ func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, 
 		return nil, fmt.Errorf("cannot parse storage request for %s log volume, error: %v", componentType, err)
 	}
 
-	datSC, dataRes := c.GetDataStorageClass(), c.GetDataStorageResources()
+	dataRes, err := c.GetDataStorageResources()
+	if err != nil {
+		return nil, err
+	}
+	dataSC := c.GetDataStorageClass()
 	dataReq, err := parseStorageRequest(dataRes.Requests)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse storage request for %s data volume, error: %v", componentType, err)
@@ -326,7 +330,7 @@ func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, 
 			Spec: corev1.PersistentVolumeClaimSpec{
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 				Resources:        dataReq,
-				StorageClassName: datSC,
+				StorageClassName: dataSC,
 			},
 		},
 	}

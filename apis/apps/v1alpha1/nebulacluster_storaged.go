@@ -99,13 +99,13 @@ func (c *storagedComponent) GetLogStorageResources() *corev1.ResourceRequirement
 	return c.nc.Spec.Storaged.LogVolumeClaim.Resources.DeepCopy()
 }
 
-func (c *storagedComponent) GetDataStorageResources() *corev1.ResourceRequirements {
+func (c *storagedComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
 	resources := corev1.ResourceRequirements{}
 	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
 		claim := c.nc.Spec.Storaged.DataVolumeClaims[i]
 		storageRequest, err := parseStorageRequest(claim.Resources.Requests)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		if i == 0 {
 			resources = storageRequest
@@ -113,7 +113,7 @@ func (c *storagedComponent) GetDataStorageResources() *corev1.ResourceRequiremen
 		}
 		resources.Requests.Storage().Add(storageRequest.Requests.Storage().DeepCopy())
 	}
-	return &resources
+	return &resources, nil
 }
 
 func (c *storagedComponent) GetPodEnvVars() []corev1.EnvVar {

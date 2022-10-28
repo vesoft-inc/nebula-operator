@@ -2,6 +2,7 @@ nebula:
   version: v3.2.0
   imagePullPolicy: Always
   storageClassName: ""
+  enablePVReclaim: false
   schedulerName: default-scheduler # nebula-scheduler
   unsatisfiableAction: ScheduleAnyway
   reference:

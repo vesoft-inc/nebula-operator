@@ -190,23 +190,25 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 
 	containers := make([]corev1.Container, 0, 1)
 
-	metadAddress := strings.Join(nc.GetMetadEndpoints(), ",")
 	cmd := []string{"/bin/bash", "-ecx"}
+
+	var dataPath string
+	volumes := len(nc.Spec.Storaged.DataVolumeClaims)
+	if c.Type() == StoragedComponentType && volumes > 1 {
+		dataPath = " --data_path=data/storage"
+		for i := 1; i < volumes; i++ {
+			dataPath += fmt.Sprintf(",data%d/storage", i)
+		}
+	}
+
+	metadAddress := strings.Join(nc.GetMetadEndpoints(), ",")
 	cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
 		fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+
 		" --meta_server_addrs="+metadAddress+
 		" --local_ip=$(hostname)."+c.GetServiceFQDN()+
 		" --ws_ip=$(hostname)."+c.GetServiceFQDN()+
-		" --daemonize=false")
-
-	dataPath := "--data_path=data/storage"
-	volumes := len(nc.Spec.Storaged.DataVolumeClaims)
-	if c.Type() == StoragedComponentType && volumes > 1 {
-		for i := 1; i < volumes; i++ {
-			dataPath += fmt.Sprintf(",data%d/storage", i)
-		}
-		cmd = append(cmd, dataPath)
-	}
+		" --daemonize=false"+
+		fmt.Sprintf("%s", dataPath))
 
 	mounts := c.GenerateVolumeMounts()
 	if cm != nil {

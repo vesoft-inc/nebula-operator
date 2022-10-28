@@ -207,8 +207,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		" --meta_server_addrs="+metadAddress+
 		" --local_ip=$(hostname)."+c.GetServiceFQDN()+
 		" --ws_ip=$(hostname)."+c.GetServiceFQDN()+
-		" --daemonize=false"+
-		fmt.Sprintf("%s", dataPath))
+		" --daemonize=false"+dataPath)
 
 	mounts := c.GenerateVolumeMounts()
 	if cm != nil {

@@ -217,6 +217,8 @@ const (
 
 ############## rocksdb Options ##############
 --rocksdb_wal_sync=true
+
+--minimum_reserved_bytes=104857600
 `
 	// nolint: revive
 	StoragedConfigTemplate = `

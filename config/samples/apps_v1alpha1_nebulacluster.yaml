@@ -13,14 +13,14 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-graphd
-    version: v3.2.0
+    version: v3.3.0
     service:
       type: NodePort
       externalTrafficPolicy: Local
     logVolumeClaim:
       resources:
         requests:
-          storage: 2Gi
+          storage: 1Gi
       storageClassName: gp2
   metad:
     resources:
@@ -32,16 +32,16 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-metad
-    version: v3.2.0
+    version: v3.3.0
     dataVolumeClaim:
       resources:
         requests:
-          storage: 2Gi
+          storage: 5Gi
       storageClassName: gp2
     logVolumeClaim:
       resources:
         requests:
-          storage: 2Gi
+          storage: 1Gi
       storageClassName: gp2
   storaged:
     resources:
@@ -53,16 +53,16 @@ spec:
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v3.2.0
-    dataVolumeClaim:
-      resources:
+    version: v3.3.0
+    dataVolumeClaims:
+    - resources:
         requests:
-          storage: 2Gi
-      storageClassName: gp2
+          storage: 10Gi
+        storageClassName: gp2
     logVolumeClaim:
       resources:
         requests:
-          storage: 2Gi
+          storage: 1Gi
       storageClassName: gp2
   reference:
     name: statefulsets.apps

@@ -20,9 +20,9 @@ spec:
       resources:
         requests:
           storage: {{ .Values.nebula.graphd.logStorage }}
-    {{- if .Values.nebula.storageClassName }}
+      {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
-    {{- end }}
+      {{- end }}
     labels: {{ toYaml .Values.nebula.graphd.podLabels | nindent 6 }}
     annotations: {{ toYaml .Values.nebula.graphd.podAnnotations | nindent 6 }}
     {{- with .Values.nebula.graphd.nodeSelector }}
@@ -60,9 +60,9 @@ spec:
       resources:
         requests:
           storage: {{ .Values.nebula.metad.logStorage }}
-    {{- if .Values.nebula.storageClassName }}
+      {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
-    {{- end }}
+      {{- end }}
     dataVolumeClaim:
       resources:
         requests:
@@ -112,15 +112,15 @@ spec:
       resources:
         requests:
           storage: {{ .Values.nebula.storaged.logStorage }}
-    {{- if .Values.nebula.storageClassName }}
+      {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
-    {{- end }}
+      {{- end }}
     dataVolumeClaims:
     - resources:
         requests:
           storage: {{ .Values.nebula.storaged.dataStorage }}
       {{- if .Values.nebula.storageClassName }}
-        storageClassName: {{ .Values.nebula.storageClassName }}
+      storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
     labels: {{ toYaml .Values.nebula.storaged.podLabels | nindent 6 }}
     annotations: {{ toYaml .Values.nebula.storaged.podAnnotations | nindent 6 }}

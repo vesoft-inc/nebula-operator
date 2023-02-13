@@ -172,7 +172,7 @@ func (c *storagedComponent) IsHeadlessService() bool {
 }
 
 func (c *storagedComponent) GetServiceSpec() *ServiceSpec {
-	if c.nc.Spec.Storaged.Service != nil {
+	if c.nc.Spec.Storaged.Service == nil {
 		return nil
 	}
 	return c.nc.Spec.Storaged.Service.DeepCopy()

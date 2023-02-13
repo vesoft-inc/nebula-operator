@@ -1,6 +1,6 @@
 image:
   nebulaOperator:
-    image: vesoft/nebula-operator:v1.3.0
+    image: vesoft/nebula-operator:v1.4.0
     imagePullPolicy: Always
   kubeRBACProxy:
     image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0

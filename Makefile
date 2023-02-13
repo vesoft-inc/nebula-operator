@@ -1,11 +1,13 @@
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false,maxDescLen=0"
+CRD_OPTIONS ?= "crd:generateEmbeddedObjectMeta=false,maxDescLen=0"
 # Set build symbols
 LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
-DOCKER_REGISTRY ?= localhost:5000
+DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
-IMAGE_TAG ?= latest
+IMAGE_TAG ?= v1.4.0
+
+CHARTS_VERSION ?= 1.4.0
 
 export GO111MODULE := on
 GOOS := $(if $(GOOS),$(GOOS),linux)
@@ -81,7 +83,7 @@ test: manifests generate check ## Run tests.
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... ./apis/... -coverprofile cover.out
 
 ##@ e2e
-e2e: $(GOBIN)/ginkgo $(GOBIN)/kind helm
+e2e: $(GOBIN)/ginkgo $(GOBIN)/kind
 	PATH="${GOBIN}:${PATH}" ./hack/e2e.sh
 
 ##@ Build
@@ -90,12 +92,12 @@ build: generate check ## Build binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o images/nebula-operator/bin/controller-manager cmd/controller-manager/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o images/nebula-operator/bin/scheduler cmd/scheduler/main.go
 
-build-helm: helm
-	helm repo index charts --url https://vesoft-inc.github.io/nebula-operator/charts
-	helm package charts/nebula-operator
-	helm package charts/nebula-cluster
+helm-charts:
+	cp config/crd/bases/*.yaml charts/nebula-operator/crds/
+	helm package charts/nebula-operator --version $(CHARTS_VERSION)
+	helm package charts/nebula-cluster --version $(CHARTS_VERSION)
 	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/
-	cp config/crd/bases/apps.nebula-graph.io_nebulaclusters.yaml charts/nebula-operator/crds/nebulacluster.yaml
+	helm repo index charts/ --url https://github.com/vesoft-inc/nebula-operator/releases/download/v$(CHARTS_VERSION)
 
 run: run-controller-manager
 
@@ -108,7 +110,7 @@ run-scheduler: manifests generate check
 docker-build: build ## Build docker images.
 	docker build -t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" images/nebula-operator/
 
-docker-push: docker-build ## Push docker images.
+docker-push: ## Push docker images.
 	docker push "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}"
 
 docker-manifest: ## Build all docker images and push it to registry.
@@ -138,8 +140,7 @@ tools: $(GOBIN)/goimports \
 	$(GOBIN)/controller-gen \
 	$(GOBIN)/kustomize \
 	$(GOBIN)/ginkgo \
-	$(GOBIN)/kind \
-	helm
+	$(GOBIN)/kind
 
 $(GOBIN)/goimports:
 	$(call go-get-tool,$(GOBIN)/goimports,golang.org/x/tools/cmd/goimports)
@@ -156,26 +157,20 @@ $(GOBIN)/gofumpt:
 $(GOBIN)/golangci-lint:
 	@[ -f $(GOBIN)/golangci-lint ] || { \
 	set -e ;\
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.40.1 ;\
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.51.1 ;\
 	}
 
 $(GOBIN)/controller-gen:
-	$(call go-get-tool,$(GOBIN)/controller-gen,sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+	$(call go-get-tool,$(GOBIN)/controller-gen,sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3)
 
 $(GOBIN)/kustomize:
-	$(call go-get-tool,$(GOBIN)/kustomize,sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+	$(call go-get-tool,$(GOBIN)/kustomize,sigs.k8s.io/kustomize/kustomize/v4@v4.5.7)
 
 $(GOBIN)/ginkgo:
-	$(call go-get-tool,$(GOBIN)/kustomize,github.com/onsi/ginkgo/ginkgo@v1.16.2)
+	$(call go-get-tool,$(GOBIN)/ginkgo,github.com/onsi/ginkgo/ginkgo@v1.16.5)
 
 $(GOBIN)/kind:
-	$(call go-get-tool,$(GOBIN)/kustomize,sigs.k8s.io/kind@v0.10.0)
-
-helm:
-	@[ -f /usr/local/bin/helm ] || { \
-	set -e ;\
-	curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash ;\
-	}
+	$(call go-get-tool,$(GOBIN)/kind,sigs.k8s.io/kind@v0.17.0)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool
@@ -186,6 +181,7 @@ cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
 go get $(2) ;\
+go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef

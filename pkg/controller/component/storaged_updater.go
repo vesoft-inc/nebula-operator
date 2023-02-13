@@ -24,6 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
@@ -40,7 +41,7 @@ const (
 	// TransLeaderBeginTime is the key of trans Leader begin time
 	TransLeaderBeginTime = "transLeaderBeginTime"
 	// TransLeaderTimeout is the timeout limit of trans leader
-	TransLeaderTimeout = 5 * time.Minute
+	TransLeaderTimeout = 30 * time.Minute
 )
 
 type storagedUpdater struct {
@@ -57,7 +58,6 @@ func (s *storagedUpdater) Update(
 	oldUnstruct, newUnstruct *unstructured.Unstructured,
 	gvk schema.GroupVersionKind,
 ) error {
-	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
 	if *nc.Spec.Storaged.Replicas == int32(0) {
 		return nil
 	}
@@ -91,7 +91,7 @@ func (s *storagedUpdater) Update(
 	}
 	defer func() {
 		if err := mc.Disconnect(); err != nil {
-			log.Error(err, "meta client disconnect failed")
+			klog.Errorf("meta client disconnect failed: %v", err)
 		}
 	}()
 
@@ -125,16 +125,15 @@ func (s *storagedUpdater) updateStoragedPod(
 	advanced bool,
 	empty bool,
 ) error {
-	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
 	namespace := nc.GetNamespace()
 	updatePodName := nc.StoragedComponent().GetPodName(ordinal)
 	updatePod, err := s.clientSet.Pod().GetPod(namespace, updatePodName)
 	if err != nil {
-		log.Error(err, "failed to get pod")
+		klog.Errorf("cluster [%s/%s] get pod failed: %v", nc.Namespace, nc.Name, err)
 		return err
 	}
 
-	if empty || *nc.Spec.Storaged.Replicas < 3 {
+	if empty || *nc.Spec.Storaged.Replicas < 3 || nc.IsForceUpdateEnabled() {
 		return setPartition(newUnstruct, int64(ordinal), advanced)
 	}
 
@@ -152,28 +151,29 @@ func (s *storagedUpdater) updateStoragedPod(
 }
 
 func (s *storagedUpdater) readyToUpdate(mc nebula.MetaInterface, leaderHost string, updatePod *corev1.Pod) bool {
-	log := getLog().WithValues("updatePod", updatePod.GetName())
+	ns := updatePod.GetNamespace()
+	podName := updatePod.GetName()
 	count, err := mc.GetLeaderCount(leaderHost)
 	if err != nil {
-		log.Error(err, "get leader count failed")
+		klog.Errorf("pod [%s/%s] get leader count failed: %v", ns, podName, err)
 		return false
 	}
 	if count == 0 {
-		log.Info("leader count is 0, ready for updating", "host", leaderHost)
+		klog.Infof("pod [%s/%s] leader count is 0, ready for rolling update", ns, podName)
 		return true
 	}
 	if timeStr, ok := updatePod.Annotations[TransLeaderBeginTime]; ok {
 		transLeaderBeginTime, err := time.Parse(time.RFC3339, timeStr)
 		if err != nil {
-			log.Error(err, "parse time formatted string failed")
+			klog.Errorf("parse time formatted string failed: %v", err)
 			return false
 		}
 		if time.Now().After(transLeaderBeginTime.Add(TransLeaderTimeout)) {
-			log.Error(err, "trans leader timeout")
-			return true
+			klog.Errorf("pod [%s/%s] transfer leader timeout", ns, podName)
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (s *storagedUpdater) transLeaderIfNecessary(
@@ -182,7 +182,6 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 	ordinal int32,
 	updatePod *corev1.Pod,
 ) error {
-	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
 	if updatePod.Annotations == nil {
 		updatePod.Annotations = map[string]string{}
 	}
@@ -192,6 +191,7 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 	if err := s.clientSet.Pod().UpdatePod(updatePod); err != nil {
 		return err
 	}
+	klog.Infof("set pod %s annotation %v successfully", updatePod.Name, TransLeaderBeginTime)
 
 	podFQDN := nc.StoragedComponent().GetPodFQDN(ordinal)
 	endpoint := fmt.Sprintf("%s:%d", podFQDN, nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameAdmin))
@@ -202,13 +202,13 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 
 	defer func() {
 		if err := sc.Disconnect(); err != nil {
-			log.Error(err, "storage client disconnect failed")
+			klog.Errorf("storage client disconnect failed: %v", err)
 		}
 	}()
 
 	spaceItems, err := mc.GetSpaceParts()
 	if err != nil {
-		log.Error(err, "get space partition failed")
+		klog.Errorf("cluster [%s/%s] get space partition failed: %v", nc.Namespace, nc.Name, err)
 		return err
 	}
 	for spaceID, partItems := range spaceItems {
@@ -234,16 +234,16 @@ func (s *storagedUpdater) transLeader(
 	partID nebulago.PartitionID,
 	newLeader *nebulago.HostAddr,
 ) error {
-	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
 	if err := storageClient.TransLeader(spaceID, partID, newLeader); err != nil {
 		return err
 	}
-	log.Info("transfer leader successfully", "space", spaceID, "partition", partID)
+	klog.Infof("cluster [%s/%s] transfer leader spaceID %d partitionID %d to host %s successfully",
+		nc.Namespace, nc.Name, spaceID, partID, newLeader.Host)
 	return nil
 }
 
 func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaces []*meta.IdName) error {
-	if len(spaces) == 0 {
+	if len(spaces) == 0 || *nc.Spec.Storaged.Replicas == 1 {
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}

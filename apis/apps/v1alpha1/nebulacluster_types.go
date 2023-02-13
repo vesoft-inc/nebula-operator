@@ -92,6 +92,13 @@ type NebulaClusterSpec struct {
 	// UpdatePolicy indicates how pods should be updated
 	// +optional
 	UpdatePolicy string `json:"strategy,omitempty"`
+
+	// Flag to enable/disable sidecar container nebula-agent injection, default false.
+	// +optional
+	EnableBR *bool `json:"enableBR,omitempty"`
+
+	// optional
+	//BrAgentVersion *string `json:"brAgentVersion,omitempty"`
 }
 
 // NebulaClusterStatus defines the observed state of NebulaCluster
@@ -170,7 +177,7 @@ type NebulaClusterCondition struct {
 	// The reason for the condition's last transition.
 	// +optional
 	Reason string `json:"reason,omitempty"`
-	// A human readable message indicating details about the transition.
+	// A human-readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
 }
@@ -254,6 +261,10 @@ type StoragedSpec struct {
 	// Flag to enable/disable auto balance data and leader while the nebula storaged scale out, default false
 	// +optional
 	EnableAutoBalance *bool `json:"enableAutoBalance,omitempty"`
+
+	// Flag to enable/disable rolling update without leader state transition
+	// +optional
+	EnableForceUpdate *bool `json:"enableForceUpdate,omitempty"`
 }
 
 // PodSpec is a common set of k8s resource configs for nebula components.
@@ -294,6 +305,9 @@ type PodSpec struct {
 
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// +optional
 	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`

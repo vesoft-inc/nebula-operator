@@ -26,8 +26,10 @@ const (
 --pid_file=pids/nebula-graphd.pid
 # Whether to enable optimizer
 --enable_optimizer=true
-# Heartbeat interval of communication between meta client and graphd service
---heartbeat_interval_secs=10
+# The default charset when a space is created
+--default_charset=utf8
+# The default collate when a space is created
+--default_collate=utf8_bin
 # Whether to use the configuration obtained from the configuration file
 --local_config=true
 
@@ -46,8 +48,8 @@ const (
 --stdout_log_file=graphd-stdout.log
 --stderr_log_file=graphd-stderr.log
 # Copy log messages at or above this level to stderr in addition to logfiles. The numbers of severity levels INFO, WARNING, ERROR, and FATAL are 0, 1, 2, and 3, respectively.
---stderrthreshold=2
-# wether logging files' name contain timestamp
+--stderrthreshold=3
+# wether logging files' name contain timestamp.
 --timestamp_in_logfile_name=true
 
 ########## query ##########
@@ -89,6 +91,12 @@ const (
 --ws_http_port=19669
 # storage client timeout
 --storage_client_timeout_ms=60000
+# Enable slow query records
+--enable_record_slow_query=true
+# The number of slow query records
+--slow_query_limit=100
+# slow query threshold in us
+--slow_query_threshold_us=200000
 # Port to listen on Meta with HTTP protocol, it corresponds to ws_http_port in metad's configuration file
 --ws_meta_http_port=19559
 
@@ -100,7 +108,7 @@ const (
 
 ########## memory ##########
 # System memory high watermark ratio, cancel the memory checking when the ratio greater than 1.0
---system_memory_high_watermark_ratio=1.0
+--system_memory_high_watermark_ratio=0.8
 
 ########## audit ##########
 # This variable is used to enable audit. The value can be 'true' or 'false'.
@@ -127,7 +135,7 @@ const (
 # This variable is used to specify the audit log format. Supports three log formats [ xml | json | csv ]
 # This variable has effect only when audit_log_handler is set to 'file'.
 --audit_log_format=xml
-# This variable can be used to specify the comma-separated list of Elasticsearch addresses,
+# This variable can be used to specify the comma-seperated list of Elasticsearch addresses,
 # eg, '192.168.0.1:7001, 192.168.0.2:7001'.
 # This variable has effect only when audit_log_handler is set to 'es'.
 --audit_log_es_address=
@@ -144,7 +152,7 @@ const (
 # The value can be comma separated list of spaces, ie, 'nba, basketball'.
 --audit_log_exclude_spaces=
 # This variable is used to specify the list of log categories for tracking, eg, 'login, ddl'.
-# There are eight categories for tracking. There are: [ login | exit | ddl | dql | dml | dcl | util | unknown ].
+# There are eight categories for tracking. There are: [ login ｜ exit | ddl | dql | dml | dcl | util | unknown ].
 --audit_log_categories=login,exit
 
 ########## metrics ##########
@@ -154,9 +162,35 @@ const (
 # if use experimental features
 --enable_experimental_feature=false
 
+########## Black box ########
+# Enable black box
+--ng_black_box_switch=true
+# Black box log folder
+--ng_black_box_home=black_box
+# Black box dump metrics log period
+--ng_black_box_dump_period_seconds=5
+# Black box log files expire time
+--ng_black_box_file_lifetime_seconds=1800
+
 ########## session ##########
 # Maximum number of sessions that can be created per IP and per user
 --max_sessions_per_ip_per_user=300
+
+########## memory tracker ##########
+# trackable memory ratio (trackable_memory / (total_memory - untracked_reserved_memory) )
+--memory_tracker_limit_ratio=0.8
+# untracked reserved memory in Mib
+--memory_tracker_untracked_reserved_memory_mb=50
+
+# enable log memory tracker stats periodically
+--memory_tracker_detail_log=false
+# log memory tacker stats interval in milliseconds
+--memory_tracker_detail_log_interval_ms=60000
+
+# enable memory background purge (if jemalloc is used)
+--memory_purge_enabled=true
+# memory background purge interval in seconds
+--memory_purge_interval_seconds=10
 `
 	// nolint: revive
 	MetadhConfigTemplate = `
@@ -165,7 +199,7 @@ const (
 --daemonize=true
 # The file to host the process id
 --pid_file=pids/nebula-metad.pid
---license-path=share/nebula.license
+--license_path=nebula.license
 
 ########## logging ##########
 # The directory to host logging files
@@ -182,8 +216,8 @@ const (
 --stdout_log_file=metad-stdout.log
 --stderr_log_file=metad-stderr.log
 # Copy log messages at or above this level to stderr in addition to logfiles. The numbers of severity levels INFO, WARNING, ERROR, and FATAL are 0, 1, 2, and 3, respectively.
---stderrthreshold=2
-# wether logging files' name contain time stamp.
+--stderrthreshold=3
+# wether logging files' name contain time stamp, If Using logrotate to rotate logging files, than should set it to true.
 --timestamp_in_logfile_name=true
 
 ########## networking ##########
@@ -208,17 +242,22 @@ const (
 
 ########## Misc #########
 # The default number of parts when a space is created
---default_parts_num=100
+--default_parts_num=10
 # The default replica factor when a space is created
 --default_replica_factor=1
 
 --heartbeat_interval_secs=10
 --agent_heartbeat_interval_secs=60
 
-############## rocksdb Options ##############
---rocksdb_wal_sync=true
-
---minimum_reserved_bytes=104857600
+########## Black box ########
+# Enable black box
+--ng_black_box_switch=true
+# Black box log folder
+--ng_black_box_home=black_box
+# Black box dump metrics log period
+--ng_black_box_dump_period_seconds=5
+# Black box log files expire time
+--ng_black_box_file_lifetime_seconds=1800
 `
 	// nolint: revive
 	StoragedConfigTemplate = `
@@ -245,8 +284,8 @@ const (
 --stdout_log_file=storaged-stdout.log
 --stderr_log_file=storaged-stderr.log
 # Copy log messages at or above this level to stderr in addition to logfiles. The numbers of severity levels INFO, WARNING, ERROR, and FATAL are 0, 1, 2, and 3, respectively.
---stderrthreshold=2
-# Wether logging files' name contain timestamp.
+--stderrthreshold=3
+# Wether logging files' name contain time stamp.
 --timestamp_in_logfile_name=true
 
 ########## networking ##########
@@ -270,11 +309,13 @@ const (
 --raft_heartbeat_interval_secs=30
 # RPC timeout for raft client (ms)
 --raft_rpc_timeout_ms=500
-## recycle Raft WAL
+# recycle Raft WAL
 --wal_ttl=14400
+# whether send raft snapshot by files via http
+--snapshot_send_files=true
 
 ########## Disk ##########
-# Root data path. split by comma. e.g. --data_path=/disk1/path1/,/disk2/path2/
+# Root data path. Split by comma. e.g. --data_path=/disk1/path1/,/disk2/path2/
 # One path per Rocksdb instance.
 --data_path=data/storage
 
@@ -289,6 +330,8 @@ const (
 # Disable page cache to better control memory used by rocksdb.
 # Caution: Make sure to allocate enough block cache if disabling page cache!
 --disable_page_cache=false
+# The type of storage engine, rocksdb, memory, etc.
+--engine_type=rocksdb
 
 # Compression algorithm, options: no,snappy,lz4,lz4hc,zlib,bzip2,zstd
 # For the sake of binary compatibility, the default value is snappy.
@@ -303,14 +346,6 @@ const (
 # "no:no:lz4:lz4::zstd" is identical to "no:no:lz4:lz4:snappy:zstd:snappy"
 # In order to disable compression for level 0/1, set it to "no:no"
 --rocksdb_compression_per_level=
-
-############## rocksdb Options ##############
-# rocksdb DBOptions in json, each name and value of option is a string, given as "option_name":"option_value" separated by comma
---rocksdb_db_options={"max_subcompactions":"4","max_background_jobs":"4"}
-# rocksdb ColumnFamilyOptions in json, each name and value of option is string, given as "option_name":"option_value" separated by comma
---rocksdb_column_family_options={"disable_auto_compactions":"false","write_buffer_size":"67108864","max_write_buffer_number":"4","max_bytes_for_level_base":"268435456"}
-# rocksdb BlockBasedTableOptions in json, each name and value of option is string, given as "option_name":"option_value" separated by comma
---rocksdb_block_based_table_options={"block_size":"8192"}
 
 # Whether or not to enable rocksdb's statistics, disabled by default
 --enable_rocksdb_statistics=false
@@ -328,27 +363,22 @@ const (
 # Whether or not to enable rocksdb's whole key bloom filter, disabled by default.
 --enable_rocksdb_whole_key_filtering=false
 
-############## Key-Value separation ##############
-# Whether or not to enable BlobDB (RocksDB key-value separation support)
---rocksdb_enable_kv_separation=false
-# RocksDB key value separation threshold in bytes. Values at or above this threshold will be written to blob files during flush or compaction.
---rocksdb_kv_separation_threshold=100
-# Compression algorithm for blobs, options: no,snappy,lz4,lz4hc,zlib,bzip2,zstd
---rocksdb_blob_compression=lz4
-# Whether to garbage collect blobs during compaction
---rocksdb_enable_blob_garbage_collection=true
+############## rocksdb Options ##############
+# rocksdb DBOptions in json, each name and value of option is a string, given as "option_name":"option_value" separated by comma
+--rocksdb_db_options={}
+# rocksdb ColumnFamilyOptions in json, each name and value of option is string, given as "option_name":"option_value" separated by comma
+--rocksdb_column_family_options={"write_buffer_size":"67108864","max_write_buffer_number":"4","max_bytes_for_level_base":"268435456"}
+# rocksdb BlockBasedTableOptions in json, each name and value of option is string, given as "option_name":"option_value" separated by comma
+--rocksdb_block_based_table_options={"block_size":"8192"}
 
 ############## storage cache ##############
 # Whether to enable storage cache
 --enable_storage_cache=false
 # Total capacity reserved for storage in memory cache in MB
 --storage_cache_capacity=0
-# Number of buckets in base 2 logarithm. E.g., in case of 20, the total number of buckets will be 2^20. 
-# A good estimate can be ceil(log2(cache_entries * 1.6)). The maximum allowed is 32.
---storage_cache_buckets_power=20
-# Number of locks in base 2 logarithm. E.g., in case of 10, the total number of locks will be 2^10. 
-# A good estimate can be max(1, buckets_power - 10). The maximum allowed is 32.
---storage_cache_locks_power=10
+# Estimated number of cache entries on this storage node in base 2 logarithm. E.g., in case of 20, the estimated number of entries will be 2^20.
+# A good estimate can be log2(#vertices on this storage node). The maximum allowed is 31.
+--storage_cache_entries_power=20
 
 # Whether to add vertex pool in cache. Only valid when storage cache is enabled.
 --enable_vertex_pool=false
@@ -357,17 +387,69 @@ const (
 # TTL in seconds for vertex items in the cache
 --vertex_item_ttl=300
 
-# Whether to add empty key pool in cache. Only valid when storage cache is enabled.
---enable_empty_key_pool=false
-# Empty key pool size in MB
---empty_key_pool_capacity=50
-# TTL in seconds for empty key items in the cache
---empty_key_item_ttl=300
+# Whether to add negative pool in cache. Only valid when storage cache is enabled.
+--enable_negative_pool=false
+# Negative pool size in MB
+--negative_pool_capacity=50
+# TTL in seconds for negative items in the cache
+--negative_item_ttl=300
 
 ############### misc ####################
+# Whether turn on query in multiple thread
+--query_concurrently=true
+# Whether remove outdated space data
+--auto_remove_invalid_space=true
+# Network IO threads number
+--num_io_threads=16
+# Worker threads number to handle request
+--num_worker_threads=32
+# Maximum subtasks to run admin jobs concurrently
+--max_concurrent_subtasks=10
+# The rate limit in bytes when leader synchronizes snapshot data
 --snapshot_part_rate_limit=10485760
+# The amount of data sent in each batch when leader synchronizes snapshot data
 --snapshot_batch_size=1048576
+# The rate limit in bytes when leader synchronizes rebuilding index
 --rebuild_index_part_rate_limit=4194304
+# The amount of data sent in each batch when leader synchronizes rebuilding index
 --rebuild_index_batch_size=1048576
+
+############## non-volatile cache ##############
+# Cache file location
+--nv_cache_path=/tmp/cache
+# Cache file size in MB
+--nv_cache_size=0
+# DRAM part size of non-volatile cache in MB
+--nv_dram_size=50
+# DRAM part bucket power. The value is a logarithm with a base of 2. Optional values are 0-32.
+--nv_bucket_power=20
+# DRAM part lock power. The value is a logarithm with a base of 2. The recommended value is max(1, nv_bucket_power - 10).
+--nv_lock_power=10
+
+########## Black box ########
+# Enable black box
+--ng_black_box_switch=true
+# Black box log folder
+--ng_black_box_home=black_box
+# Black box dump metrics log period
+--ng_black_box_dump_period_seconds=5
+# Black box log files expire time
+--ng_black_box_file_lifetime_seconds=1800
+
+########## memory tracker ##########
+# trackable memory ratio (trackable_memory / (total_memory - untracked_reserved_memory) )
+--memory_tracker_limit_ratio=0.8
+# untracked reserved memory in Mib
+--memory_tracker_untracked_reserved_memory_mb=50
+
+# enable log memory tracker stats periodically
+--memory_tracker_detail_log=false
+# log memory tacker stats interval in milliseconds
+--memory_tracker_detail_log_interval_ms=60000
+
+# enable memory background purge (if jemalloc is used)
+--memory_purge_enabled=true
+# memory background purge interval in seconds
+--memory_purge_interval_seconds=10
 `
 )

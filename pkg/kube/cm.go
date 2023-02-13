@@ -18,11 +18,14 @@ package kube
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,15 +80,26 @@ func (c *cmClient) GetConfigMap(namespace, cmName string) (*corev1.ConfigMap, er
 }
 
 func (c *cmClient) updateConfigMap(cm *corev1.ConfigMap) error {
-	log := getLog().WithValues("namespace", cm.Namespace, "name", cm.Name)
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		return c.kubecli.Update(context.TODO(), cm)
+	ns := cm.GetNamespace()
+	cmName := cm.GetName()
+	cmData := cm.Data
+
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if updated, err := c.GetConfigMap(ns, cmName); err == nil {
+			cm = updated.DeepCopy()
+			cm.Data = cmData
+		} else {
+			utilruntime.HandleError(fmt.Errorf("get configMap [%s/%s] failed: %v", ns, cmName, err))
+			return err
+		}
+
+		updateErr := c.kubecli.Update(context.TODO(), cm)
+		if updateErr == nil {
+			klog.Infof("configMap [%s/%s] updated successfully", ns, cmName)
+			return nil
+		}
+		return updateErr
 	})
-	if err != nil {
-		return err
-	}
-	log.Info("configMap updated")
-	return nil
 }
 
 func (c *cmClient) getConfigMap(objKey client.ObjectKey) (*corev1.ConfigMap, error) {
@@ -98,11 +112,9 @@ func (c *cmClient) getConfigMap(objKey client.ObjectKey) (*corev1.ConfigMap, err
 }
 
 func (c *cmClient) DeleteConfigMap(namespace, cmName string) error {
-	log := getLog().WithValues("namespace", namespace, "name", cmName)
 	cm, err := c.getConfigMap(client.ObjectKey{Namespace: namespace, Name: cmName})
 	if err != nil {
 		return err
 	}
-	log.Info("configMap deleted")
 	return c.kubecli.Delete(context.TODO(), cm)
 }

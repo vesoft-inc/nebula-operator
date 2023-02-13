@@ -1,8 +1,10 @@
 nebula:
-  version: v3.3.0
+  version: v3.4.0
   imagePullPolicy: Always
   storageClassName: ""
   enablePVReclaim: false
+  enableBR: false
+  enableForceUpdate: false
   schedulerName: default-scheduler # nebula-scheduler
   unsatisfiableAction: ScheduleAnyway
   reference:
@@ -28,6 +30,7 @@ nebula:
     tolerations: []
     affinity: {}
     readinessProbe: {}
+    initContainers: []
     sidecarContainers: []
     sidecarVolumes: []
 
@@ -44,7 +47,7 @@ nebula:
         cpu: "1"
         memory: "1Gi"
     logStorage: "1Gi"
-    dataStorage: "5Gi"
+    dataStorage: "10Gi"
     license: {}
     podLabels: {}
     podAnnotations: {}
@@ -52,6 +55,7 @@ nebula:
     tolerations: []
     affinity: {}
     readinessProbe: {}
+    initContainers: []
     sidecarContainers: []
     sidecarVolumes: []
 
@@ -76,6 +80,7 @@ nebula:
     tolerations: []
     affinity: {}
     readinessProbe: {}
+    initContainers: []
     sidecarContainers: []
     sidecarVolumes: []
 

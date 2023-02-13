@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-s3-secret
+type: Opaque
+data:
+  access-key: QVNJQVE0WFlSWFE1TlhVMlczNlUK
+  secret-key: ZFJ6OEdNcDdxenMwVGFGdExVM2RpYkk4b2hHRWRSamgvNTdzWkg3Ugo=
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nebula-incr-backup
+spec:
+  parallelism: 1
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - image: vesoft/br-ent:v3.4.0
+          imagePullPolicy: Always
+          name: backup
+          command:
+            - /bin/sh
+            - -ecx
+            - exec /usr/local/bin/nebula-br backup incr
+            - --meta $META_ADDRESS:9559
+            - --base $BACKUP_NAME
+            - --storage s3://$BUCKET
+            - --s3.access_key $ACCESS_KEY
+            - --s3.secret_key $SECRET_KEY
+            - --s3.region $REGION
+            - --s3.endpoint https://s3.$REGION.amazonaws.com

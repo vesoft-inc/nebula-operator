@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component"
@@ -37,7 +38,6 @@ func NewMetaReconciler(clientSet kube.ClientSet) component.ReconcileManager {
 }
 
 func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
-	log := getLog().WithValues("namespace", nc.Namespace, "name", nc.Name)
 	namespace := nc.GetNamespace()
 	clusterName := nc.GetClusterName()
 	selector, err := label.New().Cluster(clusterName).Selector()
@@ -68,7 +68,7 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 			}
 			pv, err := m.clientSet.PV().GetPersistentVolume(pvc.Spec.VolumeName)
 			if err != nil {
-				log.Error(err, "get pv failed", "pvName", pvc.Spec.VolumeName)
+				klog.Errorf("cluster [%s/%s] get PV %s failed: %v", namespace, clusterName, pvc.Spec.VolumeName, err)
 				return err
 			}
 			if err := m.clientSet.PV().UpdateMetaInfo(nc, pv); err != nil {
@@ -83,7 +83,6 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 func (m *meta) resolvePVCFromPod(pod *corev1.Pod) ([]*corev1.PersistentVolumeClaim, error) {
 	var pvcs []*corev1.PersistentVolumeClaim
 	var pvcName string
-	log := getLog().WithValues("namespace", pod.Namespace, "name", pod.Name)
 	for i := range pod.Spec.Volumes {
 		vol := pod.Spec.Volumes[i]
 		if vol.PersistentVolumeClaim == nil {
@@ -95,7 +94,7 @@ func (m *meta) resolvePVCFromPod(pod *corev1.Pod) ([]*corev1.PersistentVolumeCla
 		}
 		pvc, err := m.clientSet.PVC().GetPVC(pod.Namespace, pvcName)
 		if err != nil {
-			log.Error(err, "get pvc failed", "pvcName", pvcName)
+			klog.Error(err, "pod [%s/%s] get PVC %s failed: %v", pod.Namespace, pod.Name, pvcName, err)
 			continue
 		}
 		pvcs = append(pvcs, pvc)

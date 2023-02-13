@@ -23,42 +23,42 @@ import (
 
 	kruise "github.com/openkruise/kruise-api/apps/v1alpha1"
 	"github.com/spf13/pflag"
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/klog/v2/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulacluster"
-	"github.com/vesoft-inc/nebula-operator/pkg/logging"
+	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebularestore"
 	"github.com/vesoft-inc/nebula-operator/pkg/version"
 	"github.com/vesoft-inc/nebula-operator/pkg/webhook"
 )
 
 const (
-	defaultWatchNamespace                 = corev1.NamespaceAll
-	defaultLeaderElectionNamespace        = ""
-	defaultLeaderElectionID               = "nebula-controller-manager-leader"
-	defaultMetricsBindAddr                = ":8080"
-	defaultHealthProbeBindAddr            = ":8081"
-	defaultSyncPeriod                     = 30 * time.Minute
-	defaultWebhookBindPort                = 9443
-	defaultMaxIngressConcurrentReconciles = 3
-	defaultPrintVersion                   = false
-	defaultEnableLeaderElection           = false
-	defaultEnableAdmissionWebhook         = false
-	defaultEnableKruise                   = false
+	defaultWatchNamespace          = corev1.NamespaceAll
+	defaultLeaderElectionNamespace = ""
+	defaultLeaderElectionID        = "nebula-controller-manager-leader"
+	defaultMetricsBindAddr         = ":8080"
+	defaultHealthProbeBindAddr     = ":8081"
+	defaultSyncPeriod              = 30 * time.Minute
+	defaultWebhookBindPort         = 9443
+	defaultMaxConcurrentReconciles = 3
+	defaultPrintVersion            = false
+	defaultEnableLeaderElection    = false
+	defaultEnableAdmissionWebhook  = false
+	defaultEnableKruise            = false
 )
 
 var (
 	scheme = runtime.NewScheme()
-	log    = logging.Log.WithName("setup")
+	log    = ctrl.Log.WithName("setup")
 )
 
 func init() {
@@ -99,24 +99,16 @@ func main() {
 	pflag.BoolVar(&enableAdmissionWebhook, "admission-webhook", defaultEnableAdmissionWebhook, "Enable admission webhook for controller manager. ") // nolint: revive
 	pflag.IntVar(&webhookBindPort, "webhook-bind-port", defaultWebhookBindPort,
 		"The TCP port the Webhook server binds to.")
-	pflag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", defaultMaxIngressConcurrentReconciles, "The max concurrent reconciles.") // nolint: revive
+	pflag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", defaultMaxConcurrentReconciles, "The max concurrent reconciles.") // nolint: revive
 	pflag.StringVar(&watchNamespace, "watch-namespace", defaultWatchNamespace,
 		"Namespace the controller watches for updates to Kubernetes objects, If empty, all namespaces are watched.")
 	pflag.DurationVar(&syncPeriod, "sync-period", defaultSyncPeriod,
 		"Period at which the controller forces the repopulation  of its local object stores.")
 	pflag.BoolVar(&enableKruise, "enable-kruise", defaultEnableKruise, "Enable openkruise scheme for controller manager.")
-	opts := logging.Options{
-		Development:     true,
-		StacktraceLevel: zap.NewAtomicLevelAt(zap.FatalLevel),
-		ZapOpts: []zap.Option{
-			zap.AddCaller(),
-			zap.AddCallerSkip(-1),
-		},
-	}
-	opts.BindFlags(flag.CommandLine)
 
 	pflag.Parse()
-	logging.SetLogger(logging.New(logging.UseFlagOptions(&opts)))
+
+	ctrl.SetLogger(klogr.New())
 
 	if printVersion {
 		log.Info("Nebula Operator Version", "version", version.Version())
@@ -157,6 +149,18 @@ func main() {
 	if err := nebulaClusterReconciler.SetupWithManager(mgr,
 		controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}); err != nil {
 		log.Error(err, "unable to create controller", "controller", "NebulaCluster")
+		os.Exit(1)
+	}
+
+	nebulaRestoreReconciler, err := nebularestore.NewRestoreReconciler(mgr)
+	if err != nil {
+		log.Error(err, "unable to create nebula restore reconciler", "controller", "NebulaRestore")
+		os.Exit(1)
+	}
+
+	if err := nebulaRestoreReconciler.SetupWithManager(mgr,
+		controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}); err != nil {
+		log.Error(err, "unable to create controller", "controller", "NebulaRestore")
 		os.Exit(1)
 	}
 

@@ -18,6 +18,7 @@ package errors
 
 import (
 	"fmt"
+	"net"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
@@ -43,5 +44,10 @@ func IsReconcileError(err error) bool {
 
 func IsStatusError(err error) bool {
 	_, ok := err.(*errors.StatusError)
+	return ok
+}
+
+func IsDNSError(err error) bool {
+	_, ok := err.(*net.DNSError)
 	return ok
 }

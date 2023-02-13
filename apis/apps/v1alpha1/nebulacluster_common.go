@@ -31,8 +31,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
+)
+
+const (
+	AgentSidecarContainerName = "br-agent"
+	AgentInitContainerName    = "br-init-agent"
+	DefaultAgentPortGRPC      = 8888
+	agentPortNameGRPC         = "grpc"
+	defaultAgentImage         = "vesoft/nebula-agent:latest"
 )
 
 func getComponentName(clusterName string, typ ComponentType) string {
@@ -82,10 +91,6 @@ func getPort(ports []corev1.ContainerPort, portName string) int32 {
 
 func getConnAddress(serviceFQDN string, port int32) string {
 	return joinHostPort(serviceFQDN, port)
-}
-
-func getPodConnAddress(podFQDN string, port int32) string {
-	return joinHostPort(podFQDN, port)
 }
 
 func getHeadlessConnAddresses(connAddress, componentName string, replicas int32, isHeadless bool) []string {
@@ -184,6 +189,54 @@ func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, 
 	}, nil
 }
 
+func GenerateInitAgentContainer(c NebulaClusterComponentter) corev1.Container {
+	container := generateAgentContainer(c, true)
+	container.Name = AgentInitContainerName
+
+	return container
+}
+
+func generateAgentContainer(c NebulaClusterComponentter, init bool) corev1.Container {
+	componentType := c.Type().String()
+	metadAddr := c.GetNebulaCluster().GetMetadThriftConnAddress()
+	agentCmd := []string{"/bin/sh", "-ecx"}
+	if init {
+		agentCmd = append(agentCmd, "exec /usr/local/bin/agent"+
+			fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
+			" --ratelimit=1073741824 --debug")
+	} else {
+		agentCmd = append(agentCmd, "sleep 30; exec /usr/local/bin/agent"+
+			fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
+			" --meta="+metadAddr+
+			" --ratelimit=1073741824 --debug")
+	}
+
+	container := corev1.Container{
+		Name:            AgentSidecarContainerName,
+		Image:           defaultAgentImage,
+		ImagePullPolicy: corev1.PullAlways,
+		Command:         agentCmd,
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          agentPortNameGRPC,
+				ContainerPort: int32(DefaultAgentPortGRPC),
+			},
+		},
+	}
+
+	if c.Type() != GraphdComponentType {
+		container.VolumeMounts = []corev1.VolumeMount{
+			{
+				Name:      dataVolume(componentType),
+				MountPath: "/usr/local/nebula/data",
+				SubPath:   "data",
+			},
+		}
+	}
+
+	return container
+}
+
 func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []corev1.Container {
 	componentType := c.Type().String()
 	nc := c.GetNebulaCluster()
@@ -219,7 +272,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 
 	ports := c.GenerateContainerPorts()
 
-	container := corev1.Container{
+	baseContainer := corev1.Container{
 		Name:         componentType,
 		Image:        c.GetImage(),
 		Command:      cmd,
@@ -229,9 +282,9 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 	}
 
 	if c.ReadinessProbe() != nil {
-		container.ReadinessProbe = c.ReadinessProbe()
+		baseContainer.ReadinessProbe = c.ReadinessProbe()
 	} else {
-		container.ReadinessProbe = &corev1.Probe{
+		baseContainer.ReadinessProbe = &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/status",
@@ -247,16 +300,22 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 
 	resources := c.GetResources()
 	if resources != nil {
-		container.Resources = *resources
+		baseContainer.Resources = *resources
 	}
 
 	imagePullPolicy := nc.Spec.ImagePullPolicy
 	if imagePullPolicy != nil {
-		container.ImagePullPolicy = *imagePullPolicy
+		baseContainer.ImagePullPolicy = *imagePullPolicy
 	}
 
-	containers = append(containers, container)
-	containers = append(containers, c.SidecarContainers()...)
+	containers = append(containers, baseContainer)
+
+	if nc.IsBREnabled() {
+		agentContainer := generateAgentContainer(c, false)
+		containers = append(containers, agentContainer)
+	}
+
+	containers = mergeSidecarContainers(containers, c.SidecarContainers())
 
 	return containers
 }
@@ -288,11 +347,12 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 			},
 		})
 	}
-	volumes = append(volumes, c.SidecarVolumes()...)
+	volumes = mergeVolumes(volumes, c.SidecarVolumes())
 
 	podSpec := corev1.PodSpec{
 		SchedulerName:    nc.Spec.SchedulerName,
 		NodeSelector:     c.NodeSelector(),
+		InitContainers:   c.InitContainers(),
 		Containers:       containers,
 		Volumes:          volumes,
 		ImagePullSecrets: nc.Spec.ImagePullSecrets,
@@ -490,4 +550,40 @@ func isStringMapExist(m map[string]string, key string) bool {
 	}
 	_, exist := m[key]
 	return exist
+}
+
+func mergeVolumes(original []corev1.Volume, additional []corev1.Volume) []corev1.Volume {
+	exists := sets.NewString()
+	for _, volume := range original {
+		exists.Insert(volume.Name)
+	}
+
+	for _, volume := range additional {
+		if exists.Has(volume.Name) {
+			continue
+		}
+		original = append(original, volume)
+		exists.Insert(volume.Name)
+	}
+
+	return original
+}
+
+func mergeSidecarContainers(origins, injected []corev1.Container) []corev1.Container {
+	containersInPod := make(map[string]int)
+	for index, container := range origins {
+		containersInPod[container.Name] = index
+	}
+
+	var appContainers []corev1.Container
+	for _, sidecar := range injected {
+		if index, ok := containersInPod[sidecar.Name]; ok {
+			origins[index] = sidecar
+			continue
+		}
+		appContainers = append(appContainers, sidecar)
+	}
+
+	origins = append(origins, appContainers...)
+	return origins
 }

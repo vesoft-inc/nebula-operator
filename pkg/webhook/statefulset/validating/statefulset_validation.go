@@ -23,6 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/klog/v2"
 	appsvalidation "k8s.io/kubernetes/pkg/apis/apps/validation"
 	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
@@ -95,10 +96,8 @@ func validateStatefulSetCreate(statefulSet *appsv1.StatefulSet) (allErrs field.E
 	namespace := statefulSet.Namespace
 	l := label.Label(statefulSet.Labels)
 
-	log := getLog().WithValues("gvk", statefulSet.GroupVersionKind(),
-		"namespace", namespace, "name", name, "operation", admissionv1.Create)
-
-	log.Info("receive admission")
+	klog.Infof("receive admission with resource [%s/%s], GVK %s, operation %s", namespace, name,
+		statefulSet.GroupVersionKind().String(), admissionv1.Create)
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(
 		&statefulSet.ObjectMeta,
@@ -156,10 +155,8 @@ func validateStatefulSetUpdate(statefulSet, oldStatefulSet *appsv1.StatefulSet) 
 	namespace := statefulSet.Namespace
 	l := label.Label(statefulSet.Labels)
 
-	log := getLog().WithValues("gvk", statefulSet.GroupVersionKind(),
-		"namespace", namespace, "name", name, "operation", admissionv1.Update)
-
-	log.Info("receive admission")
+	klog.Infof("receive admission with resource [%s/%s], GVK %s, operation %s", namespace, name,
+		statefulSet.GroupVersionKind().String(), admissionv1.Create)
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(
 		&statefulSet.ObjectMeta,
@@ -221,16 +218,13 @@ func isManaged(statefulSet *appsv1.StatefulSet) bool {
 	namespace := statefulSet.Namespace
 	l := label.Label(statefulSet.Labels)
 
-	log := getLog().WithValues("gvk", statefulSet.GroupVersionKind(),
-		"namespace", namespace, "name", name, "operation", admissionv1.Create)
-
 	if !l.IsManagedByNebulaOperator() {
-		log.Info("not managed by Nebula Operator, admit")
+		klog.Infof("resource [%s/%s] not managed by Nebula Operator, admit", namespace, name)
 		return false
 	}
 
 	if !(l.IsGraphd() || l.IsMetad() || l.IsStoraged()) {
-		log.Info("not Nebula component, admit")
+		klog.Infof("resource [%s/%s] not Nebula component, admit", namespace, name)
 		return false
 	}
 

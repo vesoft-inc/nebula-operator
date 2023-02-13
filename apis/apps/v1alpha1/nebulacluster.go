@@ -56,6 +56,10 @@ func (nc *NebulaCluster) GetMetadEndpoints() []string {
 	return nc.MetadComponent().GetHeadlessConnAddresses(MetadPortNameThrift)
 }
 
+func (nc *NebulaCluster) GetStoragedEndpoints() []string {
+	return nc.StoragedComponent().GetHeadlessConnAddresses(StoragedPortNameThrift)
+}
+
 func (nc *NebulaCluster) GetClusterName() string {
 	return nc.Name
 }
@@ -83,6 +87,22 @@ func (nc *NebulaCluster) IsPVReclaimEnabled() bool {
 
 func (nc *NebulaCluster) IsAutoBalanceEnabled() bool {
 	enabled := nc.Spec.Storaged.EnableAutoBalance
+	if enabled == nil {
+		return false
+	}
+	return *enabled
+}
+
+func (nc *NebulaCluster) IsForceUpdateEnabled() bool {
+	enabled := nc.Spec.Storaged.EnableForceUpdate
+	if enabled == nil {
+		return false
+	}
+	return *enabled
+}
+
+func (nc *NebulaCluster) IsBREnabled() bool {
+	enabled := nc.Spec.EnableBR
 	if enabled == nil {
 		return false
 	}

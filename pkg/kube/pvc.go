@@ -18,12 +18,16 @@ package kube
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -47,12 +51,7 @@ func NewPVC(kubecli client.Client) PersistentVolumeClaim {
 }
 
 func (p *pvcClient) CreatePVC(pvc *corev1.PersistentVolumeClaim) error {
-	log := getLog().WithValues("namespace", pvc.GetNamespace(), "name", pvc.GetName())
-	if err := p.kubecli.Create(context.TODO(), pvc); err != nil {
-		return err
-	}
-	log.Info("pvc created ")
-	return nil
+	return p.kubecli.Create(context.TODO(), pvc)
 }
 
 func (p *pvcClient) GetPVC(namespace, name string) (*corev1.PersistentVolumeClaim, error) {
@@ -91,26 +90,41 @@ func (p *pvcClient) UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev
 }
 
 func (p *pvcClient) UpdatePVC(pvc *corev1.PersistentVolumeClaim) error {
-	log := getLog().WithValues("namespace", pvc.GetNamespace(), "name", pvc.GetName())
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		return p.kubecli.Update(context.TODO(), pvc)
+	ns := pvc.GetNamespace()
+	pvcName := pvc.GetName()
+	pvcLabels := pvc.GetLabels()
+	annotations := pvc.GetAnnotations()
+
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if updated, err := p.GetPVC(ns, pvcName); err == nil {
+			pvc = updated.DeepCopy()
+			pvc.SetLabels(pvcLabels)
+			pvc.SetAnnotations(annotations)
+		} else {
+			utilruntime.HandleError(fmt.Errorf("get PV [%s/%s] failed: %v", ns, pvcName, err))
+			return err
+		}
+
+		updateErr := p.kubecli.Update(context.TODO(), pvc)
+		if updateErr == nil {
+			klog.V(4).Infof("PVC [%s/%s] updated successfully", ns, pvcName)
+			return nil
+		}
+		return updateErr
 	})
-	if err != nil {
-		return err
-	}
-	log.V(4).Info("pvc updated")
-	return nil
 }
 
 func (p *pvcClient) DeletePVC(namespace, name string) error {
-	log := getLog().WithValues("namespace", namespace, "name", name)
 	pvc, err := p.GetPVC(namespace, name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
 	if err := p.kubecli.Delete(context.TODO(), pvc); err != nil {
 		return err
 	}
-	log.Info("pvc deleted")
+	klog.Infof("PVC [%s/%s] deleted successfully", namespace, name)
 	return nil
 }

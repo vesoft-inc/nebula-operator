@@ -43,8 +43,8 @@ scheduler:
 # Enable openkruise scheme for controller manager. (default false)
 enableKruise: false
 
-# Period at which the controller forces the repopulation of its local object stores. (default 1h0m0s)
-syncPeriod:
+# Period at which the controller forces the repopulation of its local object stores. (default 0h30m0s)
+syncPeriod: 0h30m0s
 
 # Namespace the controller watches for updates to Kubernetes objects, If empty, all namespaces are watched.
 watchNamespace:

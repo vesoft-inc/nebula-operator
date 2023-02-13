@@ -18,11 +18,14 @@ package kube
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,16 +45,13 @@ func NewService(kubecli client.Client) Service {
 }
 
 func (s *serviceClient) CreateService(service *corev1.Service) error {
-	log := getLog().WithValues("namespace", service.Namespace, "name", service.Name)
 	if err := s.kubecli.Create(context.TODO(), service); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			log.Info("service already exists")
+			klog.Infof("service [%s/%s] already exists", service.Namespace, service.Name)
 			return nil
 		}
-		log.Error(err, "service created failed")
 		return err
 	}
-	log.Info("service created")
 	return nil
 }
 
@@ -68,19 +68,33 @@ func (s *serviceClient) GetService(namespace, name string) (*corev1.Service, err
 }
 
 func (s *serviceClient) UpdateService(service *corev1.Service) error {
-	log := getLog().WithValues("namespace", service.Namespace, "name", service.Name)
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		return s.kubecli.Update(context.TODO(), service)
+	ns := service.GetNamespace()
+	svcName := service.GetName()
+	svcSpec := service.Spec.DeepCopy()
+	labels := service.GetLabels()
+	annotations := service.GetAnnotations()
+
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if updated, err := s.GetService(ns, svcName); err == nil {
+			service = updated.DeepCopy()
+			service.Spec = *svcSpec
+			service.SetLabels(labels)
+			service.SetAnnotations(annotations)
+		} else {
+			utilruntime.HandleError(fmt.Errorf("get service [%s/%s] failed: %v", ns, svcName, err))
+			return err
+		}
+
+		updateErr := s.kubecli.Update(context.TODO(), service)
+		if updateErr == nil {
+			klog.Infof("service [%s/%s] updated successfully", ns, svcName)
+			return nil
+		}
+		return updateErr
 	})
-	if err != nil {
-		return err
-	}
-	log.Info("service updated")
-	return nil
 }
 
 func (s *serviceClient) DeleteService(namespace, name string) error {
-	log := getLog().WithValues("namespace", namespace, "name", name)
 	service := &corev1.Service{}
 	err := s.kubecli.Get(context.TODO(), types.NamespacedName{
 		Name:      name,
@@ -90,6 +104,6 @@ func (s *serviceClient) DeleteService(namespace, name string) error {
 		return err
 	}
 
-	log.Info("service deleted")
+	klog.Infof("service [%s/%s] deleted successfully", namespace, name)
 	return s.kubecli.Delete(context.TODO(), service)
 }

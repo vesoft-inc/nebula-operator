@@ -38,9 +38,6 @@ var _ admission.Handler = &StatefulSetCreateUpdateHandler{}
 
 // Handle handles admission requests.
 func (h *StatefulSetCreateUpdateHandler) Handle(_ context.Context, req admission.Request) admission.Response {
-	log := getLog().WithValues("resource", req.Resource,
-		"namespace", req.Namespace, "name", req.Name, "operation", req.Operation)
-	log.Info("start mutating")
 	return admission.Patched("")
 }
 

@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -44,12 +45,11 @@ var _ admission.Handler = &NebulaClusterCreateUpdateHandler{}
 
 // Handle handles admission requests.
 func (h *NebulaClusterCreateUpdateHandler) Handle(_ context.Context, req admission.Request) (resp admission.Response) {
-	log := getLog().WithValues("resource", req.Resource,
-		"namespace", req.Namespace, "name", req.Name, "operation", req.Operation)
-	log.Info("start validating")
+	klog.Infof("start validating resource %v [%s/%s] operation %s", req.Resource, req.Namespace, req.Name, req.Operation)
+
 	defer func() {
-		log.Info("end validating", "allowed", resp.Allowed,
-			"reason", resp.Result.Reason, "message", resp.Result.Message)
+		klog.Infof("end validating, allowed %v, reason %v, message %s", "allowed", resp.Allowed,
+			resp.Result.Reason, resp.Result.Message)
 	}()
 
 	obj := &v1alpha1.NebulaCluster{}

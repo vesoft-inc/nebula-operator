@@ -22,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -58,19 +59,20 @@ func (ss *storageScaler) Scale(nc *v1alpha1.NebulaCluster, oldUnstruct, newUnstr
 }
 
 func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
-	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
+	ns := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
 	nc.Status.Storaged.Phase = v1alpha1.ScaleOutPhase
 	if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
 		return err
 	}
 
 	if !nc.StoragedComponent().IsReady() {
-		log.Info("storage cluster status not ready", "storage", nc.StoragedComponent().GetName())
+		klog.Infof("cluster [%s/%s] status not ready", ns, componentName)
 		return nil
 	}
 
 	if !pointer.BoolPtrDerefOr(nc.Spec.Storaged.EnableAutoBalance, false) {
-		log.Info("auto balance is disabled", "storage", nc.StoragedComponent().GetName())
+		klog.Infof("cluster [%s/%s] auto balance is disabled", ns, componentName)
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}
@@ -78,13 +80,13 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 	endpoints := []string{nc.GetMetadThriftConnAddress()}
 	metaClient, err := nebula.NewMetaClient(endpoints)
 	if err != nil {
-		log.Error(err, "create meta client failed", "endpoints", endpoints)
+		klog.Errorf("create meta client failed: %v", err)
 		return err
 	}
 	defer func() {
 		err := metaClient.Disconnect()
 		if err != nil {
-			log.Error(err, "disconnect meta client failed", "endpoints", endpoints)
+			klog.Errorf("disconnect meta client failed: %v", err)
 		}
 	}()
 
@@ -114,7 +116,9 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 
 // nolint: revive
 func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
-	log := getLog().WithValues("namespace", nc.GetNamespace(), "name", nc.GetName())
+	ns := nc.GetNamespace()
+	ncName := nc.GetName()
+	componentName := nc.StoragedComponent().GetName()
 	nc.Status.Storaged.Phase = v1alpha1.ScaleInPhase
 	if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
 		return err
@@ -128,7 +132,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	defer func() {
 		err := metaClient.Disconnect()
 		if err != nil {
-			log.Error(err, "meta client disconnect", "endpoints", endpoints)
+			klog.Error("meta client disconnect failed: %v", err)
 		}
 	}()
 
@@ -162,13 +166,13 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 				if err := ss.removeHost(metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
 					return err
 				}
-				log.Info("remove hosts successfully", "space", space.Name)
+				klog.Infof("cluster [%s/%s] remove hosts from space %s successfully", ns, ncName, space.Name)
 			}
 		}
 		if err := metaClient.DropHosts(hosts); err != nil {
 			return err
 		}
-		log.Info("drop hosts successfully")
+		klog.Infof("cluster [%s/%s] drop hosts successfully", ns, ncName)
 	}
 
 	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
@@ -207,7 +211,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	}
 
 	if nc.StoragedComponent().IsReady() {
-		log.Info("all used pvcs were reclaimed", "storage", nc.StoragedComponent().GetName())
+		klog.Infof("cluster [%s/%s] all used pvcs were reclaimed", ns, componentName)
 		nc.Status.Storaged.BalancedSpaces = nil
 		nc.Status.Storaged.LastBalanceJob = nil
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase

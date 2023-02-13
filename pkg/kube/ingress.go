@@ -24,6 +24,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -44,7 +45,6 @@ func NewIngress(kubecli client.Client) Ingress {
 }
 
 func (i *ingressClient) CreateOrUpdateIngress(ingress *networkingv1.Ingress) error {
-	log := getLog().WithValues("namespace", ingress.Namespace, "name", ingress.Name)
 	if err := i.kubecli.Create(context.TODO(), ingress); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			merge := func(existing, desired *networkingv1.Ingress) error {
@@ -89,7 +89,7 @@ func (i *ingressClient) CreateOrUpdateIngress(ingress *networkingv1.Ingress) err
 		}
 		return err
 	}
-	log.Info("ingress created")
+	klog.Infof("ingress %s/%s created successfully", ingress.Namespace, ingress.Name)
 	return nil
 }
 
@@ -107,24 +107,16 @@ func (i *ingressClient) getIngress(objKey client.ObjectKey) (*networkingv1.Ingre
 }
 
 func (i *ingressClient) updateIngress(ingress *networkingv1.Ingress) error {
-	log := getLog().WithValues("namespace", ingress.Namespace, "name", ingress.Name)
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		return i.kubecli.Update(context.TODO(), ingress)
 	})
-	if err != nil {
-		return err
-	}
-	log.Info("ingress updated")
-	return nil
 }
 
 func (i *ingressClient) DeleteIngress(namespace, ingressName string) error {
-	log := getLog().WithValues("namespace", namespace, "name", ingressName)
 	ingress, err := i.getIngress(client.ObjectKey{Namespace: namespace, Name: ingressName})
 	if err != nil {
 		return err
 	}
-	log.Info("ingress deleted")
 	return i.kubecli.Delete(context.TODO(), ingress)
 }
 

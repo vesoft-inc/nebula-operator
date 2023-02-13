@@ -6,7 +6,7 @@ Scaling out Storage is divided into two stages.
 
 * In the second stage, the BALANCE DATA and BALANCE LEADER command is executed. 
 
-We provide a parameter `enableAutoBalance` in crd to control whether to automatically balance data and leader.
+We provide a parameter `enableAutoBalance` in CRD to control whether to automatically balance data and leader.
 
 Through both stages, the scaling process of the controller replicas is decoupled from the balancing data process and user executing it at low traffic. 
 

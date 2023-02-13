@@ -9,6 +9,13 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - secrets
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
   - configmaps
   verbs:
   - create
@@ -136,3 +143,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+    - apps.nebula-graph.io
+  resources:
+    - nebularestores
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - apps.nebula-graph.io
+  resources:
+    - nebularestores/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - apps.nebula-graph.io
+  resources:
+    - nebularestores/status
+  verbs:
+    - get
+    - patch
+    - update

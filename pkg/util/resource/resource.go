@@ -66,7 +66,7 @@ func GetUniteDeploymentGVR() schema.GroupVersionResource {
 }
 
 func GetGVKFromDefinition(dm discovery.Interface, ref v1alpha1.WorkloadReference) (schema.GroupVersionKind, error) {
-	// if given definitionRef is empty return an default GVK
+	// if given definitionRef is empty return a default GVK
 	if ref.Name == "" {
 		return StatefulSetKind, nil
 	}

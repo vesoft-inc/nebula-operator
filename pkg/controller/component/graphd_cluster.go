@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -65,18 +66,16 @@ func (c *graphdCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 
 func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	namespace := nc.GetNamespace()
-	ncName := nc.GetName()
 	componentName := nc.GraphdComponent().GetName()
-	log := getLog().WithValues("namespace", namespace, "name", ncName)
 
 	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
 	if err != nil {
-		return fmt.Errorf("get workload reference error: %v", err)
+		return fmt.Errorf("get workload kind failed: %v", err)
 	}
 
 	oldWorkloadTemp, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
 	if err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get workload")
+		klog.Errorf("get graphd cluster failed: %v", err)
 		return err
 	}
 
@@ -90,6 +89,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 
 	newWorkload, err := nc.GraphdComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
 	if err != nil {
+		klog.Errorf("generate graphd cluster template failed: %v", err)
 		return err
 	}
 
@@ -100,7 +100,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if err := c.syncNebulaClusterStatus(nc, newWorkload, oldWorkload); err != nil {
-		return fmt.Errorf("failed to sync graphd status status, error: %v", err)
+		return fmt.Errorf("sync graphd cluster status status failed: %v", err)
 	}
 
 	if notExist {

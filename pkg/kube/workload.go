@@ -24,8 +24,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
 )
 
 type Workload interface {
@@ -57,26 +61,63 @@ func (w *workloadClient) GetWorkload(namespace, name string, gvk schema.GroupVer
 }
 
 func (w *workloadClient) CreateWorkload(obj *unstructured.Unstructured) error {
-	log := getLog().WithValues("kind", obj.GetKind(), "namespace", obj.GetNamespace(), "name", obj.GetName())
 	if err := w.kubecli.Create(context.TODO(), obj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			log.Error(err, "workload already exists")
+			klog.Error(err, "workload already exists")
 			return nil
 		}
 		return err
 	}
-	log.Info("workload created")
+	klog.Infof("workload %s/%s created successfully", obj.GetNamespace(), obj.GetName())
 	return nil
 }
 
 func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
-	log := getLog().WithValues("kind", obj.GetKind(), "namespace", obj.GetNamespace(), "name", obj.GetName())
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		return w.kubecli.Update(context.TODO(), obj)
+	kind := obj.GetKind()
+	ns := obj.GetNamespace()
+	objName := obj.GetName()
+	spec := getSpec(obj)
+	labels := obj.GetLabels()
+	annotations := obj.GetAnnotations()
+
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		updated, err := w.GetWorkload(ns, objName, resource.StatefulSetKind)
+		if err == nil {
+			obj = updated.DeepCopy()
+			setSpec(obj, spec)
+			obj.SetLabels(labels)
+			obj.SetAnnotations(annotations)
+		} else {
+			utilruntime.HandleError(fmt.Errorf("get workload %s/%s failed: %v", ns, objName, err))
+		}
+
+		updated, err = w.GetWorkload(ns, objName, resource.AdvancedStatefulSetKind)
+		if err == nil {
+			obj = updated.DeepCopy()
+			setSpec(obj, spec)
+			obj.SetLabels(labels)
+			obj.SetAnnotations(annotations)
+		} else {
+			utilruntime.HandleError(fmt.Errorf("get workload %s/%s failed: %v", ns, objName, err))
+		}
+
+		updateErr := w.kubecli.Update(context.TODO(), obj)
+		if updateErr == nil {
+			klog.Infof("workload %s %s/%s updated successfully", kind, ns, objName)
+			return nil
+		}
+		return updateErr
 	})
-	if err != nil {
-		return fmt.Errorf("workload kind %s %s/%s update failed: %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err)
+}
+
+func getSpec(obj *unstructured.Unstructured) map[string]interface{} {
+	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
+	if err != nil || !found {
+		return nil
 	}
-	log.Info("workload updated")
-	return nil
+	return spec
+}
+
+func setSpec(obj *unstructured.Unstructured, value interface{}) error {
+	return unstructured.SetNestedField(obj.Object, value, "spec")
 }

@@ -22,6 +22,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -144,12 +145,12 @@ func templateEqual(oldTemplate, newTemplate map[string]interface{}) bool {
 	var newVal, oldVal interface{}
 	oldApply, _ := codec.Encode(oldTemplate)
 	if err := json.Unmarshal([]byte(oldApply), &oldVal); err != nil {
-		log.Error(err, "unmarshal failed")
+		klog.Errorf("unmarshal failed, error: %v", err)
 		return false
 	}
 	newApply, _ := codec.Encode(newTemplate)
 	if err := json.Unmarshal([]byte(newApply), &newVal); err != nil {
-		log.Error(err, "unmarshal failed")
+		klog.Errorf("unmarshal failed, error: %v", err)
 		return false
 	}
 	return apiequality.Semantic.DeepEqual(oldVal, newVal)
@@ -161,9 +162,7 @@ func PodTemplateEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool 
 	lastAppliedConfig, ok := oldUnstruct.GetAnnotations()[annotation.AnnLastAppliedConfigKey]
 	if ok {
 		if err := json.Unmarshal([]byte(lastAppliedConfig), &oldSpec); err != nil {
-			log.Error(err, "applied config failed",
-				"namespace", oldUnstruct.GetNamespace(),
-				"name", oldUnstruct.GetName())
+			klog.Errorf("applied config failed, error: %v", err)
 			return false
 		}
 		oldPodTemplate, _, _ := unstructured.NestedMap(oldSpec, "template", "spec")
@@ -185,10 +184,7 @@ func ObjectEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
 	oldSpec := make(map[string]interface{})
 	if lastAppliedConfig, ok := oldUnstruct.GetAnnotations()[annotation.AnnLastAppliedConfigKey]; ok {
 		if err := json.Unmarshal([]byte(lastAppliedConfig), &oldSpec); err != nil {
-			log.Error(err, "unmarshal failed",
-				"kind", oldUnstruct.GetKind(),
-				"namespace", oldUnstruct.GetNamespace(),
-				"name", oldUnstruct.GetName())
+			klog.Errorf("unmarshal failed, error: %v", err)
 			return false
 		}
 		newSpec := GetSpec(newUnstruct)

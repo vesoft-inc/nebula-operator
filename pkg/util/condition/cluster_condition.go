@@ -25,7 +25,7 @@ import (
 
 const (
 	WorkloadReady = "Ready"
-	// WorkloadNotUpToDate is added when one of workloads is not up to date.
+	// WorkloadNotUpToDate is added when one of workloads is not up-to-date.
 	WorkloadNotUpToDate = "WorkloadNotUpToDate"
 	// MetadUnhealthy is added when one of metad pods is unhealthy.
 	MetadUnhealthy = "MetadUnhealthy"

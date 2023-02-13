@@ -136,6 +136,10 @@ func (c *graphdComponent) Tolerations() []corev1.Toleration {
 	return tolerations
 }
 
+func (c *graphdComponent) InitContainers() []corev1.Container {
+	return c.nc.Spec.Graphd.PodSpec.InitContainers
+}
+
 func (c *graphdComponent) SidecarContainers() []corev1.Container {
 	return c.nc.Spec.Graphd.PodSpec.SidecarContainers
 }
@@ -177,10 +181,6 @@ func (c *graphdComponent) GetPort(portName string) int32 {
 
 func (c *graphdComponent) GetConnAddress(portName string) string {
 	return getConnAddress(c.GetServiceFQDN(), c.GetPort(portName))
-}
-
-func (c *graphdComponent) GetPodConnAddresses(portName string, ordinal int32) string {
-	return getPodConnAddress(c.GetPodFQDN(ordinal), c.GetPort(portName))
 }
 
 func (c *graphdComponent) GetHeadlessConnAddresses(portName string) []string {

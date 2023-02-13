@@ -18,11 +18,14 @@ package kube
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -54,19 +57,31 @@ func (pd *podClient) GetPod(namespace, name string) (*corev1.Pod, error) {
 }
 
 func (pd *podClient) UpdatePod(pod *corev1.Pod) error {
-	log := getLog().WithValues("namespace", pod.GetNamespace(), "name", pod.GetName())
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		return pd.kubecli.Update(context.TODO(), pod)
+	ns := pod.GetNamespace()
+	podName := pod.GetName()
+	podLabels := pod.GetLabels()
+	annotations := pod.GetAnnotations()
+
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if updated, err := pd.GetPod(ns, podName); err == nil {
+			pod = updated.DeepCopy()
+			pod.SetLabels(podLabels)
+			pod.SetAnnotations(annotations)
+		} else {
+			utilruntime.HandleError(fmt.Errorf("get pod [%s/%s] failed: %v", ns, podName, err))
+			return err
+		}
+
+		updateErr := pd.kubecli.Update(context.TODO(), pod)
+		if updateErr == nil {
+			klog.Infof("pod [%s/%s] updated successfully", ns, podName)
+			return nil
+		}
+		return updateErr
 	})
-	if err != nil {
-		return err
-	}
-	log.Info("pod updated")
-	return nil
 }
 
 func (pd *podClient) DeletePod(namespace, name string) error {
-	log := getLog().WithValues("namespace", namespace, "name", name)
 	pod := &corev1.Pod{}
 	if err := pd.kubecli.Get(context.TODO(), types.NamespacedName{
 		Namespace: namespace,
@@ -74,7 +89,6 @@ func (pd *podClient) DeletePod(namespace, name string) error {
 	}, pod); err != nil {
 		return err
 	}
-	log.Info("pod deleted")
 	return pd.kubecli.Delete(context.TODO(), pod)
 }
 

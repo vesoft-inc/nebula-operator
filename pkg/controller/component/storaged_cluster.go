@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -75,18 +76,16 @@ func (c *storagedCluster) syncStoragedHeadlessService(nc *v1alpha1.NebulaCluster
 
 func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error {
 	namespace := nc.GetNamespace()
-	ncName := nc.GetName()
 	componentName := nc.StoragedComponent().GetName()
-	log := getLog().WithValues("namespace", namespace, "name", ncName, "componentName", componentName)
 
 	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
 	if err != nil {
-		return fmt.Errorf("get workload reference error: %v", err)
+		return fmt.Errorf("get workload kind failed: %v", err)
 	}
 
 	oldWorkloadTemp, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
 	if err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get workload")
+		klog.Errorf("get storaged cluster failed: %v", err)
 		return err
 	}
 
@@ -100,7 +99,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	newWorkload, err := nc.StoragedComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
 	if err != nil {
-		log.Error(err, "generate workload template failed")
+		klog.Errorf("generate storaged cluster template failed: %v", err)
 		return err
 	}
 
@@ -111,7 +110,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	}
 
 	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
-		return fmt.Errorf("failed to sync storaged cluster status, error: %v", err)
+		return fmt.Errorf("sync storaged cluster status failed: %v", err)
 	}
 
 	if notExist {
@@ -122,7 +121,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 			return err
 		}
 		nc.Status.Storaged.Workload = v1alpha1.WorkloadStatus{}
-		return utilerrors.ReconcileErrorf("waiting for storaged cluster %s running", newWorkload.GetName())
+		return utilerrors.ReconcileErrorf("waiting for storaged cluster [%s/%s] running", namespace, componentName)
 	}
 
 	oldReplicas := extender.GetReplicas(oldWorkload)
@@ -138,10 +137,10 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
 			return err
 		}
-		log.Info("add storage hosts succeed")
+		klog.Infof("storaged cluster [%s/%s] add hosts succeed", namespace, componentName)
 	}
 	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
-		log.Error(err, "failed to scale cluster")
+		klog.Errorf("scale storaged cluster [%s/%s] failed: %v", namespace, componentName, err)
 		return err
 	}
 

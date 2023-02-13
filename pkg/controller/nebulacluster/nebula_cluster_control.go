@@ -19,11 +19,14 @@ package nebulacluster
 import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component/reclaimer"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 type ControlInterface interface {
@@ -83,29 +86,40 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 }
 
 func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaCluster) error {
-	log := getLog().WithValues("namespace", nc.Namespace, "name", nc.Name)
 	if err := c.metadCluster.Reconcile(nc); err != nil {
-		log.Error(err, "reconcile metad cluster failed")
+		klog.Errorf("reconcile metad cluster failed: %v", err)
 		return err
+	}
+
+	if nc.IsBREnabled() &&
+		annotation.IsRestoreNameNotEmpty(nc.GetAnnotations()) &&
+		!annotation.IsRestoreMetadDone(nc.GetAnnotations()) {
+		return utilerrors.ReconcileErrorf("waiting for metad cluster restore done")
 	}
 
 	if err := c.storagedCluster.Reconcile(nc); err != nil {
-		log.Error(err, "reconcile storaged cluster failed")
+		klog.Errorf("reconcile storaged cluster failed: %v", err)
 		return err
 	}
 
+	if nc.IsBREnabled() &&
+		annotation.IsRestoreNameNotEmpty(nc.GetAnnotations()) &&
+		!annotation.IsRestoreStoragedDone(nc.GetAnnotations()) {
+		return utilerrors.ReconcileErrorf("waiting for storaged cluster restore done")
+	}
+
 	if err := c.graphdCluster.Reconcile(nc); err != nil {
-		log.Error(err, "reconcile graphd cluster failed")
+		klog.Errorf("reconcile graphd cluster failed: %v", err)
 		return err
 	}
 
 	if err := c.metaReconciler.Reconcile(nc); err != nil {
-		log.Error(err, "reconcile pv and pvc metadata cluster failed")
+		klog.Errorf("reconcile pv and pvc metadata cluster failed: %v", err)
 		return err
 	}
 
 	if err := c.pvcReclaimer.Reclaim(nc); err != nil {
-		log.Error(err, "reclaim pvc failed")
+		klog.Errorf("reclaim pvc failed: %v", err)
 		return err
 	}
 

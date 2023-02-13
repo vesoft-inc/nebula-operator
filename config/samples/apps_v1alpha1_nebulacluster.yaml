@@ -13,7 +13,7 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-graphd
-    version: v3.3.0
+    version: v3.4.0
     service:
       type: NodePort
       externalTrafficPolicy: Local
@@ -21,8 +21,11 @@ spec:
       resources:
         requests:
           storage: 1Gi
-      storageClassName: gp2
+      storageClassName: ebs-sc
   metad:
+#    license:
+#      secretName: "nebula-license"
+#      licenseKey: "nebula.license"
     resources:
       requests:
         cpu: "500m"
@@ -32,17 +35,17 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-metad
-    version: v3.3.0
+    version: v3.4.0
     dataVolumeClaim:
       resources:
         requests:
           storage: 5Gi
-      storageClassName: gp2
+      storageClassName: ebs-sc
     logVolumeClaim:
       resources:
         requests:
           storage: 1Gi
-      storageClassName: gp2
+      storageClassName: ebs-sc
   storaged:
     resources:
       requests:
@@ -53,19 +56,21 @@ spec:
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v3.3.0
+    version: v3.4.0
     dataVolumeClaims:
     - resources:
         requests:
           storage: 10Gi
-      storageClassName: gp2
+      storageClassName: ebs-sc
     logVolumeClaim:
       resources:
         requests:
           storage: 1Gi
-      storageClassName: gp2
+      storageClassName: ebs-sc
   reference:
     name: statefulsets.apps
     version: v1
   schedulerName: default-scheduler
+#  enablePVReclaim: false
+#  enableBR: false
   imagePullPolicy: Always

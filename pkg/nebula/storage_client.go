@@ -17,12 +17,10 @@ limitations under the License.
 package nebula
 
 import (
-	"sync"
-
 	"github.com/pkg/errors"
-
 	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/storage"
+	"k8s.io/klog/v2"
 )
 
 var ErrNoAvailableStoragedEndpoints = errors.New("storagedclient: no available endpoints")
@@ -37,13 +35,12 @@ type StorageInterface interface {
 }
 
 type storageClient struct {
-	mutex  sync.Mutex
 	client *storage.StorageAdminServiceClient
 }
 
 func NewStorageClient(endpoints []string, options ...Option) (StorageInterface, error) {
 	if len(endpoints) == 0 {
-		return nil, ErrNoAvailableMetadEndpoints
+		return nil, ErrNoAvailableStoragedEndpoints
 	}
 	sc, err := newStorageConnection(endpoints[0], options...)
 	if err != nil {
@@ -66,60 +63,48 @@ func newStorageConnection(endpoint string, options ...Option) (*storageClient, e
 }
 
 func (s *storageClient) connect() error {
-	log := getLog()
 	if err := s.client.Open(); err != nil {
-		log.Error(err, "open transport failed")
 		return err
 	}
-	log.Info("storaged connection opened", "isOpen", s.client.IsOpen())
-	return nil
-}
-
-func (s *storageClient) disconnect() error {
-	if err := s.client.Close(); err != nil {
-		getLog().Error(err, "close transport failed")
+	if !s.client.IsOpen() {
+		return errors.Errorf("transport is not open")
 	}
 	return nil
 }
 
 func (s *storageClient) Disconnect() error {
-	return s.disconnect()
+	return s.client.Close()
 }
 
 func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.PartitionID, newLeader *nebula.HostAddr) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	req := &storage.TransLeaderReq{
 		SpaceID:    spaceID,
 		PartID:     partID,
 		NewLeader_: newLeader,
 	}
-	log := getLog()
-	log.Info("start TransLeader")
+	klog.Infof("start transfer leader spaceID %d partitionID %d", spaceID, partID)
 	resp, err := s.client.TransLeader(req)
 	if err != nil {
-		log.Error(err, "TransLeader failed")
+		klog.Errorf("TransLeader failed: %v", err)
 		return err
 	}
 
 	if len(resp.Result_.FailedParts) > 0 {
 		if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_PART_NOT_FOUND {
-			return errors.Errorf("part %d not found", partID)
+			return errors.Errorf("partition %d not found", partID)
 		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_SPACE_NOT_FOUND {
 			return errors.Errorf("space %d not found", partID)
 		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_LEADER_CHANGED {
-			log.Info("request leader changed", "result", resp.Result_.FailedParts[0].String())
+			klog.Infof("request leader changed, result: %v", resp.Result_.FailedParts[0].String())
 			return nil
 		} else {
-			return errors.Errorf("TransLeader space %d part %d code %d", spaceID, partID, resp.Result_.FailedParts[0].Code)
+			return errors.Errorf("TransLeader space %d partition %d code %d", spaceID, partID, resp.Result_.FailedParts[0].Code)
 		}
 	}
 	return nil
 }
 
 func (s *storageClient) RemovePart(spaceID nebula.GraphSpaceID, partID nebula.PartitionID) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	req := &storage.RemovePartReq{
 		SpaceID: spaceID,
 		PartID:  partID,
@@ -135,8 +120,6 @@ func (s *storageClient) RemovePart(spaceID nebula.GraphSpaceID, partID nebula.Pa
 }
 
 func (s *storageClient) GetLeaderParts() (map[nebula.GraphSpaceID][]nebula.PartitionID, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	req := &storage.GetLeaderReq{}
 	resp, err := s.client.GetLeaderParts(req)
 	if err != nil {

@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	extender "k8s.io/kube-scheduler/extender/v1"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
@@ -49,7 +50,7 @@ func NewScheduleExtender(kubeCli kubernetes.Interface, predicate predicates.Pred
 	eventBroadcaster := record.NewBroadcaster()
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "nebula-scheduler"})
 	eventBroadcaster.StartLogging(func(format string, args ...interface{}) {
-		getLog().Info(fmt.Sprintf(format, args...))
+		klog.Info(fmt.Sprintf(format, args...))
 	})
 	eventBroadcaster.StartRecordingToSink(
 		&typedcorev1.EventSinkImpl{
@@ -59,9 +60,6 @@ func NewScheduleExtender(kubeCli kubernetes.Interface, predicate predicates.Pred
 }
 
 func (se *scheduleExtender) Filter(args *extender.ExtenderArgs) *extender.ExtenderFilterResult {
-	log := getLog()
-	log.Info("schedule pod", "namespace", args.Pod.Namespace, "name", args.Pod.Name)
-
 	l := label.Label(args.Pod.Labels)
 
 	if !l.IsManagedByNebulaOperator() && !l.IsNebulaComponent() {

@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -72,18 +73,16 @@ func (c *metadCluster) syncMetadHeadlessService(nc *v1alpha1.NebulaCluster) erro
 
 func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	namespace := nc.GetNamespace()
-	ncName := nc.GetName()
 	componentName := nc.MetadComponent().GetName()
-	log := getLog().WithValues("namespace", namespace, "name", ncName)
 
 	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
 	if err != nil {
-		return fmt.Errorf("get workload reference error: %v", err)
+		return fmt.Errorf("get workload kind failed: %v", err)
 	}
 
 	oldWorkloadTemp, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
 	if err != nil && !apierrors.IsNotFound(err) {
-		log.Error(err, "failed to get workload")
+		klog.Errorf("get metad cluster failed: %v", err)
 		return err
 	}
 
@@ -97,7 +96,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 
 	newWorkload, err := nc.MetadComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
 	if err != nil {
-		log.Error(err, "generate workload template failed")
+		klog.Errorf("generate metad cluster template failed: %v", err)
 		return err
 	}
 
@@ -108,7 +107,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
-		return fmt.Errorf("failed to sync metad cluster status, error: %v", err)
+		return fmt.Errorf("sync metad cluster status failed: %v", err)
 	}
 
 	if notExist {

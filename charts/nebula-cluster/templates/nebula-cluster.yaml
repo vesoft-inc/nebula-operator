@@ -41,6 +41,10 @@ spec:
     readinessProbe:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.graphd.initContainers }}
+    initContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.graphd.sidecarContainers }}
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
@@ -92,6 +96,10 @@ spec:
     readinessProbe:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.metad.initContainers }}
+    initContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.metad.sidecarContainers }}
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
@@ -106,6 +114,7 @@ spec:
     image: {{ .Values.nebula.storaged.image }}
     version: {{ .Values.nebula.version }}
     enableAutoBalance: {{ .Values.nebula.storaged.enableAutoBalance }}
+    enableForceUpdate: {{ .Values.nebula.enableForceUpdate }}
     env: {{ toYaml .Values.nebula.storaged.env | nindent 6 }}
     config: {{ toYaml .Values.nebula.storaged.config | nindent 6 }}
     logVolumeClaim:
@@ -140,6 +149,10 @@ spec:
     readinessProbe:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.storaged.initContainers }}
+    initContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.storaged.sidecarContainers }}
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
@@ -156,3 +169,5 @@ spec:
   schedulerName: {{ .Values.nebula.schedulerName }}
   unsatisfiableAction: {{ .Values.nebula.unsatisfiableAction }}
   enablePVReclaim: {{ .Values.nebula.enablePVReclaim }}
+  enableBR: {{ .Values.nebula.enableBR }}
+

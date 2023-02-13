@@ -25,6 +25,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -49,8 +50,6 @@ func (t *topology) Filter(pod *corev1.Pod, preNodes []corev1.Node) ([]corev1.Nod
 	componentType := pod.Labels[label.ComponentLabelKey]
 	clusterName := pod.Labels[label.ClusterLabelKey]
 
-	log := getLog()
-
 	nc := &v1alpha1.NebulaCluster{}
 	if err := t.client.Get(context.TODO(), types.NamespacedName{
 		Namespace: pod.Namespace,
@@ -61,7 +60,7 @@ func (t *topology) Filter(pod *corev1.Pod, preNodes []corev1.Node) ([]corev1.Nod
 
 	component, err := nc.ComponentByType(v1alpha1.ComponentType(componentType))
 	if err != nil {
-		log.Error(err, "get component %s failed", "componentType", componentType)
+		klog.Errorf("get component %s failed: %v", componentType, err)
 		return nil, err
 	}
 
@@ -119,7 +118,7 @@ func (t *topology) Filter(pod *corev1.Pod, preNodes []corev1.Node) ([]corev1.Nod
 		}
 	}
 
-	log.Info("candidate nodes", "nodes", resNames)
+	klog.Infof("candidate nodes %v", resNames)
 	return resNodes, nil
 }
 
@@ -151,7 +150,6 @@ func (t *topology) acquireLock(pod *corev1.Pod, pods []corev1.Pod) error {
 	var currentPod, schedulingPod *corev1.Pod
 	namespace := pod.GetNamespace()
 	podName := pod.GetName()
-	log := getLog().WithValues("namespace", namespace, "podName", podName)
 
 	for i := range pods {
 		if pods[i].GetName() == podName {
@@ -163,7 +161,7 @@ func (t *topology) acquireLock(pod *corev1.Pod, pods []corev1.Pod) error {
 	}
 
 	if currentPod == nil {
-		log.Info("not found")
+		klog.Infof("pod %s not found", podName)
 		return fmt.Errorf("can't find current Pod %s/%s", namespace, podName)
 	}
 
@@ -175,12 +173,10 @@ func (t *topology) acquireLock(pod *corev1.Pod, pods []corev1.Pod) error {
 		}
 		currentPod.Annotations[annotation.AnnPodSchedulingKey] = now
 		err := t.client.Update(context.TODO(), currentPod)
-		log := log.WithValues("key", annotation.AnnPodSchedulingKey, "value", now)
 		if err != nil {
-			log.Error(err, "set annotation failed")
 			return err
 		}
-		log.Info("set annotation successfully")
+		klog.Infof("pod [%s/%s] set annotation successfully", namespace, podName)
 		return nil
 	}
 
@@ -192,13 +188,11 @@ func (t *topology) acquireLock(pod *corev1.Pod, pods []corev1.Pod) error {
 	// If the scheduling pod already bind with node, and then remove the AnnPodSchedulingKey annotation
 	if schedulingPod.Spec.NodeName != "" {
 		delete(schedulingPod.Annotations, annotation.AnnPodSchedulingKey)
-		log := log.WithValues("key", annotation.AnnPodSchedulingKey)
 		err := t.client.Update(context.TODO(), schedulingPod)
 		if err != nil {
-			log.Error(err, "delete annotation failed")
 			return err
 		}
-		log.Error(err, "delete annotation successfully")
+		klog.Infof("delete pod [%s/%s] annotation successfully", namespace, podName)
 		return nil
 	}
 

@@ -23,6 +23,7 @@ import (
 )
 
 type ClientSet interface {
+	Secret() Secret
 	ConfigMap() ConfigMap
 	PV() PersistentVolume
 	PVC() PersistentVolumeClaim
@@ -32,9 +33,11 @@ type ClientSet interface {
 	Ingress() Ingress
 	Workload() Workload
 	NebulaCluster() NebulaCluster
+	NebulaRestore() NebulaRestore
 }
 
 type clientSet struct {
+	secretClient   Secret
 	cmClient       ConfigMap
 	pvClient       PersistentVolume
 	pvcClient      PersistentVolumeClaim
@@ -44,6 +47,7 @@ type clientSet struct {
 	ingressClient  Ingress
 	workloadClient Workload
 	nebulaClient   NebulaCluster
+	restoreClient  NebulaRestore
 }
 
 func NewClientSet(config *rest.Config) (ClientSet, error) {
@@ -52,6 +56,7 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		return nil, errors.Errorf("error building runtime client: %v", err)
 	}
 	return &clientSet{
+		secretClient:   NewSecret(cli),
 		cmClient:       NewConfigMap(cli),
 		pvClient:       NewPV(cli),
 		pvcClient:      NewPVC(cli),
@@ -61,7 +66,12 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		ingressClient:  NewIngress(cli),
 		workloadClient: NewWorkload(cli),
 		nebulaClient:   NewNebulaCluster(cli),
+		restoreClient:  NewNebulaRestore(cli),
 	}, nil
+}
+
+func (c *clientSet) Secret() Secret {
+	return c.secretClient
 }
 
 func (c *clientSet) ConfigMap() ConfigMap {
@@ -98,4 +108,8 @@ func (c *clientSet) Workload() Workload {
 
 func (c *clientSet) NebulaCluster() NebulaCluster {
 	return c.nebulaClient
+}
+
+func (c *clientSet) NebulaRestore() NebulaRestore {
+	return c.restoreClient
 }

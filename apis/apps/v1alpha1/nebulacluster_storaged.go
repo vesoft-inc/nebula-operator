@@ -155,6 +155,10 @@ func (c *storagedComponent) Tolerations() []corev1.Toleration {
 	return tolerations
 }
 
+func (c *storagedComponent) InitContainers() []corev1.Container {
+	return c.nc.Spec.Storaged.PodSpec.InitContainers
+}
+
 func (c *storagedComponent) SidecarContainers() []corev1.Container {
 	return c.nc.Spec.Storaged.PodSpec.SidecarContainers
 }
@@ -172,7 +176,7 @@ func (c *storagedComponent) IsHeadlessService() bool {
 }
 
 func (c *storagedComponent) GetServiceSpec() *ServiceSpec {
-	if c.nc.Spec.Storaged.Service != nil {
+	if c.nc.Spec.Storaged.Service == nil {
 		return nil
 	}
 	return c.nc.Spec.Storaged.Service.DeepCopy()
@@ -196,10 +200,6 @@ func (c *storagedComponent) GetPort(portName string) int32 {
 
 func (c *storagedComponent) GetConnAddress(portName string) string {
 	return getConnAddress(c.GetServiceFQDN(), c.GetPort(portName))
-}
-
-func (c *storagedComponent) GetPodConnAddresses(portName string, ordinal int32) string {
-	return getPodConnAddress(c.GetPodFQDN(ordinal), c.GetPort(portName))
 }
 
 func (c *storagedComponent) GetHeadlessConnAddresses(portName string) []string {

@@ -25,7 +25,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -49,12 +51,7 @@ func NewPV(kubecli client.Client) PersistentVolume {
 }
 
 func (p *pvClient) CreatePersistentVolume(pv *corev1.PersistentVolume) error {
-	log := getLog().WithValues("namespace", pv.Namespace, "name", pv.Name)
-	if err := p.kubecli.Create(context.TODO(), pv); err != nil {
-		return err
-	}
-	log.Info("pv created")
-	return nil
+	return p.kubecli.Create(context.TODO(), pv)
 }
 
 func (p *pvClient) GetPersistentVolume(name string) (*corev1.PersistentVolume, error) {
@@ -69,7 +66,6 @@ func (p *pvClient) GetPersistentVolume(name string) (*corev1.PersistentVolume, e
 }
 
 func (p *pvClient) PatchPVReclaimPolicy(pv *corev1.PersistentVolume, reclaimPolicy corev1.PersistentVolumeReclaimPolicy) error {
-	log := getLog().WithValues("namespace", pv.Namespace, "name", pv.Name)
 	patchBytes := []byte(fmt.Sprintf(`{"spec":{"persistentVolumeReclaimPolicy":"%s"}}`, reclaimPolicy))
 	patch := client.RawPatch(types.StrategicMergePatchType, patchBytes)
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
@@ -78,18 +74,16 @@ func (p *pvClient) PatchPVReclaimPolicy(pv *corev1.PersistentVolume, reclaimPoli
 	if err != nil {
 		return err
 	}
-	log.Info("pv patched reclaim policy")
+	klog.Infof("PV %s patched reclaim policy", pv.GetName())
 	return nil
 }
 
 func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolume) error {
-	log := getLog().WithValues("name", pv.GetName())
 	metaObj, ok := obj.(metav1.Object)
 	if !ok {
 		return fmt.Errorf("%+v is not a runtime.Object", obj)
 	}
 	namespace := metaObj.GetNamespace()
-	log = log.WithValues("namespace", namespace)
 	if pv.Annotations == nil {
 		pv.Annotations = make(map[string]string)
 	}
@@ -98,7 +92,7 @@ func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolum
 	}
 	pvcRef := pv.Spec.ClaimRef
 	if pvcRef == nil {
-		log.Info("pv doesn't have a ClaimRef, skipping")
+		klog.Infof("PV %s doesn't have a claimRef, skipping", pv.GetName())
 		return nil
 	}
 
@@ -112,7 +106,7 @@ func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolum
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		log.Info("pv: pvc doesn't exist, skipping", "pvcName", pvcName)
+		klog.Infof("PV: PVC %s doesn't exist, skipping", pvcName)
 		return nil
 	}
 	componentType := pvc.Labels[label.ComponentLabelKey]
@@ -127,13 +121,25 @@ func (p *pvClient) UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolum
 }
 
 func (p *pvClient) UpdatePersistentVolume(pv *corev1.PersistentVolume) error {
-	log := getLog().WithValues("name", pv.GetName())
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		return p.kubecli.Update(context.TODO(), pv)
+	pvName := pv.GetName()
+	labels := pv.GetLabels()
+	annotations := pv.GetAnnotations()
+
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if updated, err := p.GetPersistentVolume(pvName); err == nil {
+			pv = updated.DeepCopy()
+			pv.SetLabels(labels)
+			pv.SetAnnotations(annotations)
+		} else {
+			utilruntime.HandleError(fmt.Errorf("get PV %s failed: %v", pvName, err))
+			return err
+		}
+
+		updateErr := p.kubecli.Update(context.TODO(), pv)
+		if updateErr == nil {
+			klog.V(4).Infof("PV %s updated successfully", pvName)
+			return nil
+		}
+		return updateErr
 	})
-	if err != nil {
-		return err
-	}
-	log.V(4).Info("pv updated")
-	return nil
 }

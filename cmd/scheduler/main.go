@@ -22,15 +22,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/pflag"
-	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/logging"
 	"github.com/vesoft-inc/nebula-operator/pkg/scheduler/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/scheduler/extender/predicates"
 	"github.com/vesoft-inc/nebula-operator/pkg/scheduler/extender/server"
@@ -39,7 +39,7 @@ import (
 
 var (
 	scheme = runtime.NewScheme()
-	log    = logging.Log.WithName("setup")
+	log    = ctrl.Log.WithName("setup")
 )
 
 func init() {
@@ -53,26 +53,17 @@ func main() {
 
 	flag.BoolVar(&printVersion, "version", false, "Show version and quit")
 	flag.StringVar(&httpPort, "port", "12021", "schedule extender listen address")
-	opts := logging.Options{
-		Development:     true,
-		StacktraceLevel: zap.NewAtomicLevelAt(zap.FatalLevel),
-		ZapOpts: []zap.Option{
-			zap.AddCaller(),
-			zap.AddCallerSkip(-1),
-		},
-	}
-	opts.BindFlags(flag.CommandLine)
 
 	pflag.Parse()
-	logging.SetLogger(logging.New(logging.UseFlagOptions(&opts)))
+	ctrl.SetLogger(klogr.New())
 
 	if printVersion {
 		log.Info("Nebula Operator Version", "version", version.Version())
 		os.Exit(0)
 	}
 
-	log.Info("Welcome to Nebula Operator.")
-	log.Info("Nebula Operator Version", "version", version.Version())
+	klog.Info("Welcome to Nebula Operator.")
+	klog.Info("Nebula Operator Version", "version", version.Version())
 
 	restConfig := ctrl.GetConfigOrDie()
 

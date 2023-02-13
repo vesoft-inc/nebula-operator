@@ -147,6 +147,10 @@ func (c *metadComponent) Tolerations() []corev1.Toleration {
 	return tolerations
 }
 
+func (c *metadComponent) InitContainers() []corev1.Container {
+	return c.nc.Spec.Metad.PodSpec.InitContainers
+}
+
 func (c *metadComponent) SidecarContainers() []corev1.Container {
 	return c.nc.Spec.Metad.PodSpec.SidecarContainers
 }
@@ -190,10 +194,6 @@ func (c *metadComponent) GetConnAddress(portName string) string {
 	return getConnAddress(c.GetServiceFQDN(), c.GetPort(portName))
 }
 
-func (c *metadComponent) GetPodConnAddresses(portName string, ordinal int32) string {
-	return getPodConnAddress(c.GetPodFQDN(ordinal), c.GetPort(portName))
-}
-
 func (c *metadComponent) GetHeadlessConnAddresses(portName string) []string {
 	return getHeadlessConnAddresses(
 		c.GetConnAddress(portName),
@@ -234,7 +234,8 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 			Name:      logVolume(componentType),
 			MountPath: "/usr/local/nebula/logs",
 			SubPath:   "logs",
-		}, {
+		},
+		{
 			Name:      dataVolume(componentType),
 			MountPath: "/usr/local/nebula/data",
 			SubPath:   "data",
@@ -245,7 +246,7 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      "nebula-license",
 			ReadOnly:  true,
-			MountPath: "/usr/local/nebula/share/nebula.license",
+			MountPath: "/usr/local/nebula/nebula.license",
 			SubPath:   "nebula.license",
 		})
 	}

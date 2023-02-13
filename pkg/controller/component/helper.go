@@ -80,7 +80,6 @@ func setWorkloadStatus(obj *unstructured.Unstructured, status *v1alpha1.Componen
 }
 
 func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Service) error {
-	log := getLog().WithValues("namespace", component.GetNamespace(), "name", component.GetName())
 	newSvc := component.GenerateService()
 	if newSvc == nil {
 		return nil
@@ -94,7 +93,6 @@ func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Se
 		return svcClient.CreateService(newSvc)
 	}
 	if err != nil {
-		log.Error(err, "failed to get svc cluster", "svcName", newSvc.Name)
 		return err
 	}
 
@@ -241,12 +239,12 @@ func getNextUpdatePod(component v1alpha1.NebulaClusterComponentter, replicas int
 		}
 		revision, exist := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
 		if !exist {
-			return -1, &errors.ReconcileError{Msg: fmt.Sprintf("updated pod %s has no label: %s",
+			return -1, &errors.ReconcileError{Msg: fmt.Sprintf("rolling updated pod %s has no label: %s",
 				podName, appsv1.ControllerRevisionHashLabelKey)}
 		}
 		if revision == updateRevision {
 			if pod.Status.Phase != corev1.PodRunning {
-				return -1, &errors.ReconcileError{Msg: fmt.Sprintf("updated pod %s is not running", podName)}
+				return -1, &errors.ReconcileError{Msg: fmt.Sprintf("rolling updated pod %s is not running", podName)}
 			}
 			continue
 		}

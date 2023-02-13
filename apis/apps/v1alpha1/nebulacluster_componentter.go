@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -44,6 +42,7 @@ type NebulaClusterComponentter interface {
 	NodeSelector() map[string]string
 	Affinity() *corev1.Affinity
 	Tolerations() []corev1.Toleration
+	InitContainers() []corev1.Container
 	SidecarContainers() []corev1.Container
 	SidecarVolumes() []corev1.Volume
 	ReadinessProbe() *corev1.Probe
@@ -54,7 +53,6 @@ type NebulaClusterComponentter interface {
 	GetPodFQDN(int32) string
 	GetPort(string) int32
 	GetConnAddress(string) string
-	GetPodConnAddresses(portName string, ordinal int32) string
 	GetHeadlessConnAddresses(string) []string
 
 	IsReady() bool
@@ -73,7 +71,6 @@ type NebulaClusterComponentter interface {
 
 // +k8s:deepcopy-gen=false
 type baseComponentter interface {
-	fmt.Stringer
 	GraphdComponent() NebulaClusterComponentter
 	MetadComponent() NebulaClusterComponentter
 	StoragedComponent() NebulaClusterComponentter
@@ -100,10 +97,6 @@ func (typ ComponentType) String() string {
 type baseComponent struct {
 	nc  *NebulaCluster
 	typ ComponentType
-}
-
-func (c *baseComponent) String() string {
-	return fmt.Sprintf("%s component for [%s/%s] NebulaCluster", c.Type(), c.GetNamespace(), c.GetClusterName())
 }
 
 func (c *baseComponent) GraphdComponent() NebulaClusterComponentter {

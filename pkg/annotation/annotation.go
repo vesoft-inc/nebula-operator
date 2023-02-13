@@ -34,9 +34,66 @@ const (
 	// AnnPvReclaimKey is annotation key that indicate whether reclaim persistent volume
 	AnnPvReclaimKey = "nebula-graph.io/enable-pv-reclaim"
 
+	// AnnRestoreNameKey is restore name annotation key used for creating new nebula cluster with backup data
+	AnnRestoreNameKey = "nebula-graph.io/restore-name"
+	// AnnRestoreMetadStepKey is the annotation key to control Metad reconcile process
+	AnnRestoreMetadStepKey = "nebula-graph.io/restore-metad-done"
+	// AnnRestoreStoragedStepKey is the annotation key to control Storaged reconcile process
+	AnnRestoreStoragedStepKey = "nebula-graph.io/restore-storaged-done"
+	// AnnRestoreStageKey is the annotation key to indicate what is the current stage
+	AnnRestoreStageKey = "restore-stage"
+
 	// AnnHaModeVal is annotation value to indicate whether in ha mode
 	AnnHaModeVal = "true"
+
+	// AnnRestoreMetadStepVal is annotation value to indicate whether Metad restore step is completed in stage 1
+	AnnRestoreMetadStepVal = "true"
+	// AnnRestoreStoragedStepVal is annotation value to indicate whether Storaged restore step is completed in stage 1
+	AnnRestoreStoragedStepVal = "true"
+
+	AnnRestoreStage1Val = "restore-stage-1"
+	AnnRestoreStage2Val = "restore-stage-2"
 )
+
+func IsRestoreNameNotEmpty(ann map[string]string) bool {
+	if ann != nil {
+		val, ok := ann[AnnRestoreNameKey]
+		if ok && val != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func IsRestoreMetadDone(ann map[string]string) bool {
+	if ann != nil {
+		val, ok := ann[AnnRestoreMetadStepKey]
+		if ok && val == AnnRestoreMetadStepVal {
+			return true
+		}
+	}
+	return false
+}
+
+func IsRestoreStoragedDone(ann map[string]string) bool {
+	if ann != nil {
+		val, ok := ann[AnnRestoreStoragedStepKey]
+		if ok && val == AnnRestoreStoragedStepVal {
+			return true
+		}
+	}
+	return false
+}
+
+func IsInRestoreStage2(ann map[string]string) bool {
+	if ann != nil {
+		val, ok := ann[AnnRestoreStageKey]
+		if ok && val == AnnRestoreStage2Val {
+			return true
+		}
+	}
+	return false
+}
 
 // IsInHaMode check whether in ha mode
 func IsInHaMode(ann map[string]string) bool {

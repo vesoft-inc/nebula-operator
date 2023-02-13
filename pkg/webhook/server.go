@@ -17,6 +17,7 @@ limitations under the License.
 package webhook
 
 import (
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -26,10 +27,9 @@ import (
 var HandlerMap = map[string]admission.Handler{}
 
 func registerHandlers(m map[string]admission.Handler) {
-	log := getLog()
 	for path, handler := range m {
 		if path == "" {
-			log.Info("Skip handler with empty path.")
+			klog.Info("Skip handler with empty path.")
 			continue
 		}
 		if path[0] != '/' {
@@ -37,20 +37,19 @@ func registerHandlers(m map[string]admission.Handler) {
 		}
 		_, found := HandlerMap[path]
 		if found {
-			log.V(1).Info("conflicting webhook path in handler map", "path", path)
+			klog.V(1).Infof("conflicting webhook path %s in handler map", path)
 		}
 		HandlerMap[path] = handler
 	}
 }
 
 func SetupWithManager(mgr manager.Manager) error {
-	log := getLog()
 	server := mgr.GetWebhookServer()
 
 	// register admission handlers
 	for path, handler := range HandlerMap {
 		server.Register(path, &webhook.Admission{Handler: handler})
-		log.V(3).Info("Registered webhook handler", "path", path)
+		klog.V(3).Infof("Registered webhook handler with path %s", path)
 	}
 
 	return nil

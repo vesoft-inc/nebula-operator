@@ -40,6 +40,7 @@ func NewDefaultNebulaClusterControl(
 	graphdCluster component.ReconcileManager,
 	metadCluster component.ReconcileManager,
 	storagedCluster component.ReconcileManager,
+	exporter component.ReconcileManager,
 	metaReconciler component.ReconcileManager,
 	pvcReclaimer reclaimer.PVCReclaimer,
 	conditionUpdater ClusterConditionUpdater) ControlInterface {
@@ -48,6 +49,7 @@ func NewDefaultNebulaClusterControl(
 		graphdCluster:    graphdCluster,
 		metadCluster:     metadCluster,
 		storagedCluster:  storagedCluster,
+		exporter:         exporter,
 		metaReconciler:   metaReconciler,
 		pvcReclaimer:     pvcReclaimer,
 		conditionUpdater: conditionUpdater,
@@ -59,6 +61,7 @@ type defaultNebulaClusterControl struct {
 	graphdCluster    component.ReconcileManager
 	metadCluster     component.ReconcileManager
 	storagedCluster  component.ReconcileManager
+	exporter         component.ReconcileManager
 	metaReconciler   component.ReconcileManager
 	pvcReclaimer     reclaimer.PVCReclaimer
 	conditionUpdater ClusterConditionUpdater
@@ -110,6 +113,11 @@ func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaClu
 
 	if err := c.graphdCluster.Reconcile(nc); err != nil {
 		klog.Errorf("reconcile graphd cluster failed: %v", err)
+		return err
+	}
+
+	if err := c.exporter.Reconcile(nc); err != nil {
+		klog.Errorf("reconcile exporter failed: %v", err)
 		return err
 	}
 

@@ -5,9 +5,9 @@ LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
 DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
-IMAGE_TAG ?= v1.4.0
+IMAGE_TAG ?= v1.4.1
 
-CHARTS_VERSION ?= 1.4.0
+CHARTS_VERSION ?= 1.4.1
 
 export GO111MODULE := on
 GOOS := $(if $(GOOS),$(GOOS),linux)
@@ -94,8 +94,8 @@ build: generate check ## Build binary.
 
 helm-charts:
 	cp config/crd/bases/*.yaml charts/nebula-operator/crds/
-	helm package charts/nebula-operator --version $(CHARTS_VERSION)
-	helm package charts/nebula-cluster --version $(CHARTS_VERSION)
+	helm package charts/nebula-operator --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
+	helm package charts/nebula-cluster --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
 	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/
 	helm repo index charts/ --url https://github.com/vesoft-inc/nebula-operator/releases/download/v$(CHARTS_VERSION)
 

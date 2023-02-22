@@ -71,7 +71,12 @@ func (c *storagedCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (c *storagedCluster) syncStoragedHeadlessService(nc *v1alpha1.NebulaCluster) error {
-	return syncService(nc.StoragedComponent(), c.clientSet.Service())
+	newSvc := nc.StoragedComponent().GenerateService()
+	if newSvc == nil {
+		return nil
+	}
+
+	return syncService(newSvc, c.clientSet.Service())
 }
 
 func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error {

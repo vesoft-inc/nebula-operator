@@ -17,6 +17,7 @@ limitations under the License.
 package annotation
 
 const (
+	AnnDeploymentRevision = "deployment.kubernetes.io/revision"
 	// AnnPVCDeferDeletingKey is pvc defer deletion annotation key used in PVC for defer deleting PVC
 	AnnPVCDeferDeletingKey = "nebula-graph.io/pvc-defer-deleting"
 	// AnnPodNameKey is pod name annotation key used in PV/PVC for synchronizing nebula cluster meta info

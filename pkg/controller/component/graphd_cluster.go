@@ -157,7 +157,12 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 }
 
 func (c *graphdCluster) syncGraphdService(nc *v1alpha1.NebulaCluster) error {
-	return syncService(nc.GraphdComponent(), c.clientSet.Service())
+	newSvc := nc.GraphdComponent().GenerateService()
+	if newSvc == nil {
+		return nil
+	}
+
+	return syncService(newSvc, c.clientSet.Service())
 }
 
 func (c *graphdCluster) syncGraphdConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {

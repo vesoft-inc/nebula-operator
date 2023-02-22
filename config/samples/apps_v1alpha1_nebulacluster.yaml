@@ -67,10 +67,16 @@ spec:
         requests:
           storage: 1Gi
       storageClassName: ebs-sc
+  exporter:
+    replicas: 1
+    maxRequests: 20
   reference:
     name: statefulsets.apps
     version: v1
   schedulerName: default-scheduler
 #  enablePVReclaim: false
 #  enableBR: false
+  logRotate:
+    rotate: 5
+    size: "100M"
   imagePullPolicy: Always

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	kruisepub "github.com/openkruise/kruise-api/apps/pub"
@@ -37,11 +38,12 @@ import (
 )
 
 const (
-	AgentSidecarContainerName = "br-agent"
-	AgentInitContainerName    = "br-init-agent"
+	AgentSidecarContainerName = "ng-agent"
+	AgentInitContainerName    = "ng-init-agent"
 	DefaultAgentPortGRPC      = 8888
 	agentPortNameGRPC         = "grpc"
-	defaultAgentImage         = "vesoft/nebula-agent:latest"
+	defaultAgentImage         = "megabyte875/nebula-agent:latest"
+	defaultExporterImage      = "vesoft/nebula-stats-exporter"
 )
 
 func getComponentName(clusterName string, typ ComponentType) string {
@@ -205,33 +207,65 @@ func generateAgentContainer(c NebulaClusterComponentter, init bool) corev1.Conta
 			fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
 			" --ratelimit=1073741824 --debug")
 	} else {
-		agentCmd = append(agentCmd, "sleep 30; exec /usr/local/bin/agent"+
-			fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
-			" --meta="+metadAddr+
-			" --ratelimit=1073741824 --debug")
+		if c.GetNebulaCluster().IsLogRotateEnabled() && c.GetNebulaCluster().IsBREnabled() {
+			agentCmd = append(agentCmd, "sh /logrotate.sh; /etc/init.d/cron start;"+
+				" sleep 30; exec /usr/local/bin/agent"+
+				fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
+				" --meta="+metadAddr+
+				" --ratelimit=1073741824 --debug")
+		} else if c.GetNebulaCluster().IsLogRotateEnabled() {
+			agentCmd = append(agentCmd, "sh /logrotate.sh; exec cron -f")
+		} else if c.GetNebulaCluster().IsBREnabled() {
+			agentCmd = append(agentCmd, "sleep 30; exec /usr/local/bin/agent"+
+				fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
+				" --meta="+metadAddr+
+				" --ratelimit=1073741824 --debug")
+		}
 	}
 
 	container := corev1.Container{
-		Name:            AgentSidecarContainerName,
-		Image:           defaultAgentImage,
-		ImagePullPolicy: corev1.PullAlways,
-		Command:         agentCmd,
-		Ports: []corev1.ContainerPort{
+		Name:    AgentSidecarContainerName,
+		Image:   defaultAgentImage,
+		Command: agentCmd,
+	}
+
+	if c.GetNebulaCluster().IsBREnabled() {
+		if c.Type() != GraphdComponentType {
+			container.VolumeMounts = []corev1.VolumeMount{
+				{
+					Name:      dataVolume(componentType),
+					MountPath: "/usr/local/nebula/data",
+					SubPath:   "data",
+				},
+			}
+		}
+
+		container.Ports = []corev1.ContainerPort{
 			{
 				Name:          agentPortNameGRPC,
 				ContainerPort: int32(DefaultAgentPortGRPC),
 			},
-		},
+		}
 	}
 
-	if c.Type() != GraphdComponentType {
-		container.VolumeMounts = []corev1.VolumeMount{
+	if c.GetNebulaCluster().IsLogRotateEnabled() {
+		logRotate := c.GetNebulaCluster().Spec.LogRotate
+		container.Env = []corev1.EnvVar{
 			{
-				Name:      dataVolume(componentType),
-				MountPath: "/usr/local/nebula/data",
-				SubPath:   "data",
+				Name:  "LOGROTATE_ROTATE",
+				Value: strconv.Itoa(int(logRotate.Rotate)),
+			},
+			{
+				Name:  "LOGROTATE_SIZE",
+				Value: logRotate.Size,
 			},
 		}
+
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      logVolume(componentType),
+			MountPath: "/usr/local/nebula/logs",
+			SubPath:   "logs",
+		})
 	}
 
 	return container
@@ -310,7 +344,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 
 	containers = append(containers, baseContainer)
 
-	if nc.IsBREnabled() {
+	if nc.IsBREnabled() || nc.IsLogRotateEnabled() {
 		agentContainer := generateAgentContainer(c, false)
 		containers = append(containers, agentContainer)
 	}

@@ -108,3 +108,7 @@ func (nc *NebulaCluster) IsBREnabled() bool {
 	}
 	return *enabled
 }
+
+func (nc *NebulaCluster) IsLogRotateEnabled() bool {
+	return nc.Spec.LogRotate != nil
+}

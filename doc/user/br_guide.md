@@ -13,13 +13,13 @@
 
 #### Full backup
 
-Update the [full-backup-job.yaml](../../config/samples/full-backup-job.yaml) fields:
+Update the [full-backup-job.yaml](../../config/samples/full-backup-job.yaml) parameters:
 
-* META_ENDPOINT
-* AWS_S3_REGION
-* AWS_S3_BUCKET
-* AWS_S3_ENDPOINT
-* secret aws-s3-secret data access-key and secret-key
+* $META_ADDRESS
+* $BUCKET
+* $ACCESS_KEY
+* $SECRET_KEY
+* $REGION
 
 ```shell
 $ kubectl apply -f full-backup-job.yaml
@@ -30,13 +30,13 @@ $ kubectl logs logs $POD -f
 
 #### Incremental backup
 
-Update the [full-backup-job.yaml](../../config/samples/incremental-backup-job.yaml) fields:
+Update the [incremental-backup-job.yaml](../../config/samples/incremental-backup-job.yaml) parameters:
 
-* META_ENDPOINT
-* AWS_S3_REGION
-* AWS_S3_BUCKET
-* AWS_S3_ENDPOINT
-* secret data access-key and secret-key
+* $META_ADDRESS
+* $BUCKET
+* $ACCESS_KEY
+* $SECRET_KEY
+* $REGION
 
 ```shell
 $ kubectl apply -f incremental-backup-job.yaml

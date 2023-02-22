@@ -68,7 +68,12 @@ func (c *metadCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (c *metadCluster) syncMetadHeadlessService(nc *v1alpha1.NebulaCluster) error {
-	return syncService(nc.MetadComponent(), c.clientSet.Service())
+	newSvc := nc.MetadComponent().GenerateService()
+	if newSvc == nil {
+		return nil
+	}
+
+	return syncService(newSvc, c.clientSet.Service())
 }
 
 func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {

@@ -79,12 +79,7 @@ func setWorkloadStatus(obj *unstructured.Unstructured, status *v1alpha1.Componen
 	return nil
 }
 
-func syncService(component v1alpha1.NebulaClusterComponentter, svcClient kube.Service) error {
-	newSvc := component.GenerateService()
-	if newSvc == nil {
-		return nil
-	}
-
+func syncService(newSvc *corev1.Service, svcClient kube.Service) error {
 	oldSvcTmp, err := svcClient.GetService(newSvc.Namespace, newSvc.Name)
 	if apierrors.IsNotFound(err) {
 		if err := setServiceLastAppliedConfigAnnotation(newSvc); err != nil {
@@ -272,5 +267,91 @@ func contains(ss []int32, lookingFor int32) bool {
 		}
 	}
 
+	return false
+}
+
+func setDeploymentLastAppliedConfigAnnotation(deploy *appsv1.Deployment) error {
+	b, err := json.Marshal(deploy.Spec)
+	if err != nil {
+		return err
+	}
+	if deploy.Annotations == nil {
+		deploy.Annotations = map[string]string{}
+	}
+	deploy.Annotations[annotation.AnnLastAppliedConfigKey] = string(b)
+	return nil
+}
+
+func updateDeployment(clientSet kube.ClientSet, newDeploy, oldDeploy *appsv1.Deployment) error {
+	isOrphan := metav1.GetControllerOf(oldDeploy) == nil
+	if newDeploy.Annotations == nil {
+		newDeploy.Annotations = map[string]string{}
+	}
+	if oldDeploy.Annotations == nil {
+		oldDeploy.Annotations = map[string]string{}
+	}
+
+	if deploymentEqual(newDeploy, oldDeploy) && !isOrphan {
+		return nil
+	}
+
+	deploy := oldDeploy
+	deploy.Labels = newDeploy.Labels
+	deploy.Annotations = newDeploy.Annotations
+	deploy.Spec.Replicas = newDeploy.Spec.Replicas
+	deploy.Spec.Template = newDeploy.Spec.Template
+	deploy.Spec.Strategy = newDeploy.Spec.Strategy
+	if isOrphan {
+		deploy.OwnerReferences = newDeploy.OwnerReferences
+	}
+
+	var podConfig string
+	var exists bool
+	if oldDeploy.Spec.Template.Annotations != nil {
+		podConfig, exists = oldDeploy.Spec.Template.Annotations[annotation.AnnLastAppliedConfigKey]
+	}
+	if exists {
+		if deploy.Spec.Template.Annotations == nil {
+			deploy.Spec.Template.Annotations = map[string]string{}
+		}
+		deploy.Spec.Template.Annotations[annotation.AnnLastAppliedConfigKey] = podConfig
+	}
+	v, ok := oldDeploy.Annotations[annotation.AnnLastSyncTimestampKey]
+	if ok {
+		deploy.Annotations[annotation.AnnLastSyncTimestampKey] = v
+	}
+
+	err := setDeploymentLastAppliedConfigAnnotation(deploy)
+	if err != nil {
+		return err
+	}
+
+	return clientSet.Deployment().UpdateDeployment(deploy)
+}
+
+func deploymentEqual(newDeploy, oldDeploy *appsv1.Deployment) bool {
+	tmpAnno := map[string]string{}
+	for k, v := range oldDeploy.Annotations {
+		if k != annotation.AnnLastAppliedConfigKey && k != annotation.AnnLastSyncTimestampKey &&
+			k != annotation.AnnDeploymentRevision {
+			tmpAnno[k] = v
+		}
+	}
+
+	if !apiequality.Semantic.DeepEqual(newDeploy.Annotations, tmpAnno) {
+		return false
+	}
+	oldConfig := appsv1.DeploymentSpec{}
+	if lastAppliedConfig, ok := oldDeploy.Annotations[annotation.AnnLastAppliedConfigKey]; ok {
+		err := json.Unmarshal([]byte(lastAppliedConfig), &oldConfig)
+		if err != nil {
+			return false
+		}
+		tmpTemplate := oldConfig.Template.DeepCopy()
+		delete(tmpTemplate.Annotations, annotation.AnnLastAppliedConfigKey)
+		return apiequality.Semantic.DeepEqual(oldConfig.Replicas, newDeploy.Spec.Replicas) &&
+			apiequality.Semantic.DeepEqual(*tmpTemplate, newDeploy.Spec.Template) &&
+			apiequality.Semantic.DeepEqual(oldConfig.Strategy, newDeploy.Spec.Strategy)
+	}
 	return false
 }

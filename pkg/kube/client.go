@@ -32,6 +32,7 @@ type ClientSet interface {
 	Service() Service
 	Ingress() Ingress
 	Workload() Workload
+	Deployment() Deployment
 	NebulaCluster() NebulaCluster
 	NebulaRestore() NebulaRestore
 }
@@ -46,6 +47,7 @@ type clientSet struct {
 	svcClient      Service
 	ingressClient  Ingress
 	workloadClient Workload
+	deployClient   Deployment
 	nebulaClient   NebulaCluster
 	restoreClient  NebulaRestore
 }
@@ -65,6 +67,7 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		svcClient:      NewService(cli),
 		ingressClient:  NewIngress(cli),
 		workloadClient: NewWorkload(cli),
+		deployClient:   NewDeployment(cli),
 		nebulaClient:   NewNebulaCluster(cli),
 		restoreClient:  NewNebulaRestore(cli),
 	}, nil
@@ -104,6 +107,10 @@ func (c *clientSet) Ingress() Ingress {
 
 func (c *clientSet) Workload() Workload {
 	return c.workloadClient
+}
+
+func (c *clientSet) Deployment() Deployment {
+	return c.deployClient
 }
 
 func (c *clientSet) NebulaCluster() NebulaCluster {

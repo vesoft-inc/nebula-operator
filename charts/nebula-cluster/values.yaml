@@ -7,6 +7,7 @@ nebula:
   enableForceUpdate: false
   schedulerName: default-scheduler # nebula-scheduler
   unsatisfiableAction: ScheduleAnyway
+  logRotate: { }
   reference:
     name: statefulsets.apps
     version: v1
@@ -83,6 +84,25 @@ nebula:
     initContainers: []
     sidecarContainers: []
     sidecarVolumes: []
+
+  exporter:
+    image: vesoft/nebula-stats-exporter
+    version: v3.3.0
+    replicas: 1
+    env: [ ]
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+    podLabels: { }
+    podAnnotations: { }
+    nodeSelector: { }
+    tolerations: [ ]
+    affinity: { }
+    livenessProbe: { }
 
 
 imagePullSecrets: []

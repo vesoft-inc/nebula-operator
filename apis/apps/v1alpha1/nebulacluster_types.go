@@ -97,8 +97,11 @@ type NebulaClusterSpec struct {
 	// +optional
 	EnableBR *bool `json:"enableBR,omitempty"`
 
-	// optional
-	//BrAgentVersion *string `json:"brAgentVersion,omitempty"`
+	// +optional
+	LogRotate *LogRotate `json:"logRotate,omitempty"`
+
+	// +optional
+	Exporter *ExporterSpec `json:"exporter,omitempty"`
 }
 
 // NebulaClusterStatus defines the observed state of NebulaCluster
@@ -193,6 +196,26 @@ type WorkloadReference struct {
 	Version string `json:"version,omitempty"`
 }
 
+type LogRotate struct {
+	// +kubebuilder:default=5
+	// +optional
+	Rotate int32 `json:"rotate,omitempty"`
+
+	// +kubebuilder:default="200M"
+	// +optional
+	Size string `json:"size,omitempty"`
+}
+
+// ExporterSpec defines the desired state of Exporter
+type ExporterSpec struct {
+	PodSpec `json:",inline"`
+
+	// Maximum number of parallel scrape requests
+	// +kubebuilder:default=40
+	// +optional
+	MaxRequests int32 `json:"maxRequests,omitempty"`
+}
+
 type LicenseSpec struct {
 	// Name of the license secret name.
 	SecretName string `json:"secretName,omitempty"`
@@ -281,7 +304,6 @@ type PodSpec struct {
 	// +optional
 	EnvVars []corev1.EnvVar `json:"env,omitempty"`
 
-	// +kubebuilder:default=vesoft/graphd
 	// +optional
 	Image string `json:"image,omitempty"`
 
@@ -317,6 +339,9 @@ type PodSpec struct {
 
 	// +optional
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 }
 
 // StorageClaim contains details of storage

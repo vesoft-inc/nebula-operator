@@ -102,6 +102,7 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 				sm,
 				storagedUpdater,
 				evenPodsSpread),
+			component.NewNebulaExporter(clientSet),
 			reclaimer.NewMetaReconciler(clientSet),
 			reclaimer.NewPVCReclaimer(clientSet),
 			NewClusterConditionUpdater(),
@@ -124,6 +125,7 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.kruise.io,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
@@ -196,6 +198,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager, opts controller.O
 			Owns(&corev1.Service{}).
 			Owns(&appsv1.StatefulSet{}).
 			Owns(&kruisev1alpha1.StatefulSet{}).
+			Owns(&appsv1.Deployment{}).
 			WithOptions(opts).
 			Complete(r)
 	}
@@ -205,6 +208,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager, opts controller.O
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
+		Owns(&appsv1.Deployment{}).
 		WithOptions(opts).
 		Complete(r)
 }

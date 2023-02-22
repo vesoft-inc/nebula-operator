@@ -47,6 +47,8 @@ const (
 	MetadLabelVal string = "metad"
 	// StoragedLabelVal is storaged label value
 	StoragedLabelVal string = "storaged"
+	// ExporterLabelVal is exporter label value
+	ExporterLabelVal string = "exporter"
 )
 
 type Label labels.Set
@@ -66,6 +68,10 @@ func (l Label) Cluster(name string) Label {
 func (l Label) Component(name string) Label {
 	l[ComponentLabelKey] = name
 	return l
+}
+
+func (l Label) Exporter() Label {
+	return l.Component(ExporterLabelVal)
 }
 
 func (l Label) Graphd() Label {

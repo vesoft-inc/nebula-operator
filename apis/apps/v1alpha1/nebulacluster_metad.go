@@ -101,10 +101,16 @@ func (c *metadComponent) GetDataStorageClass() *string {
 }
 
 func (c *metadComponent) GetLogStorageResources() *corev1.ResourceRequirements {
+	if c.nc.Spec.Metad.LogVolumeClaim == nil {
+		return nil
+	}
 	return c.nc.Spec.Metad.LogVolumeClaim.Resources.DeepCopy()
 }
 
 func (c *metadComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
+	if c.nc.Spec.Metad.DataVolumeClaim == nil {
+		return nil, nil
+	}
 	return c.nc.Spec.Metad.DataVolumeClaim.Resources.DeepCopy(), nil
 }
 
@@ -231,15 +237,18 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	componentType := c.Type().String()
 	mounts := []corev1.VolumeMount{
 		{
-			Name:      logVolume(componentType),
-			MountPath: "/usr/local/nebula/logs",
-			SubPath:   "logs",
-		},
-		{
 			Name:      dataVolume(componentType),
 			MountPath: "/usr/local/nebula/data",
 			SubPath:   "data",
 		},
+	}
+
+	if c.nc.Spec.Metad.LogVolumeClaim != nil {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      logVolume(componentType),
+			MountPath: "/usr/local/nebula/logs",
+			SubPath:   "logs",
+		})
 	}
 
 	if c.nc.Spec.Metad.License != nil {
@@ -258,14 +267,6 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 	componentType := c.Type().String()
 	volumes := []corev1.Volume{
 		{
-			Name: logVolume(componentType),
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: logVolume(componentType),
-				},
-			},
-		},
-		{
 			Name: dataVolume(componentType),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
@@ -273,6 +274,17 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 				},
 			},
 		},
+	}
+
+	if c.nc.Spec.Metad.LogVolumeClaim != nil {
+		volumes = append(volumes, corev1.Volume{
+			Name: logVolume(componentType),
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: logVolume(componentType),
+				},
+			},
+		})
 	}
 
 	if c.nc.Spec.Metad.License != nil {
@@ -297,11 +309,7 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 
 func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
 	componentType := c.Type().String()
-	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()
-	logReq, err := parseStorageRequest(logRes.Requests)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse storage request for %s log volume, error: %v", componentType, err)
-	}
+	claims := make([]corev1.PersistentVolumeClaim, 0)
 
 	dataRes, err := c.GetDataStorageResources()
 	if err != nil {
@@ -313,8 +321,25 @@ func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, 
 		return nil, fmt.Errorf("cannot parse storage request for %s data volume, error: %v", componentType, err)
 	}
 
-	claims := []corev1.PersistentVolumeClaim{
-		{
+	claims = append(claims, corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: dataVolume(componentType),
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources:        dataReq,
+			StorageClassName: dataSC,
+		},
+	})
+
+	if c.nc.Spec.Metad.LogVolumeClaim != nil {
+		logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()
+		logReq, err := parseStorageRequest(logRes.Requests)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse storage request for %s log volume, error: %v", componentType, err)
+		}
+
+		claims = append(claims, corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: logVolume(componentType),
 			},
@@ -323,18 +348,9 @@ func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, 
 				Resources:        logReq,
 				StorageClassName: logSC,
 			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: dataVolume(componentType),
-			},
-			Spec: corev1.PersistentVolumeClaimSpec{
-				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-				Resources:        dataReq,
-				StorageClassName: dataSC,
-			},
-		},
+		})
 	}
+
 	return claims, nil
 }
 

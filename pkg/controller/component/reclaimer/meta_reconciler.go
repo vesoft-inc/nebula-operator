@@ -17,10 +17,10 @@ limitations under the License.
 package reclaimer
 
 import (
-	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -54,8 +54,17 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		if !label.Label(pod.Labels).IsNebulaComponent() {
 			continue
 		}
+
+		var hasDataPV bool
+		if pod.Labels[label.ComponentLabelKey] == label.GraphdLabelVal {
+			hasDataPV = false
+		}
+
 		pvcs, err := m.resolvePVCFromPod(&pod)
 		if err != nil {
+			if errors.IsNotFound(err) && !hasDataPV {
+				continue
+			}
 			return err
 		}
 		for i := range pvcs {
@@ -100,7 +109,9 @@ func (m *meta) resolvePVCFromPod(pod *corev1.Pod) ([]*corev1.PersistentVolumeCla
 		pvcs = append(pvcs, pvc)
 	}
 	if len(pvcs) == 0 {
-		return nil, errors.New("pvcs not found")
+		err := errors.NewNotFound(corev1.Resource("pvc"), "")
+		err.ErrStatus.Message = fmt.Sprintf("no PVC found for pod [%s/%s]", pod.Namespace, pod.Name)
+		return nil, err
 	}
 	return pvcs, nil
 }

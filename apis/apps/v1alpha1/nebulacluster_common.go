@@ -42,7 +42,7 @@ const (
 	AgentInitContainerName    = "ng-init-agent"
 	DefaultAgentPortGRPC      = 8888
 	agentPortNameGRPC         = "grpc"
-	defaultAgentImage         = "megabyte875/nebula-agent:latest"
+	defaultAgentImage         = "vesoft/nebula-agent:latest"
 	defaultExporterImage      = "vesoft/nebula-stats-exporter"
 )
 

@@ -90,6 +90,9 @@ func (c *graphdComponent) GetLogStorageClass() *string {
 }
 
 func (c *graphdComponent) GetLogStorageResources() *corev1.ResourceRequirements {
+	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
+		return nil
+	}
 	return c.nc.Spec.Graphd.LogVolumeClaim.Resources.DeepCopy()
 }
 
@@ -217,6 +220,10 @@ func (c *graphdComponent) GenerateContainerPorts() []corev1.ContainerPort {
 }
 
 func (c *graphdComponent) GenerateVolumeMounts() []corev1.VolumeMount {
+	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
+		return nil
+	}
+
 	componentType := c.Type().String()
 	return []corev1.VolumeMount{
 		{
@@ -228,6 +235,10 @@ func (c *graphdComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 }
 
 func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
+	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
+		return nil
+	}
+
 	componentType := c.Type().String()
 	return []corev1.Volume{
 		{
@@ -242,6 +253,10 @@ func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
 }
 
 func (c *graphdComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
+	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
+		return nil, nil
+	}
+
 	componentType := c.Type().String()
 	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()
 	storageRequest, err := parseStorageRequest(logRes.Requests)

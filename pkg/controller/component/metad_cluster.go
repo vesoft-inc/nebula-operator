@@ -94,7 +94,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
-	cm, cmHash, e, err := c.syncMetadConfigMap(nc)
+	cm, cmHash, e, err := c.syncMetadConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
 	}

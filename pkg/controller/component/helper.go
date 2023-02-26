@@ -165,7 +165,7 @@ func syncConfigMap(
 	if cfg != nil {
 		e = maputil.AllKeysExist(cfg, v1alpha1.DynamicFlags)
 		if !e {
-			customConf := config.AppendCustomConfig(template, component.GetConfig())
+			customConf := config.AppendCustomConfig(template, cfg)
 			cm.Data[cmKey] = customConf
 			cmHash = hash.Hash(customConf)
 		}
@@ -179,16 +179,6 @@ func syncConfigMap(
 
 func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[string]string, exists bool) error {
 	newFlags := newAnnotations[annotation.AnnLastAppliedFlagsKey]
-	if exists && newFlags != "{}" {
-		for _, endpoint := range endpoints {
-			url := fmt.Sprintf("http://%s/flags", endpoint)
-			if _, err := httputil.PutRequest(url, []byte(newFlags)); err != nil {
-				return err
-			}
-		}
-		klog.Info("update dynamic flags successfully")
-	}
-
 	apply, ok := oldAnnotations[annotation.AnnLastAppliedFlagsKey]
 	if ok {
 		if apply != "{}" && newFlags == "{}" {
@@ -210,8 +200,20 @@ func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[s
 				}
 				klog.Info("reset dynamic flags successfully")
 			}
+			return nil
 		}
 	}
+
+	if exists && newFlags != "{}" {
+		for _, endpoint := range endpoints {
+			url := fmt.Sprintf("http://%s/flags", endpoint)
+			if _, err := httputil.PutRequest(url, []byte(newFlags)); err != nil {
+				return err
+			}
+		}
+		klog.Info("update dynamic flags successfully")
+	}
+
 	return nil
 }
 

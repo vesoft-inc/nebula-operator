@@ -97,7 +97,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
-	cm, cmHash, e, err := c.syncStoragedConfigMap(nc)
+	cm, cmHash, e, err := c.syncStoragedConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
 	}

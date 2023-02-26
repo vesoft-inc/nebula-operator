@@ -82,7 +82,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
-	cm, cmHash, e, err := c.syncGraphdConfigMap(nc)
+	cm, cmHash, e, err := c.syncGraphdConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
 	}

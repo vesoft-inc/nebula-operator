@@ -34,7 +34,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/codec"
 )
 
 const (
@@ -91,19 +93,12 @@ func getPort(ports []corev1.ContainerPort, portName string) int32 {
 	return 0
 }
 
-func getConnAddress(serviceFQDN string, port int32) string {
-	return joinHostPort(serviceFQDN, port)
-}
-
-func getHeadlessConnAddresses(connAddress, componentName string, replicas int32, isHeadless bool) []string {
-	if isHeadless {
-		addresses := make([]string, 0, replicas)
-		for i := int32(0); i < replicas; i++ {
-			addresses = append(addresses, fmt.Sprintf("%s.%s", getPodName(componentName, i), connAddress))
-		}
-		return addresses
+func getConnAddresses(connAddress, componentName string, replicas int32) []string {
+	addresses := make([]string, 0, replicas)
+	for i := int32(0); i < replicas; i++ {
+		addresses = append(addresses, fmt.Sprintf("%s.%s", getPodName(componentName, i), connAddress))
 	}
-	return []string{connAddress}
+	return addresses
 }
 
 func getKubernetesClusterDomain() string {
@@ -157,7 +152,7 @@ func getResources(res *corev1.ResourceRequirements) *corev1.ResourceRequirements
 	return res
 }
 
-func getConfigKey(componentType string) string {
+func getCmKey(componentType string) string {
 	return fmt.Sprintf("nebula-%s.conf", componentType)
 }
 
@@ -288,7 +283,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		}
 	}
 
-	metadAddress := strings.Join(nc.GetMetadEndpoints(), ",")
+	metadAddress := strings.Join(nc.GetMetadEndpoints(MetadPortNameThrift), ",")
 	cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
 		fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+
 		" --meta_server_addrs="+metadAddress+
@@ -362,7 +357,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 
 	nc := c.GetNebulaCluster()
 
-	configKey := getConfigKey(componentType)
+	cmKey := getCmKey(componentType)
 	containers := generateContainers(c, cm)
 	volumes := c.GenerateVolumes()
 	if cm != nil {
@@ -374,8 +369,8 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 						Name: c.GetName(),
 					},
 					Items: []corev1.KeyToPath{{
-						Key:  configKey,
-						Path: configKey,
+						Key:  cmKey,
+						Path: cmKey,
 					}},
 				},
 			},
@@ -410,12 +405,18 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		return nil, err
 	}
 
+	apply, err := codec.Encode(c.GetConfig())
+	if err != nil {
+		return nil, err
+	}
+
 	mergeLabels := mergeStringMaps(true, componentLabel, c.GetPodLabels())
 	replicas := c.GetReplicas()
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.GetName(),
 			Namespace:       namespace,
+			Annotations:     map[string]string{annotation.AnnLastAppliedFlagsKey: apply},
 			Labels:          componentLabel,
 			OwnerReferences: c.GenerateOwnerReferences(),
 		},

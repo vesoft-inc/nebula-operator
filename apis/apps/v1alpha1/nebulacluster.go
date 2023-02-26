@@ -52,12 +52,16 @@ func (nc *NebulaCluster) GetMetadThriftConnAddress() string {
 	return nc.MetadComponent().GetConnAddress(MetadPortNameThrift)
 }
 
-func (nc *NebulaCluster) GetMetadEndpoints() []string {
-	return nc.MetadComponent().GetHeadlessConnAddresses(MetadPortNameThrift)
+func (nc *NebulaCluster) GetMetadEndpoints(portName string) []string {
+	return nc.MetadComponent().GetEndpoints(portName)
 }
 
-func (nc *NebulaCluster) GetStoragedEndpoints() []string {
-	return nc.StoragedComponent().GetHeadlessConnAddresses(StoragedPortNameThrift)
+func (nc *NebulaCluster) GetStoragedEndpoints(portName string) []string {
+	return nc.StoragedComponent().GetEndpoints(portName)
+}
+
+func (nc *NebulaCluster) GetGraphdEndpoints(portName string) []string {
+	return nc.GraphdComponent().GetEndpoints(portName)
 }
 
 func (nc *NebulaCluster) GetClusterName() string {

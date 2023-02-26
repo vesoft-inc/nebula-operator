@@ -71,7 +71,7 @@ func (c *metadComponent) GetConfig() map[string]string {
 }
 
 func (c *metadComponent) GetConfigMapKey() string {
-	return getConfigKey(c.Type().String())
+	return getCmKey(c.Type().String())
 }
 
 func (c *metadComponent) GetResources() *corev1.ResourceRequirements {
@@ -197,15 +197,14 @@ func (c *metadComponent) GetPort(portName string) int32 {
 }
 
 func (c *metadComponent) GetConnAddress(portName string) string {
-	return getConnAddress(c.GetServiceFQDN(), c.GetPort(portName))
+	return joinHostPort(c.GetServiceFQDN(), c.GetPort(portName))
 }
 
-func (c *metadComponent) GetHeadlessConnAddresses(portName string) []string {
-	return getHeadlessConnAddresses(
+func (c *metadComponent) GetEndpoints(portName string) []string {
+	return getConnAddresses(
 		c.GetConnAddress(portName),
 		c.GetName(),
-		c.GetReplicas(),
-		c.IsHeadlessService())
+		c.GetReplicas())
 }
 
 func (c *metadComponent) IsReady() bool {
@@ -367,7 +366,7 @@ func (c *metadComponent) GenerateService() *corev1.Service {
 
 func (c *metadComponent) GenerateConfigMap() *corev1.ConfigMap {
 	cm := generateConfigMap(c)
-	configKey := getConfigKey(c.Type().String())
+	configKey := getCmKey(c.Type().String())
 	cm.Data[configKey] = MetadhConfigTemplate
 	return cm
 }

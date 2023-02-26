@@ -19,6 +19,7 @@ package component
 import (
 	"encoding/json"
 	"fmt"
+	"k8s.io/klog/v2"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,10 +33,12 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/codec"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/config"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/hash"
+	httputil "github.com/vesoft-inc/nebula-operator/pkg/util/http"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/maputil"
 )
 
@@ -152,19 +155,64 @@ func syncConfigMap(
 	component v1alpha1.NebulaClusterComponentter,
 	cmClient kube.ConfigMap,
 	template,
-	fileName string) (*corev1.ConfigMap, string, error) {
+	cmKey string) (*corev1.ConfigMap, string, bool, error) {
 	cmHash := hash.Hash(template)
 	cm := component.GenerateConfigMap()
-	if component.GetConfig() != nil {
-		customConf := config.AppendCustomConfig(template, component.GetConfig())
-		cm.Data[fileName] = customConf
-		cmHash = hash.Hash(customConf)
+	cfg := component.GetConfig()
+	// If not all the custom flags in the dynamic flags map,
+	// then persist these flags to configmap and trigger rolling update
+	var e bool
+	if cfg != nil {
+		e = maputil.AllKeysExist(cfg, v1alpha1.DynamicFlags)
+		if !e {
+			customConf := config.AppendCustomConfig(template, component.GetConfig())
+			cm.Data[cmKey] = customConf
+			cmHash = hash.Hash(customConf)
+		}
 	}
 
 	if err := cmClient.CreateOrUpdateConfigMap(cm); err != nil {
-		return nil, "", err
+		return nil, "", e, err
 	}
-	return cm, cmHash, nil
+	return cm, cmHash, e, nil
+}
+
+func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[string]string, exists bool) error {
+	newFlags := newAnnotations[annotation.AnnLastAppliedFlagsKey]
+	if exists && newFlags != "{}" {
+		for _, endpoint := range endpoints {
+			url := fmt.Sprintf("http://%s/flags", endpoint)
+			if _, err := httputil.PutRequest(url, []byte(newFlags)); err != nil {
+				return err
+			}
+		}
+		klog.Info("update dynamic flags successfully")
+	}
+
+	apply, ok := oldAnnotations[annotation.AnnLastAppliedFlagsKey]
+	if ok {
+		if apply != "{}" && newFlags == "{}" {
+			oldFlags := map[string]string{}
+			if err := json.Unmarshal([]byte(apply), &oldFlags); err != nil {
+				return err
+			}
+			if maputil.AllKeysExist(oldFlags, v1alpha1.DynamicFlags) {
+				for _, endpoint := range endpoints {
+					url := fmt.Sprintf("http://%s/flags", endpoint)
+					maputil.ResetMap(oldFlags, v1alpha1.DynamicFlags)
+					b, err := codec.Encode(oldFlags)
+					if err != nil {
+						return err
+					}
+					if _, err := httputil.PutRequest(url, []byte(b)); err != nil {
+						return err
+					}
+				}
+				klog.Info("reset dynamic flags successfully")
+			}
+		}
+	}
+	return nil
 }
 
 func getContainerImage(

@@ -82,7 +82,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
-	cm, cmHash, err := c.syncGraphdConfigMap(nc)
+	cm, cmHash, e, err := c.syncGraphdConfigMap(nc)
 	if err != nil {
 		return err
 	}
@@ -118,6 +118,13 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		nc.Status.Graphd.Phase == v1alpha1.UpdatePhase {
 		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
 			return err
+		}
+	}
+
+	if nc.GraphdComponent().IsReady() {
+		endpoints := nc.GetGraphdEndpoints(v1alpha1.GraphdPortNameHTTP)
+		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations(), e); err != nil {
+			return fmt.Errorf("update graphd cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 	}
 
@@ -165,13 +172,12 @@ func (c *graphdCluster) syncGraphdService(nc *v1alpha1.NebulaCluster) error {
 	return syncService(newSvc, c.clientSet.Service())
 }
 
-func (c *graphdCluster) syncGraphdConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {
+func (c *graphdCluster) syncGraphdConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, bool, error) {
 	return syncConfigMap(
 		nc.GraphdComponent(),
 		c.clientSet.ConfigMap(),
 		v1alpha1.GraphdConfigTemplate,
-		nc.GraphdComponent().GetConfigMapKey(),
-	)
+		nc.GraphdComponent().GetConfigMapKey())
 }
 
 type FakeGraphdCluster struct {

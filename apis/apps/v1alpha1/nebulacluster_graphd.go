@@ -71,7 +71,7 @@ func (c *graphdComponent) GetConfig() map[string]string {
 }
 
 func (c *graphdComponent) GetConfigMapKey() string {
-	return getConfigKey(c.Type().String())
+	return getCmKey(c.Type().String())
 }
 
 func (c *graphdComponent) GetResources() *corev1.ResourceRequirements {
@@ -183,15 +183,14 @@ func (c *graphdComponent) GetPort(portName string) int32 {
 }
 
 func (c *graphdComponent) GetConnAddress(portName string) string {
-	return getConnAddress(c.GetServiceFQDN(), c.GetPort(portName))
+	return joinHostPort(c.GetServiceFQDN(), c.GetPort(portName))
 }
 
-func (c *graphdComponent) GetHeadlessConnAddresses(portName string) []string {
-	return getHeadlessConnAddresses(
+func (c *graphdComponent) GetEndpoints(portName string) []string {
+	return getConnAddresses(
 		c.GetConnAddress(portName),
 		c.GetName(),
-		c.GetReplicas(),
-		c.IsHeadlessService())
+		c.GetReplicas())
 }
 
 func (c *graphdComponent) IsReady() bool {
@@ -292,7 +291,7 @@ func (c *graphdComponent) GenerateService() *corev1.Service {
 
 func (c *graphdComponent) GenerateConfigMap() *corev1.ConfigMap {
 	cm := generateConfigMap(c)
-	configKey := getConfigKey(c.Type().String())
+	configKey := getCmKey(c.Type().String())
 	cm.Data[configKey] = GraphdConfigTemplate
 	return cm
 }

@@ -73,7 +73,7 @@ func (c *storagedComponent) GetConfig() map[string]string {
 }
 
 func (c *storagedComponent) GetConfigMapKey() string {
-	return getConfigKey(c.Type().String())
+	return getCmKey(c.Type().String())
 }
 
 func (c *storagedComponent) GetResources() *corev1.ResourceRequirements {
@@ -202,15 +202,14 @@ func (c *storagedComponent) GetPort(portName string) int32 {
 }
 
 func (c *storagedComponent) GetConnAddress(portName string) string {
-	return getConnAddress(c.GetServiceFQDN(), c.GetPort(portName))
+	return joinHostPort(c.GetServiceFQDN(), c.GetPort(portName))
 }
 
-func (c *storagedComponent) GetHeadlessConnAddresses(portName string) []string {
-	return getHeadlessConnAddresses(
+func (c *storagedComponent) GetEndpoints(portName string) []string {
+	return getConnAddresses(
 		c.GetConnAddress(portName),
 		c.GetName(),
-		c.GetReplicas(),
-		c.IsHeadlessService())
+		c.GetReplicas())
 }
 
 func (c *storagedComponent) IsReady() bool {
@@ -351,7 +350,7 @@ func (c *storagedComponent) GenerateService() *corev1.Service {
 
 func (c *storagedComponent) GenerateConfigMap() *corev1.ConfigMap {
 	cm := generateConfigMap(c)
-	configKey := getConfigKey(c.Type().String())
+	configKey := getCmKey(c.Type().String())
 	cm.Data[configKey] = StoragedConfigTemplate
 	return cm
 }

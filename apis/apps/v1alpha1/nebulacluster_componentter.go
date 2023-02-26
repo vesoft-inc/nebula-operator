@@ -53,7 +53,7 @@ type NebulaClusterComponentter interface {
 	GetPodFQDN(int32) string
 	GetPort(string) int32
 	GetConnAddress(string) string
-	GetHeadlessConnAddresses(string) []string
+	GetEndpoints(string) []string
 
 	IsReady() bool
 

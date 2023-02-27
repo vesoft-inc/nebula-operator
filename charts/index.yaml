@@ -2,6 +2,30 @@ apiVersion: v1
 entries:
   nebula-cluster:
   - apiVersion: v2
+    appVersion: 1.4.2
+    created: "2023-02-27T15:38:06.420209124+08:00"
+    description: Nebula Cluster Helm chart for Kubernetes
+    digest: 8f7bf865bab766e7592e9a8e67aa058aa4e0d3136f49ca31805864dbdd2a3040
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-cluster
+    sources:
+      - https://github.com/vesoft-inc/nebula
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.4.2/nebula-cluster-1.4.2.tgz
+    version: 1.4.2
+  - apiVersion: v2
     appVersion: 1.4.1
     created: "2023-02-22T02:40:54.460449427+08:00"
     description: Nebula Cluster Helm chart for Kubernetes
@@ -170,6 +194,29 @@ entries:
     - https://github.com/vesoft-inc/nebula-operator/releases/download/v0.9.0/nebula-cluster-0.9.0.tgz
     version: 0.9.0
   nebula-operator:
+  - apiVersion: v2
+    appVersion: 1.4.2
+    created: "2023-02-27T15:38:06.424678165+08:00"
+    description: Nebula Operator Helm chart for Kubernetes
+    digest: b3d2569c19d9ea97ddc255fd98cc4796f9bedf7031adc3f607d9c1907f62b23e
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-operator
+    sources:
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.4.2/nebula-operator-1.4.2.tgz
+    version: 1.4.2
   - apiVersion: v2
     appVersion: 1.4.1
     created: "2023-02-22T02:40:54.46736014+08:00"

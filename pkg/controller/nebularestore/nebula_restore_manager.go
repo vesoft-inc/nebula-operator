@@ -173,11 +173,11 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 	}
 
 	if !condition.IsRestoreMetadComplete(rt) {
-		if !rm.endpointsConnected(restored.GetMetadEndpoints()) {
+		if !rm.endpointsConnected(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)) {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for metad init agent are connected", ns, restoredName)
 		}
 
-		if err := rm.restore.downloadMetaData(restored.GetMetadEndpoints()); err != nil {
+		if err := rm.restore.downloadMetaData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)); err != nil {
 			klog.Errorf("download metad files failed: %v", err)
 			return err
 		}
@@ -192,8 +192,8 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for metad running", ns, restoredName)
 		}
 
-		hostPairs := rm.restore.genHostPairs(rm.restore.bakMetas[0], restored.GetStoragedEndpoints())
-		restoreResp, err := rm.restore.restoreMeta(rm.restore.bakMetas[0], hostPairs, restored.GetMetadEndpoints())
+		hostPairs := rm.restore.genHostPairs(rm.restore.bakMetas[0], restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift))
+		restoreResp, err := rm.restore.restoreMeta(rm.restore.bakMetas[0], hostPairs, restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift))
 		if err != nil {
 			klog.Errorf("restore metad data [%s/%s] failed, error: %v", ns, restoredName, err)
 			return err
@@ -223,7 +223,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 	}
 
 	if !condition.IsRestoreStoragedComplete(rt) {
-		if !rm.endpointsConnected(restored.GetStoragedEndpoints()) {
+		if !rm.endpointsConnected(restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift)) {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for storaged init agent are connected", ns, restoredName)
 		}
 
@@ -235,7 +235,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 
 		klog.Infof("restoring [%s/%s] in stage1, download storaged files successfully", ns, restoredName)
 
-		if err := rm.restore.playBackStorageData(restored.GetMetadEndpoints(), rm.restore.storageHosts); err != nil {
+		if err := rm.restore.playBackStorageData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift), rm.restore.storageHosts); err != nil {
 			return err
 		}
 
@@ -266,7 +266,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for cluster ready", ns, restoredName)
 	}
 
-	if !rm.endpointsConnected(restored.GetStoragedEndpoints()) {
+	if !rm.endpointsConnected(restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift)) {
 		return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for storaged sidecar agent are connected", ns, restoredName)
 	}
 

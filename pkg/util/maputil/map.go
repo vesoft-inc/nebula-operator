@@ -28,3 +28,27 @@ func IsSubMap(first, second map[string]string) bool {
 	}
 	return true
 }
+
+// AllKeysExist indicates whether all the first map keys in the second one
+func AllKeysExist(first, second map[string]string) bool {
+	for k := range first {
+		if second == nil {
+			return false
+		}
+		if _, ok := second[k]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func ResetMap(first, second map[string]string) {
+	for k := range first {
+		if second == nil {
+			return
+		}
+		if v, ok := second[k]; ok {
+			first[k] = v
+		}
+	}
+}

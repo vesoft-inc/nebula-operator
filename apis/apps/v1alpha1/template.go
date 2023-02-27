@@ -16,6 +16,37 @@ limitations under the License.
 
 package v1alpha1
 
+var DynamicFlags = map[string]string{
+	"minloglevel":                                 "0",
+	"v":                                           "0",
+	"accept_partial_success":                      "false",
+	"session_reclaim_interval_secs":               "60",
+	"max_allowed_query_size":                      "4194304",
+	"system_memory_high_watermark_ratio":          "0.8",
+	"ng_black_box_file_lifetime_seconds":          "1800",
+	"memory_tracker_limit_ratio":                  "0.8",
+	"memory_tracker_untracked_reserved_memory_mb": "50",
+	"memory_tracker_detail_log":                   "false",
+	"memory_tracker_detail_log_interval_ms":       "60000",
+	"memory_purge_enabled":                        "true",
+	"memory_purge_interval_seconds":               "10",
+	"heartbeat_interval_secs":                     "10",
+	"raft_heartbeat_interval_secs":                "30",
+	"raft_rpc_timeout_ms":                         "500",
+	"wal_ttl":                                     "14400",
+	"query_concurrently":                          "true",
+	"auto_remove_invalid_space":                   "true",
+	"num_io_threads":                              "16",
+	"num_worker_threads":                          "0",
+	"max_concurrent_subtasks":                     "10",
+	"snapshot_part_rate_limit":                    "10485760",
+	"snapshot_batch_size":                         "1048576",
+	"rebuild_index_part_rate_limit":               "4194304",
+	"rocksdb_db_options":                          "{}",
+	"rocksdb_column_family_options":               `{"write_buffer_size":"67108864","max_write_buffer_number":"4","max_bytes_for_level_base":"268435456"}`,
+	"rocksdb_block_based_table_options":           `{"block_size":"8192"}`,
+}
+
 const (
 	// nolint: revive
 	GraphdConfigTemplate = `
@@ -240,6 +271,8 @@ const (
 # Root data path, here should be only single path for metad
 --data_path=data/meta
 
+# !!! Minimum reserved bytes of data path
+--minimum_reserved_bytes=268435456
 ########## Misc #########
 # The default number of parts when a space is created
 --default_parts_num=10

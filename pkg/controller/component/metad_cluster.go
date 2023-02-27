@@ -94,7 +94,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
-	cm, cmHash, err := c.syncMetadConfigMap(nc)
+	cm, cmHash, e, err := c.syncMetadConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
 	}
@@ -133,8 +133,15 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 
-	if err := c.setVersion(nc); err != nil {
-		return err
+	if nc.MetadComponent().IsReady() {
+		if err := c.setVersion(nc); err != nil {
+			return err
+		}
+
+		endpoints := nc.GetMetadEndpoints(v1alpha1.MetadPortNameHTTP)
+		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations(), e); err != nil {
+			return fmt.Errorf("update metad cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
+		}
 	}
 
 	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)
@@ -160,8 +167,12 @@ func (c *metadCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, oldWo
 	return syncComponentStatus(nc.MetadComponent(), &nc.Status.Metad, oldWorkload)
 }
 
-func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {
-	return syncConfigMap(nc.MetadComponent(), c.clientSet.ConfigMap(), v1alpha1.MetadhConfigTemplate, nc.MetadComponent().GetConfigMapKey())
+func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, bool, error) {
+	return syncConfigMap(
+		nc.MetadComponent(),
+		c.clientSet.ConfigMap(),
+		v1alpha1.MetadhConfigTemplate,
+		nc.MetadComponent().GetConfigMapKey())
 }
 
 func (c *metadCluster) setVersion(nc *v1alpha1.NebulaCluster) error {

@@ -220,6 +220,14 @@ nebula-storaged-1   1/1     Running   0          15m
 nebula-storaged-2   1/1     Running   0          19s
 ```
 
+## Guidelines
+
+[Custom config](doc/user/custom_config.md)
+
+[Log guide](doc/user/log_guide.md)
+
+[Storage guide](doc/user/storage_guide.md)
+
 ## Compatibility matrix
 
 Nebula Operator <-> NebulaGraph

@@ -26,6 +26,18 @@ func (nc *NebulaCluster) GetExporterPodAnnotations() map[string]string {
 	return nc.Spec.Exporter.PodSpec.Annotations
 }
 
+func (nc *NebulaCluster) GetExporterInitContainers() []corev1.Container {
+	return nc.Spec.Exporter.PodSpec.InitContainers
+}
+
+func (nc *NebulaCluster) GetExporterSidecarContainers() []corev1.Container {
+	return nc.Spec.Exporter.PodSpec.SidecarContainers
+}
+
+func (nc *NebulaCluster) GetExporterSidecarVolumes() []corev1.Volume {
+	return nc.Spec.Exporter.PodSpec.SidecarVolumes
+}
+
 func (nc *NebulaCluster) GetExporterLabels() map[string]string {
 	selector := label.New().Cluster(nc.GetName()).Exporter()
 	labels := selector.Copy().Labels()

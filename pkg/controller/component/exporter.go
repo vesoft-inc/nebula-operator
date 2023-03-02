@@ -94,9 +94,10 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 	deployName := fmt.Sprintf("%s-exporter", nc.GetName())
 	labels := nc.GetExporterLabels()
 	livenessProbe := nc.GetExporterLivenessProbe()
+	containers := make([]corev1.Container, 0)
 
 	container := corev1.Container{
-		Name:  "exporter",
+		Name:  "ng-exporter",
 		Image: nc.GetExporterImage(),
 		Args: []string{"--listen-address=0.0.0.0:9100", fmt.Sprintf("--namespace=%s", namespace),
 			fmt.Sprintf("--cluster=%s", ncName), fmt.Sprintf("--max-request=%d", nc.Spec.Exporter.MaxRequests)},
@@ -138,6 +139,9 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 		container.ImagePullPolicy = *imagePullPolicy
 	}
 
+	containers = append(containers, container)
+	containers = append(containers, nc.GetExporterSidecarContainers()...)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            deployName,
@@ -158,10 +162,12 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 				Spec: corev1.PodSpec{
 					SchedulerName:    nc.Spec.SchedulerName,
 					NodeSelector:     nc.GetExporterNodeSelector(),
-					Containers:       []corev1.Container{container},
+					InitContainers:   nc.GetExporterInitContainers(),
+					Containers:       containers,
 					ImagePullSecrets: nc.Spec.ImagePullSecrets,
 					Affinity:         nc.GetExporterAffinity(),
 					Tolerations:      nc.GetExporterTolerations(),
+					Volumes:          nc.GetExporterSidecarVolumes(),
 				},
 			},
 		},

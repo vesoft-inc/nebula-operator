@@ -30,6 +30,7 @@ import (
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
@@ -40,7 +41,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/randstr"
 	rtutil "github.com/vesoft-inc/nebula-operator/pkg/util/restore"
 )
 
@@ -146,6 +146,11 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		return err
 	}
 
+	options, err := nebula.ClientOptions(original)
+	if err != nil {
+		return err
+	}
+
 	restored := rm.genNebulaCluster(restoredName, rt, original)
 	if err := rm.clientSet.NebulaCluster().CreateNebulaCluster(restored); err != nil {
 		return err
@@ -155,7 +160,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		return err
 	}
 
-	if err := rm.loadCluster(original, restored); err != nil {
+	if err := rm.loadCluster(original, restored, options); err != nil {
 		return err
 	}
 
@@ -193,7 +198,8 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		}
 
 		hostPairs := rm.restore.genHostPairs(rm.restore.bakMetas[0], restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift))
-		restoreResp, err := rm.restore.restoreMeta(rm.restore.bakMetas[0], hostPairs, restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift))
+		metaEndpoints := restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)
+		restoreResp, err := rm.restore.restoreMeta(rm.restore.bakMetas[0], hostPairs, metaEndpoints, options)
 		if err != nil {
 			klog.Errorf("restore metad data [%s/%s] failed, error: %v", ns, restoredName, err)
 			return err
@@ -285,8 +291,8 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 	return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage2, waiting for cluster ready", ns, restoredName)
 }
 
-func (rm *restoreManager) loadCluster(original, restored *v1alpha1.NebulaCluster) error {
-	mc, err := nebula.NewMetaClient([]string{original.GetMetadThriftConnAddress()})
+func (rm *restoreManager) loadCluster(original, restored *v1alpha1.NebulaCluster, options []nebula.Option) error {
+	mc, err := nebula.NewMetaClient([]string{original.GetMetadThriftConnAddress()}, options...)
 	if err != nil {
 		return err
 	}
@@ -534,7 +540,7 @@ func (r *Restore) downloadStorageData(parts map[string][]*ng.HostAddr, storageHo
 	return checkpoints, group.Wait()
 }
 
-func (r *Restore) restoreMeta(backup *meta.BackupMeta, storageMap map[string]string, metaEndpoints []string) (*meta.RestoreMetaResp, error) {
+func (r *Restore) restoreMeta(backup *meta.BackupMeta, storageMap map[string]string, metaEndpoints []string, options []nebula.Option) (*meta.RestoreMetaResp, error) {
 	addrMap := make([]*meta.HostPair, 0, len(storageMap))
 	for from, to := range storageMap {
 		fromAddr, err := rtutil.ParseAddr(from)
@@ -556,7 +562,7 @@ func (r *Restore) restoreMeta(backup *meta.BackupMeta, storageMap map[string]str
 			files = append(files, filePath)
 		}
 
-		mc, err := nebula.NewMetaClient([]string{metaEndpoint})
+		mc, err := nebula.NewMetaClient([]string{metaEndpoint}, options...)
 		if err != nil {
 			if utilerrors.IsDNSError(err) {
 				return nil, utilerrors.ReconcileErrorf("waiting for %s dns lookup is ok", metaEndpoint)
@@ -774,7 +780,7 @@ func (rm *restoreManager) clusterReady(namespace, ncName string) (bool, error) {
 
 func (rm *restoreManager) getRestoredName(rt *v1alpha1.NebulaRestore) (string, error) {
 	if rt.Status.ClusterName == "" {
-		genName := "ng" + randstr.Hex(4)
+		genName := "ng" + rand.String(4)
 		newStatus := &kube.RestoreUpdateStatus{
 			TimeStarted: &metav1.Time{Time: time.Now()},
 			ClusterName: pointer.String(genName),

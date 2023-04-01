@@ -84,8 +84,12 @@ func (s *storagedUpdater) Update(
 		return err
 	}
 
+	options, err := nebula.ClientOptions(nc)
+	if err != nil {
+		return err
+	}
 	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	mc, err := nebula.NewMetaClient(endpoints)
+	mc, err := nebula.NewMetaClient(endpoints, options...)
 	if err != nil {
 		return err
 	}
@@ -193,9 +197,13 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 	}
 	klog.Infof("set pod %s annotation %v successfully", updatePod.Name, TransLeaderBeginTime)
 
+	options, err := nebula.ClientOptions(nc, nebula.SetIsStorage(true))
+	if err != nil {
+		return err
+	}
 	podFQDN := nc.StoragedComponent().GetPodFQDN(ordinal)
 	endpoint := fmt.Sprintf("%s:%d", podFQDN, nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameAdmin))
-	sc, err := nebula.NewStorageClient([]string{endpoint})
+	sc, err := nebula.NewStorageClient([]string{endpoint}, options...)
 	if err != nil {
 		return err
 	}

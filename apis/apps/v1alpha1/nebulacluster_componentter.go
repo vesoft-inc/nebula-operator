@@ -46,6 +46,7 @@ type NebulaClusterComponentter interface {
 	SidecarContainers() []corev1.Container
 	SidecarVolumes() []corev1.Volume
 	ReadinessProbe() *corev1.Probe
+	IsSSLEnabled() bool
 	IsHeadlessService() bool
 	GetServiceSpec() *ServiceSpec
 	GetServiceName() string

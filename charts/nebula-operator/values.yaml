@@ -3,19 +3,19 @@ image:
     image: vesoft/nebula-operator:v1.4.2
     imagePullPolicy: Always
   kubeRBACProxy:
-    image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+    image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
     imagePullPolicy: Always
   kubeScheduler:
-    image: k8s.gcr.io/kube-scheduler:v1.22.12
+    image: registry.k8s.io/kube-scheduler:v1.24.11
     imagePullPolicy: Always
 
-imagePullSecrets: []
+imagePullSecrets: [ ]
 kubernetesClusterDomain: ""
 
 controllerManager:
   create: true
   replicas: 2
-  env: []
+  env: [ ]
   resources:
     limits:
       cpu: 200m
@@ -31,7 +31,7 @@ scheduler:
   create: false
   schedulerName: nebula-scheduler
   replicas: 2
-  env: []
+  env: [ ]
   resources:
     limits:
       cpu: 200m
@@ -61,8 +61,8 @@ webhookBindPort: 9443
 # Maximum number of concurrently running reconcile loops for nebula cluster (default 3)
 maxConcurrentReconciles: 3
 
-nodeSelector: {}
+nodeSelector: { }
 
-tolerations: []
+tolerations: [ ]
 
-affinity: {}
+affinity: { }

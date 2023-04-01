@@ -102,6 +102,9 @@ type NebulaClusterSpec struct {
 
 	// +optional
 	Exporter *ExporterSpec `json:"exporter,omitempty"`
+
+	// SSLCerts defines SSL certs load into secret
+	SSLCerts *SSLCertsSpec `json:"sslCerts,omitempty"`
 }
 
 // NebulaClusterStatus defines the observed state of NebulaCluster
@@ -217,10 +220,46 @@ type ExporterSpec struct {
 }
 
 type LicenseSpec struct {
-	// Name of the license secret name.
+	// Name of the license secret.
 	SecretName string `json:"secretName,omitempty"`
 	// The key to nebula license file.
 	LicenseKey string `json:"licenseKey,omitempty"`
+}
+
+type SSLCertsSpec struct {
+	// Name of the server cert secret
+	ServerSecret string `json:"serverSecret,omitempty"`
+	// The key to server PEM encoded public key certificate
+	// +kubebuilder:default=tls.crt
+	// +optional
+	ServerPublicKey string `json:"serverPublicKey,omitempty"`
+	// The key to server private key associated with given certificate
+	// +kubebuilder:default=tls.key
+	// +optional
+	ServerPrivateKey string `json:"serverPrivateKey,omitempty"`
+
+	// Name of the client cert secret
+	ClientSecret string `json:"clientSecret,omitempty"`
+	// The key to client PEM encoded public key certificate
+	// +kubebuilder:default=tls.crt
+	// +optional
+	ClientPublicKey string `json:"clientPublicKey,omitempty"`
+	// The key to client private key associated with given certificate
+	// +kubebuilder:default=tls.key
+	// +optional
+	ClientPrivateKey string `json:"clientPrivateKey,omitempty"`
+
+	// Name of the CA cert secret
+	CASecret string `json:"caSecret,omitempty"`
+	// The key to CA PEM encoded public key certificate
+	// +kubebuilder:default=ca.crt
+	// +optional
+	CAPublicKey string `json:"caPublicKey,omitempty"`
+
+	// InsecureSkipVerify controls whether a client verifies the server's
+	// certificate chain and host name.
+	// +optional
+	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 }
 
 // GraphdSpec defines the desired state of Graphd

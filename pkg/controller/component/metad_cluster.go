@@ -176,8 +176,12 @@ func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.C
 }
 
 func (c *metadCluster) setVersion(nc *v1alpha1.NebulaCluster) error {
+	options, err := nebula.ClientOptions(nc)
+	if err != nil {
+		return err
+	}
 	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints)
+	metaClient, err := nebula.NewMetaClient(endpoints, options...)
 	if err != nil {
 		return err
 	}

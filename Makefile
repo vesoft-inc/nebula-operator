@@ -93,7 +93,6 @@ build: generate check ## Build binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o images/nebula-operator/bin/scheduler cmd/scheduler/main.go
 
 helm-charts:
-	cp config/crd/bases/*.yaml charts/nebula-operator/crds/
 	helm package charts/nebula-operator --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
 	helm package charts/nebula-cluster --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
 	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/

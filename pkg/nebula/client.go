@@ -34,9 +34,8 @@ func buildClientTransport(endpoint string, options ...Option) (thrift.Transport,
 
 	var err error
 	var sock thrift.Transport
-	if opts.EnableClusterTLS {
-		sock, err = thrift.NewSSLSocketTimeout(endpoint, opts.TLSConfig, opts.Timeout)
-	} else if opts.EnableMetaTLS && !opts.IsStorage {
+	tlsEnabled := opts.EnableClusterTLS || (opts.EnableMetaTLS && !opts.IsStorage)
+	if tlsEnabled {
 		sock, err = thrift.NewSSLSocketTimeout(endpoint, opts.TLSConfig, opts.Timeout)
 	} else {
 		sock, err = thrift.NewSocket(timeoutOption, addressOption)

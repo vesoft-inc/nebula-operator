@@ -7935,6 +7935,32 @@ spec:
                 schedulerName:
                   default: default-scheduler
                   type: string
+                sslCerts:
+                  properties:
+                    caPublicKey:
+                      default: ca.crt
+                      type: string
+                    caSecret:
+                      type: string
+                    clientPrivateKey:
+                      default: tls.key
+                      type: string
+                    clientPublicKey:
+                      default: tls.crt
+                      type: string
+                    clientSecret:
+                      type: string
+                    insecureSkipVerify:
+                      type: boolean
+                    serverPrivateKey:
+                      default: tls.key
+                      type: string
+                    serverPublicKey:
+                      default: tls.crt
+                      type: string
+                    serverSecret:
+                      type: string
+                  type: object
                 storaged:
                   properties:
                     affinity:

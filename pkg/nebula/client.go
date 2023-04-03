@@ -31,13 +31,21 @@ func buildClientTransport(endpoint string, options ...Option) (thrift.Transport,
 	opts := loadOptions(options...)
 	timeoutOption := thrift.SocketTimeout(opts.Timeout)
 	addressOption := thrift.SocketAddr(endpoint)
-	sock, err := thrift.NewSocket(timeoutOption, addressOption)
+
+	var err error
+	var sock thrift.Transport
+	tlsEnabled := opts.EnableClusterTLS || (opts.EnableMetaTLS && !opts.IsStorage)
+	if tlsEnabled {
+		sock, err = thrift.NewSSLSocketTimeout(endpoint, opts.TLSConfig, opts.Timeout)
+	} else {
+		sock, err = thrift.NewSocket(timeoutOption, addressOption)
+	}
 	if err != nil {
 		return nil, nil, err
 	}
+
 	bufferedTranFactory := thrift.NewBufferedTransportFactory(defaultBufferSize)
 	transport := thrift.NewFramedTransportMaxLength(bufferedTranFactory.GetTransport(sock), frameMaxLength)
 	pf := thrift.NewBinaryProtocolFactoryDefault()
-
 	return transport, pf, nil
 }

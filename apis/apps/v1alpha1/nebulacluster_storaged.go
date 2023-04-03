@@ -174,6 +174,12 @@ func (c *storagedComponent) ReadinessProbe() *corev1.Probe {
 	return c.nc.Spec.Storaged.PodSpec.ReadinessProbe
 }
 
+func (c *storagedComponent) IsSSLEnabled() bool {
+	return (c.nc.Spec.Storaged.Config["enable_meta_ssl"] == "true" ||
+		c.nc.Spec.Storaged.Config["enable_ssl"] == "true") &&
+		c.nc.Spec.SSLCerts != nil
+}
+
 func (c *storagedComponent) IsHeadlessService() bool {
 	return true
 }
@@ -271,6 +277,30 @@ func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 		})
 	}
 
+	if c.IsSSLEnabled() {
+		certMounts := []corev1.VolumeMount{
+			{
+				Name:      "server-crt",
+				ReadOnly:  true,
+				MountPath: "/usr/local/nebula/certs/server.crt",
+				SubPath:   "server.crt",
+			},
+			{
+				Name:      "server-key",
+				ReadOnly:  true,
+				MountPath: "/usr/local/nebula/certs/server.key",
+				SubPath:   "server.key",
+			},
+			{
+				Name:      "ca-crt",
+				ReadOnly:  true,
+				MountPath: "/usr/local/nebula/certs/ca.crt",
+				SubPath:   "ca.crt",
+			},
+		}
+		mounts = append(mounts, certMounts...)
+	}
+
 	return mounts
 }
 
@@ -300,6 +330,54 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 				},
 			},
 		})
+	}
+
+	if c.IsSSLEnabled() {
+		certVolumes := []corev1.Volume{
+			{
+				Name: "server-crt",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  c.nc.Spec.SSLCerts.ServerPublicKey,
+								Path: "server.crt",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "server-key",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  c.nc.Spec.SSLCerts.ServerPrivateKey,
+								Path: "server.key",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "ca-crt",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: c.nc.Spec.SSLCerts.CASecret,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  c.nc.Spec.SSLCerts.CAPublicKey,
+								Path: "ca.crt",
+							},
+						},
+					},
+				},
+			},
+		}
+		volumes = append(volumes, certVolumes...)
 	}
 
 	return volumes

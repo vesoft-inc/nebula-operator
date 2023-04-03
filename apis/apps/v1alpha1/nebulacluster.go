@@ -116,3 +116,27 @@ func (nc *NebulaCluster) IsBREnabled() bool {
 func (nc *NebulaCluster) IsLogRotateEnabled() bool {
 	return nc.Spec.LogRotate != nil
 }
+
+func (nc *NebulaCluster) InsecureSkipVerify() bool {
+	skip := nc.Spec.SSLCerts.InsecureSkipVerify
+	if skip == nil {
+		return false
+	}
+	return *skip
+}
+
+func (nc *NebulaCluster) IsGraphdSSLEnabled() bool {
+	return nc.Spec.Graphd.Config["enable_graph_ssl"] == "true"
+}
+
+func (nc *NebulaCluster) IsMetadSSLEnabled() bool {
+	return nc.Spec.Graphd.Config["enable_meta_ssl"] == "true" &&
+		nc.Spec.Metad.Config["enable_meta_ssl"] == "true" &&
+		nc.Spec.Storaged.Config["enable_meta_ssl"] == "true"
+}
+
+func (nc *NebulaCluster) IsClusterEnabled() bool {
+	return nc.Spec.Graphd.Config["enable_ssl"] == "true" &&
+		nc.Spec.Metad.Config["enable_ssl"] == "true" &&
+		nc.Spec.Storaged.Config["enable_ssl"] == "true"
+}

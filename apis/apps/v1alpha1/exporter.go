@@ -58,7 +58,7 @@ func (nc *NebulaCluster) GetExporterNodeSelector() map[string]string {
 }
 
 func (nc *NebulaCluster) GetExporterAffinity() *corev1.Affinity {
-	affinity := nc.Spec.Graphd.PodSpec.Affinity
+	affinity := nc.Spec.Exporter.PodSpec.Affinity
 	if affinity == nil {
 		affinity = nc.Spec.Affinity
 	}

@@ -16,14 +16,53 @@ limitations under the License.
 
 package nebula
 
-import "time"
+import (
+	"crypto/tls"
+	"k8s.io/klog/v2"
+	"time"
 
-const DefaultTimeout = 30 * time.Second
+	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/cert"
+)
+
+const DefaultTimeout = 10 * time.Second
 
 type Option func(ops *Options)
 
 type Options struct {
-	Timeout time.Duration
+	EnableMetaTLS    bool
+	EnableClusterTLS bool
+	IsStorage        bool
+	Timeout          time.Duration
+	TLSConfig        *tls.Config
+}
+
+func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error) {
+	options := []Option{SetTimeout(DefaultTimeout)}
+	if nc.Spec.SSLCerts == nil || (nc.IsGraphdSSLEnabled() && !nc.IsMetadSSLEnabled() && !nc.IsClusterEnabled()) {
+		return options, nil
+	}
+
+	if nc.IsMetadSSLEnabled() && !nc.IsClusterEnabled() {
+		options = append(options, SetMetaTLS(true))
+		klog.Infof("cluster [%s/%s] metad SSL enabled", nc.Namespace, nc.Name)
+	}
+	if nc.IsClusterEnabled() {
+		options = append(options, SetClusterTLS(true))
+		klog.Infof("cluster [%s/%s] SSL enabled", nc.Namespace, nc.Name)
+	}
+	caCert, clientCert, clientKey, err := getCerts(nc.Namespace, nc.Spec.SSLCerts)
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig, err := cert.LoadTLSConfig(caCert, clientCert, clientKey)
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig.InsecureSkipVerify = nc.InsecureSkipVerify()
+	options = append(options, SetTLSConfig(tlsConfig))
+	options = append(options, opts...)
+	return options, nil
 }
 
 func loadOptions(options ...Option) *Options {
@@ -34,14 +73,38 @@ func loadOptions(options ...Option) *Options {
 	return opts
 }
 
-func WithOptions(options Options) Option {
+func SetOptions(options Options) Option {
 	return func(opts *Options) {
 		*opts = options
 	}
 }
 
-func WithTimeout(duration time.Duration) Option {
+func SetTimeout(duration time.Duration) Option {
 	return func(options *Options) {
 		options.Timeout = duration
+	}
+}
+
+func SetTLSConfig(config *tls.Config) Option {
+	return func(options *Options) {
+		options.TLSConfig = config
+	}
+}
+
+func SetMetaTLS(e bool) Option {
+	return func(options *Options) {
+		options.EnableMetaTLS = e
+	}
+}
+
+func SetClusterTLS(e bool) Option {
+	return func(options *Options) {
+		options.EnableClusterTLS = e
+	}
+}
+
+func SetIsStorage(e bool) Option {
+	return func(options *Options) {
+		options.IsStorage = e
 	}
 }

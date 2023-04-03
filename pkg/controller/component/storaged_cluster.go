@@ -204,8 +204,12 @@ func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*co
 }
 
 func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
+	options, err := nebula.ClientOptions(nc)
+	if err != nil {
+		return err
+	}
 	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints)
+	metaClient, err := nebula.NewMetaClient(endpoints, options...)
 	if err != nil {
 		return err
 	}

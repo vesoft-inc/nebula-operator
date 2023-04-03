@@ -109,9 +109,6 @@ func getKubernetesClusterDomain() string {
 }
 
 func joinHostPort(host string, port int32) string {
-	if strings.IndexByte(host, ':') >= 0 {
-		return fmt.Sprintf("[%s]:%d", host, port)
-	}
 	return fmt.Sprintf("%s:%d", host, port)
 }
 

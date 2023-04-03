@@ -77,8 +77,12 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
+	options, err := nebula.ClientOptions(nc)
+	if err != nil {
+		return err
+	}
 	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints)
+	metaClient, err := nebula.NewMetaClient(endpoints, options...)
 	if err != nil {
 		klog.Errorf("create meta client failed: %v", err)
 		return err
@@ -124,8 +128,12 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		return err
 	}
 
+	options, err := nebula.ClientOptions(nc)
+	if err != nil {
+		return err
+	}
 	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints)
+	metaClient, err := nebula.NewMetaClient(endpoints, options...)
 	if err != nil {
 		return err
 	}

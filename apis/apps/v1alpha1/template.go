@@ -222,6 +222,31 @@ const (
 --memory_purge_enabled=true
 # memory background purge interval in seconds
 --memory_purge_interval_seconds=10
+
+# Enable HTTP2 handler for RPC
+--enable_http2_routing=false
+# HTTP stream timeout in milliseconds
+--stream_timeout_ms=30000
+
+########## SSL ##########
+# whether to enable ssl
+--enable_ssl=false
+# whether to enable ssl of graph server
+--enable_graph_ssl=false
+# whether to enable ssl of meta server
+--enable_meta_ssl=false
+# path to cert pem
+--cert_path=certs/server.crt
+# path to cert key
+--key_path=certs/server.key
+# path to trusted CA file
+--ca_path=certs/ca.crt
+# path to trusted client CA file
+--ca_client_path=certs/ca.crt
+# path to SSL req challenge password
+--password_path=certs/password
+# path to SSL config watch path of file or directory
+--ssl_watch_path=certs
 `
 	// nolint: revive
 	MetadhConfigTemplate = `
@@ -291,6 +316,24 @@ const (
 --ng_black_box_dump_period_seconds=5
 # Black box log files expire time
 --ng_black_box_file_lifetime_seconds=1800
+
+########## SSL ##########
+# whether to enable ssl
+--enable_ssl=false
+# whether to enable ssl of meta server
+--enable_meta_ssl=false
+# path to cert pem
+--cert_path=certs/server.crt
+# path to cert key
+--key_path=certs/server.key
+# path to trusted CA file
+--ca_path=certs/ca.crt
+# path to trusted client CA file
+--ca_client_path=certs/ca.crt
+# path to SSL req challenge password
+--password_path=certs/password
+# path to SSL config watch path of file or directory
+--ssl_watch_path=certs
 `
 	// nolint: revive
 	StoragedConfigTemplate = `
@@ -484,5 +527,23 @@ const (
 --memory_purge_enabled=true
 # memory background purge interval in seconds
 --memory_purge_interval_seconds=10
+
+########## SSL ##########
+# whether to enable ssl
+--enable_ssl=false
+# whether to enable ssl of meta server
+--enable_meta_ssl=false
+# path to cert pem
+--cert_path=certs/server.crt
+# path to cert key
+--key_path=certs/server.key
+# path to trusted CA file
+--ca_path=certs/ca.crt
+# path to trusted client CA file
+--ca_client_path=certs/ca.crt
+# path to SSL req challenge password
+--password_path=certs/password
+# path to SSL config watch path of file or directory
+--ssl_watch_path=certs
 `
 )

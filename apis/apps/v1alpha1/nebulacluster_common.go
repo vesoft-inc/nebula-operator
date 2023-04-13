@@ -281,12 +281,16 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 	}
 
 	metadAddress := strings.Join(nc.GetMetadEndpoints(MetadPortNameThrift), ",")
+	flags := " --meta_server_addrs=" + metadAddress +
+		" --local_ip=$(hostname)." + c.GetServiceFQDN() +
+		" --ws_ip=$(hostname)." + c.GetServiceFQDN() +
+		" --daemonize=false" + dataPath
+	if c.Type() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
+		flags += " --license_manager_url=" + *nc.Spec.Metad.LicenseManagerURL
+	}
+
 	cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
-		fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+
-		" --meta_server_addrs="+metadAddress+
-		" --local_ip=$(hostname)."+c.GetServiceFQDN()+
-		" --ws_ip=$(hostname)."+c.GetServiceFQDN()+
-		" --daemonize=false"+dataPath)
+		fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+flags)
 
 	mounts := c.GenerateVolumeMounts()
 	if cm != nil {

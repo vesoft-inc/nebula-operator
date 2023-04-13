@@ -364,7 +364,8 @@ func (c *graphdComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim,
 func (c *graphdComponent) GenerateWorkload(
 	gvk schema.GroupVersionKind,
 	cm *corev1.ConfigMap,
-	enableEvenPodsSpread bool) (*unstructured.Unstructured, error) {
+	enableEvenPodsSpread bool,
+) (*unstructured.Unstructured, error) {
 	return generateWorkload(c, gvk, cm, enableEvenPodsSpread)
 }
 

@@ -198,7 +198,8 @@ func ObjectEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
 func UpdateWorkload(
 	workloadClient kube.Workload,
 	newUnstruct,
-	oldUnstruct *unstructured.Unstructured) error {
+	oldUnstruct *unstructured.Unstructured,
+) error {
 	isOrphan := metav1.GetControllerOf(oldUnstruct) == nil
 	if !ObjectEqual(newUnstruct, oldUnstruct) || isOrphan {
 		w := oldUnstruct
@@ -258,7 +259,8 @@ func SetUpdatePartition(
 	obj *unstructured.Unstructured,
 	upgradeOrdinal,
 	gracePeriod int64,
-	advanced bool) error {
+	advanced bool,
+) error {
 	if err := SetSpecField(obj, "RollingUpdate", "updateStrategy", "type"); err != nil {
 		return err
 	}

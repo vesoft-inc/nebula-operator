@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -28,6 +27,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	condutil "github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 )

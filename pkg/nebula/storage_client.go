@@ -18,9 +18,10 @@ package nebula
 
 import (
 	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
+
 	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/storage"
-	"k8s.io/klog/v2"
 )
 
 var ErrNoAvailableStoragedEndpoints = errors.New("storagedclient: no available endpoints")

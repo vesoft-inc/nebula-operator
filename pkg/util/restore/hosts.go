@@ -45,7 +45,6 @@ func (h *NebulaHosts) LoadFrom(resp *meta.ListClusterInfoResp) error {
 			case meta.HostRole_GRAPH, meta.HostRole_META, meta.HostRole_STORAGE, meta.HostRole_AGENT:
 				h.hosts[host] = append(h.hosts[host], s)
 			}
-
 		}
 	}
 

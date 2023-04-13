@@ -43,7 +43,8 @@ func NewDefaultNebulaClusterControl(
 	exporter component.ReconcileManager,
 	metaReconciler component.ReconcileManager,
 	pvcReclaimer reclaimer.PVCReclaimer,
-	conditionUpdater ClusterConditionUpdater) ControlInterface {
+	conditionUpdater ClusterConditionUpdater,
+) ControlInterface {
 	return &defaultNebulaClusterControl{
 		nebulaClient:     nebulaClient,
 		graphdCluster:    graphdCluster,

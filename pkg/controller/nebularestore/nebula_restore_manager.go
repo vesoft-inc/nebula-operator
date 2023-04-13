@@ -24,16 +24,16 @@ import (
 	"strings"
 	"time"
 
-	pb "github.com/vesoft-inc/nebula-agent/pkg/proto"
-	"github.com/vesoft-inc/nebula-agent/pkg/storage"
-	ng "github.com/vesoft-inc/nebula-go/v3/nebula"
-	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
+	pb "github.com/vesoft-inc/nebula-agent/pkg/proto"
+	"github.com/vesoft-inc/nebula-agent/pkg/storage"
+	ng "github.com/vesoft-inc/nebula-go/v3/nebula"
+	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
@@ -138,7 +138,8 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 				TimeCompleted: &metav1.Time{Time: time.Now()},
 				ConditionType: v1alpha1.RestoreComplete,
 				Partitions:    nil,
-				Checkpoints:   nil})
+				Checkpoints:   nil,
+			})
 	}
 
 	original, err := rm.clientSet.NebulaCluster().GetNebulaCluster(ns, originalName)
@@ -217,7 +218,8 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 				Status: corev1.ConditionTrue,
 			}, &kube.RestoreUpdateStatus{
 				Partitions:    hostPartMap,
-				ConditionType: v1alpha1.RestoreMetadComplete}); err != nil {
+				ConditionType: v1alpha1.RestoreMetadComplete,
+			}); err != nil {
 			return err
 		}
 	}
@@ -253,7 +255,8 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 				Status: corev1.ConditionTrue,
 			}, &kube.RestoreUpdateStatus{
 				Checkpoints:   checkpoints,
-				ConditionType: v1alpha1.RestoreStoragedCompleted}); err != nil {
+				ConditionType: v1alpha1.RestoreStoragedCompleted,
+			}); err != nil {
 			return err
 		}
 	}
@@ -735,7 +738,6 @@ func (rm *restoreManager) updateClusterAnnotations(namespace, ncName string, ann
 	}
 
 	return nil
-
 }
 
 func (rm *restoreManager) endpointsConnected(endpoints []string) bool {

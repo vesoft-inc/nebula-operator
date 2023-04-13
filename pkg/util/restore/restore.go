@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/facebook/fbthrift/thrift/lib/go/thrift"
+
 	pb "github.com/vesoft-inc/nebula-agent/pkg/proto"
 	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
@@ -53,7 +54,7 @@ func ParseAddr(addrStr string) (*nebula.HostAddr, error) {
 }
 
 func ParseMetaFromFile(filename string) (*meta.BackupMeta, error) {
-	file, err := os.OpenFile(filename, os.O_RDONLY, 0644)
+	file, err := os.OpenFile(filename, os.O_RDONLY, 0o644)
 	if err != nil {
 		return nil, err
 	}

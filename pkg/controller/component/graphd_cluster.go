@@ -44,7 +44,8 @@ func NewGraphdCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
 	um UpdateManager,
-	enableEvenPodsSpread bool) ReconcileManager {
+	enableEvenPodsSpread bool,
+) ReconcileManager {
 	return &graphdCluster{
 		clientSet:            clientSet,
 		dm:                   dm,
@@ -134,7 +135,8 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 func (c *graphdCluster) syncNebulaClusterStatus(
 	nc *v1alpha1.NebulaCluster,
 	newWorkload,
-	oldWorkload *unstructured.Unstructured) error {
+	oldWorkload *unstructured.Unstructured,
+) error {
 	if oldWorkload == nil {
 		return nil
 	}

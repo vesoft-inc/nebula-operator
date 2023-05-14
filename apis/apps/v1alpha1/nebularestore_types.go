@@ -1,9 +1,10 @@
 package v1alpha1
 
 import (
-	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/vesoft-inc/nebula-go/v3/nebula"
 )
 
 // +genclient

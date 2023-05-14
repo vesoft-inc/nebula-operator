@@ -99,8 +99,10 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 	container := corev1.Container{
 		Name:  "ng-exporter",
 		Image: nc.GetExporterImage(),
-		Args: []string{"--listen-address=0.0.0.0:9100", fmt.Sprintf("--namespace=%s", namespace),
-			fmt.Sprintf("--cluster=%s", ncName), fmt.Sprintf("--max-request=%d", nc.Spec.Exporter.MaxRequests)},
+		Args: []string{
+			"--listen-address=0.0.0.0:9100", fmt.Sprintf("--namespace=%s", namespace),
+			fmt.Sprintf("--cluster=%s", ncName), fmt.Sprintf("--max-request=%d", nc.Spec.Exporter.MaxRequests),
+		},
 		Env: nc.GetExporterEnvVars(),
 		Ports: []corev1.ContainerPort{
 			{
@@ -174,4 +176,20 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 	}
 
 	return deployment
+}
+
+type FakeNebulaExporter struct {
+	err error
+}
+
+func NewFakeNebulaExporter() *FakeNebulaExporter {
+	return &FakeNebulaExporter{}
+}
+
+func (f *FakeNebulaExporter) SetReconcileError(err error) {
+	f.err = err
+}
+
+func (f *FakeNebulaExporter) Reconcile(_ *v1alpha1.NebulaCluster) error {
+	return f.err
 }

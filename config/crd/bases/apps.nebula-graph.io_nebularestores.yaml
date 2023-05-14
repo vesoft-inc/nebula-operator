@@ -83,6 +83,7 @@ spec:
                   additionalProperties:
                     type: string
                   type: object
+                nullable: true
                 type: object
               clusterName:
                 type: string
@@ -107,6 +108,7 @@ spec:
                   - status
                   - type
                   type: object
+                nullable: true
                 type: array
               partitions:
                 additionalProperties:
@@ -122,14 +124,17 @@ spec:
                     - port
                     type: object
                   type: array
+                nullable: true
                 type: object
               phase:
                 type: string
               timeCompleted:
                 format: date-time
+                nullable: true
                 type: string
               timeStarted:
                 format: date-time
+                nullable: true
                 type: string
             type: object
         type: object

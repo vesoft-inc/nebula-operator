@@ -48,7 +48,8 @@ func NewStoragedCluster(
 	dm discovery.Interface,
 	sm ScaleManager,
 	um UpdateManager,
-	enableEvenPodsSpread bool) ReconcileManager {
+	enableEvenPodsSpread bool,
+) ReconcileManager {
 	return &storagedCluster{
 		clientSet:            clientSet,
 		dm:                   dm,
@@ -173,7 +174,8 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 func (c *storagedCluster) syncNebulaClusterStatus(
 	nc *v1alpha1.NebulaCluster,
-	oldWorkload *unstructured.Unstructured) error {
+	oldWorkload *unstructured.Unstructured,
+) error {
 	if oldWorkload == nil {
 		return nil
 	}

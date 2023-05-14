@@ -46,7 +46,8 @@ func NewMetadCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
 	um UpdateManager,
-	enableEvenPodsSpread bool) ReconcileManager {
+	enableEvenPodsSpread bool,
+) ReconcileManager {
 	return &metadCluster{
 		clientSet:            clientSet,
 		dm:                   dm,

@@ -255,7 +255,8 @@ func (ss *storageScaler) removeHost(
 	mc nebula.MetaInterface,
 	nc *v1alpha1.NebulaCluster,
 	spaceID nebulago.GraphSpaceID,
-	hosts []*nebulago.HostAddr) error {
+	hosts []*nebulago.HostAddr,
+) error {
 	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
 		return mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
 	}

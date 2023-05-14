@@ -418,7 +418,8 @@ func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClai
 func (c *storagedComponent) GenerateWorkload(
 	gvk schema.GroupVersionKind,
 	cm *corev1.ConfigMap,
-	enableEvenPodsSpread bool) (*unstructured.Unstructured, error) {
+	enableEvenPodsSpread bool,
+) (*unstructured.Unstructured, error) {
 	return generateWorkload(c, gvk, cm, enableEvenPodsSpread)
 }
 

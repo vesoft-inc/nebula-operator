@@ -299,6 +299,9 @@ type MetadSpec struct {
 
 	// License defines a nebula license load into Secret
 	License *LicenseSpec `json:"license,omitempty"`
+
+	// LicenseManagerURL defines a nebula license manager url
+	LicenseManagerURL *string `json:"licenseManagerURL,omitempty"`
 }
 
 // StoragedSpec defines the desired state of Storaged

@@ -6435,6 +6435,8 @@ spec:
                       secretName:
                         type: string
                     type: object
+                  licenseManagerURL:
+                    type: string
                   livenessProbe:
                     properties:
                       exec:

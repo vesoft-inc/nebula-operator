@@ -163,6 +163,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, fmt.Errorf("openkruise scheme not registered")
 	}
 
+	// TODO: check lm license key valid
 	if err := r.syncNebulaCluster(nebulaCluster.DeepCopy()); err != nil {
 		isReconcileError := func(err error) (b bool) {
 			defer func() {

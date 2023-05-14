@@ -19,7 +19,6 @@ package component
 import (
 	"encoding/json"
 	"fmt"
-	"k8s.io/klog/v2"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
@@ -49,7 +49,8 @@ const (
 func syncComponentStatus(
 	component v1alpha1.NebulaClusterComponentter,
 	status *v1alpha1.ComponentStatus,
-	workload *unstructured.Unstructured) error {
+	workload *unstructured.Unstructured,
+) error {
 	if workload == nil {
 		return nil
 	}
@@ -155,7 +156,8 @@ func syncConfigMap(
 	component v1alpha1.NebulaClusterComponentter,
 	cmClient kube.ConfigMap,
 	template,
-	cmKey string) (*corev1.ConfigMap, string, bool, error) {
+	cmKey string,
+) (*corev1.ConfigMap, string, bool, error) {
 	cmHash := hash.Hash(template)
 	cm := component.GenerateConfigMap()
 	cfg := component.GetConfig()
@@ -219,7 +221,8 @@ func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[s
 
 func getContainerImage(
 	obj *unstructured.Unstructured,
-	containerName string) string {
+	containerName string,
+) string {
 	if obj == nil {
 		return ""
 	}
@@ -235,7 +238,8 @@ func getContainerImage(
 func isUpdating(
 	component v1alpha1.NebulaClusterComponentter,
 	podClient kube.Pod,
-	obj *unstructured.Unstructured) (bool, error) {
+	obj *unstructured.Unstructured,
+) (bool, error) {
 	if extender.IsUpdating(obj) {
 		return true, nil
 	}

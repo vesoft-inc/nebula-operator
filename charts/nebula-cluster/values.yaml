@@ -49,6 +49,7 @@ nebula:
         memory: "1Gi"
     logStorage: "500Mi"
     dataStorage: "2Gi"
+    licenseManagerURL: ""
     license: {}
     podLabels: {}
     podAnnotations: {}

@@ -21,11 +21,11 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/vesoft-inc/nebula-go/v3/nebula"
-	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
+	"github.com/vesoft-inc/nebula-go/v3/nebula"
+	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 

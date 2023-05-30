@@ -26,7 +26,7 @@ import (
 
 	"github.com/facebook/fbthrift/thrift/lib/go/thrift"
 
-	pb "github.com/vesoft-inc/nebula-agent/pkg/proto"
+	pb "github.com/vesoft-inc/nebula-agent/v3/pkg/proto"
 	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 )

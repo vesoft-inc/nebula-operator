@@ -30,7 +30,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 )
 
 type PersistentVolumeClaim interface {

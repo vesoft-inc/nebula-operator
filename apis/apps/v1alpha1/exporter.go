@@ -3,7 +3,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 )
 
 func (nc *NebulaCluster) GetExporterImage() string {

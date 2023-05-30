@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	agentclient "github.com/vesoft-inc/nebula-agent/pkg/client"
+	agentclient "github.com/vesoft-inc/nebula-agent/v3/pkg/client"
 	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	rtutil "github.com/vesoft-inc/nebula-operator/pkg/util/restore"

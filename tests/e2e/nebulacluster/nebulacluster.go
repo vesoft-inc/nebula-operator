@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	e2eframework "github.com/vesoft-inc/nebula-operator/tests/e2e/framework"
 )
 

@@ -34,9 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/codec"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 )
 
 const (
@@ -315,7 +314,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		baseContainer.ReadinessProbe = c.ReadinessProbe()
 	} else {
 		baseContainer.ReadinessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/status",
 					Port:   intstr.FromInt(int(ports[1].ContainerPort)),
@@ -406,7 +405,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		return nil, err
 	}
 
-	apply, err := codec.Encode(c.GetConfig())
+	apply, err := json.Marshal(c.GetConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +416,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.GetName(),
 			Namespace:       namespace,
-			Annotations:     map[string]string{annotation.AnnLastAppliedFlagsKey: apply},
+			Annotations:     map[string]string{annotation.AnnLastAppliedFlagsKey: string(apply)},
 			Labels:          componentLabel,
 			OwnerReferences: c.GenerateOwnerReferences(),
 		},

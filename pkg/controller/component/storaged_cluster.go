@@ -26,7 +26,7 @@ import (
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"

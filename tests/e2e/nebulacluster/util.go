@@ -41,7 +41,7 @@ import (
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	e2econfig "github.com/vesoft-inc/nebula-operator/tests/e2e/config"
 	e2eutil "github.com/vesoft-inc/nebula-operator/tests/e2e/util"
 )

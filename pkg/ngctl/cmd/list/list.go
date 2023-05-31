@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/kubectl/pkg/util/templates"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
 )
 

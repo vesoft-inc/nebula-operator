@@ -27,7 +27,7 @@ import (
 	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubernetes/pkg/apis/core"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	cmdutil "github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util"
 	"github.com/vesoft-inc/nebula-operator/pkg/ngctl/cmd/util/ignore"
 	operatorversion "github.com/vesoft-inc/nebula-operator/pkg/version"

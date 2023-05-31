@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 )
 
 type topology struct {

@@ -61,7 +61,6 @@ func setupSuitePerGinkgoNode() {
 
 func cleanupSuite() {
 	framework.Logf("running AfterSuite actions on all nodes")
-	framework.RunCleanupActions()
 
 	ginkgo.By("Cleanup kubernetes")
 	cleanupKubernetes()

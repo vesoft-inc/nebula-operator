@@ -27,7 +27,7 @@ import (
 	"k8s.io/klog/v2"
 	extender "k8s.io/kube-scheduler/extender/v1"
 
-	"github.com/vesoft-inc/nebula-operator/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/scheduler/extender/predicates"
 )
 

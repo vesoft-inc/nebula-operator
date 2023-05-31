@@ -117,7 +117,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 		container.ReadinessProbe = livenessProbe
 	} else {
 		container.LivenessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Port:   intstr.FromInt(defaultMetricsPort),
 					Path:   "/health",

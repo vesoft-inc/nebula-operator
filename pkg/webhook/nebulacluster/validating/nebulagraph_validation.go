@@ -25,7 +25,7 @@ import (
 	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/annotation"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/webhook/util/validation"
 )
 

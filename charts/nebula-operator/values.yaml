@@ -1,13 +1,13 @@
 image:
   nebulaOperator:
     image: vesoft/nebula-operator:v1.4.2
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
   kubeRBACProxy:
     image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
   kubeScheduler:
     image: registry.k8s.io/kube-scheduler:v1.24.11
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
 
 imagePullSecrets: [ ]
 kubernetesClusterDomain: ""

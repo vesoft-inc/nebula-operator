@@ -1,6 +1,6 @@
 nebula:
   version: v3.4.0
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   storageClassName: ""
   enablePVReclaim: false
   enableBR: false

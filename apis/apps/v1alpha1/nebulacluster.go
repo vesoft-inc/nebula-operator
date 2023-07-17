@@ -23,19 +23,23 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func (nc *NebulaCluster) GraphdComponent() NebulaClusterComponentter {
+func (nc *NebulaCluster) GraphdComponent() NebulaClusterComponent {
 	return newGraphdComponent(nc)
 }
 
-func (nc *NebulaCluster) MetadComponent() NebulaClusterComponentter {
+func (nc *NebulaCluster) MetadComponent() NebulaClusterComponent {
 	return newMetadComponent(nc)
 }
 
-func (nc *NebulaCluster) StoragedComponent() NebulaClusterComponentter {
+func (nc *NebulaCluster) StoragedComponent() NebulaClusterComponent {
 	return newStoragedComponent(nc)
 }
 
-func (nc *NebulaCluster) ComponentByType(typ ComponentType) (NebulaClusterComponentter, error) {
+func (nc *NebulaCluster) ExporterComponent() NebulaExporterComponent {
+	return newExporterComponent(nc)
+}
+
+func (nc *NebulaCluster) ComponentByType(typ ComponentType) (NebulaClusterComponent, error) {
 	switch typ {
 	case GraphdComponentType:
 		return nc.GraphdComponent(), nil
@@ -75,42 +79,26 @@ func (nc *NebulaCluster) GenerateOwnerReferences() []metav1.OwnerReference {
 			Kind:               nc.Kind,
 			Name:               nc.GetName(),
 			UID:                nc.GetUID(),
-			Controller:         pointer.BoolPtr(true),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
+			Controller:         pointer.Bool(true),
+			BlockOwnerDeletion: pointer.Bool(true),
 		},
 	}
 }
 
 func (nc *NebulaCluster) IsPVReclaimEnabled() bool {
-	enabled := nc.Spec.EnablePVReclaim
-	if enabled == nil {
-		return false
-	}
-	return *enabled
+	return pointer.BoolDeref(nc.Spec.EnablePVReclaim, false)
 }
 
 func (nc *NebulaCluster) IsAutoBalanceEnabled() bool {
-	enabled := nc.Spec.Storaged.EnableAutoBalance
-	if enabled == nil {
-		return false
-	}
-	return *enabled
+	return pointer.BoolDeref(nc.Spec.Storaged.EnableAutoBalance, false)
 }
 
 func (nc *NebulaCluster) IsForceUpdateEnabled() bool {
-	enabled := nc.Spec.Storaged.EnableForceUpdate
-	if enabled == nil {
-		return false
-	}
-	return *enabled
+	return pointer.BoolDeref(nc.Spec.Storaged.EnableForceUpdate, false)
 }
 
 func (nc *NebulaCluster) IsBREnabled() bool {
-	enabled := nc.Spec.EnableBR
-	if enabled == nil {
-		return false
-	}
-	return *enabled
+	return pointer.BoolDeref(nc.Spec.EnableBR, false)
 }
 
 func (nc *NebulaCluster) IsLogRotateEnabled() bool {
@@ -118,11 +106,7 @@ func (nc *NebulaCluster) IsLogRotateEnabled() bool {
 }
 
 func (nc *NebulaCluster) InsecureSkipVerify() bool {
-	skip := nc.Spec.SSLCerts.InsecureSkipVerify
-	if skip == nil {
-		return false
-	}
-	return *skip
+	return pointer.BoolDeref(nc.Spec.SSLCerts.InsecureSkipVerify, false)
 }
 
 func (nc *NebulaCluster) IsGraphdSSLEnabled() bool {

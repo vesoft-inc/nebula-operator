@@ -55,16 +55,6 @@ func getPodName(componentName string, ordinal int32) string {
 	return fmt.Sprintf("%s-%d", componentName, ordinal)
 }
 
-func getImage(image, version, defaultImage string) string {
-	if image == "" {
-		image = defaultImage
-	}
-	if version == "" {
-		return image
-	}
-	return fmt.Sprintf("%s:%s", image, version)
-}
-
 func getServiceName(componentName string, isHeadless bool) string {
 	if isHeadless {
 		return fmt.Sprintf("%s-headless", componentName)
@@ -109,6 +99,26 @@ func getKubernetesClusterDomain() string {
 
 func joinHostPort(host string, port int32) string {
 	return fmt.Sprintf("%s:%d", host, port)
+}
+
+func getTopologySpreadConstraints(constraints []TopologySpreadConstraint, labels map[string]string) []corev1.TopologySpreadConstraint {
+	if len(constraints) == 0 {
+		return nil
+	}
+
+	tscs := make([]corev1.TopologySpreadConstraint, 0, len(constraints))
+	for _, constraint := range constraints {
+		tsc := corev1.TopologySpreadConstraint{
+			MaxSkew:           1,
+			TopologyKey:       constraint.TopologyKey,
+			WhenUnsatisfiable: constraint.WhenUnsatisfiable,
+		}
+		tsc.LabelSelector = &metav1.LabelSelector{
+			MatchLabels: labels,
+		}
+		tscs = append(tscs, tsc)
+	}
+	return tscs
 }
 
 func upgradeStatefulSet(sts *appsv1.StatefulSet) (*kruisev1alpha1.StatefulSet, error) {
@@ -182,15 +192,15 @@ func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, 
 	}, nil
 }
 
-func GenerateInitAgentContainer(c NebulaClusterComponentter) corev1.Container {
+func GenerateInitAgentContainer(c NebulaClusterComponent) corev1.Container {
 	container := generateAgentContainer(c, true)
 	container.Name = AgentInitContainerName
 
 	return container
 }
 
-func generateAgentContainer(c NebulaClusterComponentter, init bool) corev1.Container {
-	componentType := c.Type().String()
+func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Container {
+	componentType := c.ComponentType().String()
 	metadAddr := c.GetNebulaCluster().GetMetadThriftConnAddress()
 	agentCmd := []string{"/bin/sh", "-ecx"}
 	if init {
@@ -221,7 +231,7 @@ func generateAgentContainer(c NebulaClusterComponentter, init bool) corev1.Conta
 	}
 
 	if c.GetNebulaCluster().IsBREnabled() {
-		if c.Type() != GraphdComponentType {
+		if c.ComponentType() != GraphdComponentType {
 			container.VolumeMounts = []corev1.VolumeMount{
 				{
 					Name:      dataVolume(componentType),
@@ -262,8 +272,8 @@ func generateAgentContainer(c NebulaClusterComponentter, init bool) corev1.Conta
 	return container
 }
 
-func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []corev1.Container {
-	componentType := c.Type().String()
+func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1.Container {
+	componentType := c.ComponentType().String()
 	nc := c.GetNebulaCluster()
 
 	containers := make([]corev1.Container, 0, 1)
@@ -272,7 +282,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 
 	var dataPath string
 	volumes := len(nc.Spec.Storaged.DataVolumeClaims)
-	if c.Type() == StoragedComponentType && volumes > 1 {
+	if c.ComponentType() == StoragedComponentType && volumes > 1 {
 		dataPath = " --data_path=data/storage"
 		for i := 1; i < volumes; i++ {
 			dataPath += fmt.Sprintf(",data%d/storage", i)
@@ -284,7 +294,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		" --local_ip=$(hostname)." + c.GetServiceFQDN() +
 		" --ws_ip=$(hostname)." + c.GetServiceFQDN() +
 		" --daemonize=false" + dataPath
-	if c.Type() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
+	if c.ComponentType() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
 		flags += " --license_manager_url=" + *nc.Spec.Metad.LicenseManagerURL
 	}
 
@@ -303,15 +313,17 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 
 	baseContainer := corev1.Container{
 		Name:         componentType,
-		Image:        c.GetImage(),
+		Image:        c.ComponentSpec().PodImage(),
 		Command:      cmd,
-		Env:          c.GetPodEnvVars(),
+		Env:          c.ComponentSpec().PodEnvVars(),
 		Ports:        ports,
 		VolumeMounts: mounts,
 	}
 
-	if c.ReadinessProbe() != nil {
-		baseContainer.ReadinessProbe = c.ReadinessProbe()
+	baseContainer.LivenessProbe = c.ComponentSpec().LivenessProbe()
+	readinessProbe := c.ComponentSpec().ReadinessProbe()
+	if readinessProbe != nil {
+		baseContainer.ReadinessProbe = readinessProbe
 	} else {
 		baseContainer.ReadinessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -327,7 +339,7 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		}
 	}
 
-	resources := c.GetResources()
+	resources := c.ComponentSpec().Resources()
 	if resources != nil {
 		baseContainer.Resources = *resources
 	}
@@ -344,15 +356,15 @@ func generateContainers(c NebulaClusterComponentter, cm *corev1.ConfigMap) []cor
 		containers = append(containers, agentContainer)
 	}
 
-	containers = mergeSidecarContainers(containers, c.SidecarContainers())
+	containers = mergeSidecarContainers(containers, c.ComponentSpec().SidecarContainers())
 
 	return containers
 }
 
-func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enableEvenPodsSpread bool) (*appsv1.StatefulSet, error) {
+func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv1.StatefulSet, error) {
 	namespace := c.GetNamespace()
 	svcName := c.GetServiceName()
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	componentLabel := c.GenerateLabels()
 
 	nc := c.GetNebulaCluster()
@@ -376,28 +388,21 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 			},
 		})
 	}
-	volumes = mergeVolumes(volumes, c.SidecarVolumes())
+	volumes = mergeVolumes(volumes, c.ComponentSpec().SidecarVolumes())
 
 	podSpec := corev1.PodSpec{
 		SchedulerName:    nc.Spec.SchedulerName,
-		NodeSelector:     c.NodeSelector(),
-		InitContainers:   c.InitContainers(),
+		NodeSelector:     c.ComponentSpec().NodeSelector(),
+		InitContainers:   c.ComponentSpec().InitContainers(),
 		Containers:       containers,
 		Volumes:          volumes,
 		ImagePullSecrets: nc.Spec.ImagePullSecrets,
-		Affinity:         c.Affinity(),
-		Tolerations:      c.Tolerations(),
+		Affinity:         c.ComponentSpec().Affinity(),
+		Tolerations:      c.ComponentSpec().Tolerations(),
 	}
 
-	if nc.Spec.SchedulerName == corev1.DefaultSchedulerName && enableEvenPodsSpread {
-		podSpec.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
-			{
-				MaxSkew:           int32(1),
-				TopologyKey:       label.NodeHostnameLabelKey,
-				WhenUnsatisfiable: nc.Spec.UnsatisfiableAction,
-				LabelSelector:     label.Label(componentLabel).LabelSelector(),
-			},
-		}
+	if nc.Spec.SchedulerName == corev1.DefaultSchedulerName {
+		podSpec.TopologySpreadConstraints = getTopologySpreadConstraints(nc.Spec.TopologySpreadConstraints, componentLabel)
 	}
 
 	volumeClaim, err := c.GenerateVolumeClaim()
@@ -410,8 +415,8 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 		return nil, err
 	}
 
-	mergeLabels := mergeStringMaps(true, componentLabel, c.GetPodLabels())
-	replicas := c.GetReplicas()
+	mergeLabels := mergeStringMaps(true, componentLabel, c.ComponentSpec().PodLabels())
+	replicas := c.ComponentSpec().Replicas()
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            c.GetName(),
@@ -426,7 +431,7 @@ func generateStatefulSet(c NebulaClusterComponentter, cm *corev1.ConfigMap, enab
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      mergeLabels,
-					Annotations: c.GetPodAnnotations(),
+					Annotations: c.ComponentSpec().PodAnnotations(),
 				},
 				Spec: podSpec,
 			},
@@ -456,23 +461,22 @@ func convertToUnstructured(obj interface{}) (*unstructured.Unstructured, error) 
 }
 
 func generateWorkload(
-	c NebulaClusterComponentter,
+	c NebulaClusterComponent,
 	gvk schema.GroupVersionKind,
 	cm *corev1.ConfigMap,
-	enableEvenPodsSpread bool,
 ) (*unstructured.Unstructured, error) {
 	var w interface{}
 	var err error
 
 	switch gvk.String() {
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").String():
-		w, err = generateStatefulSet(c, cm, enableEvenPodsSpread)
+		w, err = generateStatefulSet(c, cm)
 		if err != nil {
 			return nil, err
 		}
 	case kruisev1alpha1.SchemeGroupVersion.WithKind("StatefulSet").String():
 		var set *appsv1.StatefulSet
-		set, err = generateStatefulSet(c, cm, enableEvenPodsSpread)
+		set, err = generateStatefulSet(c, cm)
 		if err != nil {
 			return nil, err
 		}
@@ -492,7 +496,7 @@ func generateWorkload(
 	return u, err
 }
 
-func generateService(c NebulaClusterComponentter) *corev1.Service {
+func generateService(c NebulaClusterComponent) *corev1.Service {
 	namespace := c.GetNamespace()
 	svcName := c.GetServiceName()
 
@@ -542,7 +546,7 @@ func generateService(c NebulaClusterComponentter) *corev1.Service {
 	return service
 }
 
-func generateConfigMap(c NebulaClusterComponentter) *corev1.ConfigMap {
+func generateConfigMap(c NebulaClusterComponent) *corev1.ConfigMap {
 	namespace := c.GetNamespace()
 	labels := c.GenerateLabels()
 	cmName := c.GetName()

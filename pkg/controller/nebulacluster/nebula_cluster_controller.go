@@ -80,7 +80,10 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 
 	evenPodsSpread, err := kube.EnableEvenPodsSpread(info)
 	if err != nil {
-		return nil, fmt.Errorf("get apiServer feature failed: %v", err)
+		return nil, fmt.Errorf("get feature failed: %v", err)
+	}
+	if !evenPodsSpread {
+		return nil, fmt.Errorf("EvenPodsSpread feauture not supported")
 	}
 
 	return &ClusterReconciler{
@@ -89,19 +92,16 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 			component.NewGraphdCluster(
 				clientSet,
 				dm,
-				graphdUpdater,
-				evenPodsSpread),
+				graphdUpdater),
 			component.NewMetadCluster(
 				clientSet,
 				dm,
-				metadUpdater,
-				evenPodsSpread),
+				metadUpdater),
 			component.NewStoragedCluster(
 				clientSet,
 				dm,
 				sm,
-				storagedUpdater,
-				evenPodsSpread),
+				storagedUpdater),
 			component.NewNebulaExporter(clientSet),
 			reclaimer.NewMetaReconciler(clientSet),
 			reclaimer.NewPVCReclaimer(clientSet),

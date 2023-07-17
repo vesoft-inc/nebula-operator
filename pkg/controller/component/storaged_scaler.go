@@ -71,7 +71,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
-	if !pointer.BoolPtrDerefOr(nc.Spec.Storaged.EnableAutoBalance, false) {
+	if !pointer.BoolDeref(nc.Spec.Storaged.EnableAutoBalance, false) {
 		klog.Infof("cluster [%s/%s] auto balance is disabled", ns, componentName)
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
@@ -199,12 +199,12 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		}
 	}
 
-	if err := PvcMark(ss.clientSet.PVC(), nc.StoragedComponent(), oldReplicas, newReplicas); err != nil {
+	if err := PVCMark(ss.clientSet.PVC(), nc.StoragedComponent(), oldReplicas, newReplicas); err != nil {
 		return err
 	}
 
 	deleted := true
-	pvcNames := ordinalPVCNames(nc.StoragedComponent().Type(), nc.StoragedComponent().GetName(), newReplicas)
+	pvcNames := ordinalPVCNames(nc.StoragedComponent().ComponentType(), nc.StoragedComponent().GetName(), newReplicas)
 	for _, pvcName := range pvcNames {
 		if _, err = ss.clientSet.PVC().GetPVC(nc.GetNamespace(), pvcName); err != nil {
 			if !apierrors.IsNotFound(err) {

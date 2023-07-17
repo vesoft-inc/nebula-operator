@@ -38,7 +38,7 @@ const (
 	defaultMetadImage      = "vesoft/nebula-metad"
 )
 
-var _ NebulaClusterComponentter = &metadComponent{}
+var _ NebulaClusterComponent = &metadComponent{}
 
 // +k8s:deepcopy-gen=false
 func newMetadComponent(nc *NebulaCluster) *metadComponent {
@@ -58,20 +58,12 @@ func (c *metadComponent) GetUpdateRevision() string {
 	return c.nc.Status.Metad.Workload.UpdateRevision
 }
 
-func (c *metadComponent) GetReplicas() int32 {
-	return *c.nc.Spec.Metad.Replicas
-}
-
-func (c *metadComponent) GetImage() string {
-	return getImage(c.nc.Spec.Metad.Image, c.nc.Spec.Metad.Version, defaultMetadImage)
-}
-
 func (c *metadComponent) GetConfig() map[string]string {
 	return c.nc.Spec.Metad.Config
 }
 
 func (c *metadComponent) GetConfigMapKey() string {
-	return getCmKey(c.Type().String())
+	return getCmKey(c.ComponentType().String())
 }
 
 func (c *metadComponent) GetResources() *corev1.ResourceRequirements {
@@ -112,61 +104,6 @@ func (c *metadComponent) GetDataStorageResources() (*corev1.ResourceRequirements
 		return nil, nil
 	}
 	return c.nc.Spec.Metad.DataVolumeClaim.Resources.DeepCopy(), nil
-}
-
-func (c *metadComponent) GetPodEnvVars() []corev1.EnvVar {
-	return c.nc.Spec.Metad.PodSpec.EnvVars
-}
-
-func (c *metadComponent) GetPodAnnotations() map[string]string {
-	return c.nc.Spec.Metad.PodSpec.Annotations
-}
-
-func (c *metadComponent) GetPodLabels() map[string]string {
-	return c.nc.Spec.Metad.PodSpec.Labels
-}
-
-func (c *metadComponent) NodeSelector() map[string]string {
-	selector := map[string]string{}
-	for k, v := range c.nc.Spec.NodeSelector {
-		selector[k] = v
-	}
-	for k, v := range c.nc.Spec.Metad.PodSpec.NodeSelector {
-		selector[k] = v
-	}
-	return selector
-}
-
-func (c *metadComponent) Affinity() *corev1.Affinity {
-	affinity := c.nc.Spec.Metad.PodSpec.Affinity
-	if affinity == nil {
-		affinity = c.nc.Spec.Affinity
-	}
-	return affinity
-}
-
-func (c *metadComponent) Tolerations() []corev1.Toleration {
-	tolerations := c.nc.Spec.Metad.PodSpec.Tolerations
-	if len(tolerations) == 0 {
-		return c.nc.Spec.Tolerations
-	}
-	return tolerations
-}
-
-func (c *metadComponent) InitContainers() []corev1.Container {
-	return c.nc.Spec.Metad.PodSpec.InitContainers
-}
-
-func (c *metadComponent) SidecarContainers() []corev1.Container {
-	return c.nc.Spec.Metad.PodSpec.SidecarContainers
-}
-
-func (c *metadComponent) SidecarVolumes() []corev1.Volume {
-	return c.nc.Spec.Metad.PodSpec.SidecarVolumes
-}
-
-func (c *metadComponent) ReadinessProbe() *corev1.Probe {
-	return c.nc.Spec.Metad.PodSpec.ReadinessProbe
 }
 
 func (c *metadComponent) IsSSLEnabled() bool {
@@ -210,7 +147,7 @@ func (c *metadComponent) GetEndpoints(portName string) []string {
 	return getConnAddresses(
 		c.GetConnAddress(portName),
 		c.GetName(),
-		c.GetReplicas())
+		c.ComponentSpec().Replicas())
 }
 
 func (c *metadComponent) IsReady() bool {
@@ -239,7 +176,7 @@ func (c *metadComponent) GenerateContainerPorts() []corev1.ContainerPort {
 }
 
 func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	mounts := []corev1.VolumeMount{
 		{
 			Name:      dataVolume(componentType),
@@ -293,7 +230,7 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 }
 
 func (c *metadComponent) GenerateVolumes() []corev1.Volume {
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	volumes := []corev1.Volume{
 		{
 			Name: dataVolume(componentType),
@@ -342,7 +279,7 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.ServerPublicKey,
+								Key:  c.nc.Spec.SSLCerts.ServerCert,
 								Path: "server.crt",
 							},
 						},
@@ -356,7 +293,7 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.ServerPrivateKey,
+								Key:  c.nc.Spec.SSLCerts.ServerKey,
 								Path: "server.key",
 							},
 						},
@@ -370,7 +307,7 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.CASecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.CAPublicKey,
+								Key:  c.nc.Spec.SSLCerts.CACert,
 								Path: "ca.crt",
 							},
 						},
@@ -385,7 +322,7 @@ func (c *metadComponent) GenerateVolumes() []corev1.Volume {
 }
 
 func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	claims := make([]corev1.PersistentVolumeClaim, 0)
 
 	dataRes, err := c.GetDataStorageResources()
@@ -431,12 +368,8 @@ func (c *metadComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, 
 	return claims, nil
 }
 
-func (c *metadComponent) GenerateWorkload(
-	gvk schema.GroupVersionKind,
-	cm *corev1.ConfigMap,
-	enableEvenPodsSpread bool,
-) (*unstructured.Unstructured, error) {
-	return generateWorkload(c, gvk, cm, enableEvenPodsSpread)
+func (c *metadComponent) GenerateWorkload(gvk schema.GroupVersionKind, cm *corev1.ConfigMap) (*unstructured.Unstructured, error) {
+	return generateWorkload(c, gvk, cm)
 }
 
 func (c *metadComponent) GenerateService() *corev1.Service {
@@ -445,7 +378,7 @@ func (c *metadComponent) GenerateService() *corev1.Service {
 
 func (c *metadComponent) GenerateConfigMap() *corev1.ConfigMap {
 	cm := generateConfigMap(c)
-	configKey := getCmKey(c.Type().String())
+	configKey := getCmKey(c.ComponentType().String())
 	cm.Data[configKey] = MetadhConfigTemplate
 	return cm
 }

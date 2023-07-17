@@ -1082,6 +1082,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -1176,6 +1186,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -1234,6 +1254,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -1324,6 +1356,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -1444,6 +1486,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -1520,6 +1572,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -1582,6 +1644,18 @@ spec:
                     type: integer
                   resources:
                     properties:
+                      claims:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       limits:
                         additionalProperties:
                           anyOf:
@@ -1816,6 +1890,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -1910,6 +1994,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -1968,6 +2062,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -2058,6 +2164,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -2384,13 +2500,26 @@ spec:
                                           type: string
                                         name:
                                           type: string
+                                        namespace:
+                                          type: string
                                       required:
                                       - kind
                                       - name
                                       type: object
-                                      x-kubernetes-map-type: atomic
                                     resources:
                                       properties:
+                                        claims:
+                                          items:
+                                            properties:
+                                              name:
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - name
+                                          x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
@@ -2877,7 +3006,10 @@ spec:
                       type: object
                     type: array
                   version:
+                    default: latest
                     type: string
+                required:
+                - image
                 type: object
               graphd:
                 properties:
@@ -3537,6 +3669,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -3631,6 +3773,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -3689,6 +3841,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -3779,6 +3943,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -3899,6 +4073,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -3959,6 +4143,18 @@ spec:
                     properties:
                       resources:
                         properties:
+                          claims:
+                            items:
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -3995,6 +4191,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -4057,6 +4263,18 @@ spec:
                     type: integer
                   resources:
                     properties:
+                      claims:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       limits:
                         additionalProperties:
                           anyOf:
@@ -4312,6 +4530,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -4406,6 +4634,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -4464,6 +4702,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -4554,6 +4804,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -4880,13 +5140,26 @@ spec:
                                           type: string
                                         name:
                                           type: string
+                                        namespace:
+                                          type: string
                                       required:
                                       - kind
                                       - name
                                       type: object
-                                      x-kubernetes-map-type: atomic
                                     resources:
                                       properties:
+                                        claims:
+                                          items:
+                                            properties:
+                                              name:
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - name
+                                          x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
@@ -5373,7 +5646,10 @@ spec:
                       type: object
                     type: array
                   version:
+                    default: latest
                     type: string
+                required:
+                - image
                 type: object
               imagePullPolicy:
                 default: Always
@@ -5775,6 +6051,18 @@ spec:
                     properties:
                       resources:
                         properties:
+                          claims:
+                            items:
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -6078,6 +6366,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -6172,6 +6470,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -6230,6 +6538,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -6320,6 +6640,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -6449,6 +6779,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -6509,6 +6849,18 @@ spec:
                     properties:
                       resources:
                         properties:
+                          claims:
+                            items:
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -6545,6 +6897,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -6607,6 +6969,18 @@ spec:
                     type: integer
                   resources:
                     properties:
+                      claims:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       limits:
                         additionalProperties:
                           anyOf:
@@ -6858,6 +7232,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -6952,6 +7336,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -7010,6 +7404,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -7100,6 +7506,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -7426,13 +7842,26 @@ spec:
                                           type: string
                                         name:
                                           type: string
+                                        namespace:
+                                          type: string
                                       required:
                                       - kind
                                       - name
                                       type: object
-                                      x-kubernetes-map-type: atomic
                                     resources:
                                       properties:
+                                        claims:
+                                          items:
+                                            properties:
+                                              name:
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - name
+                                          x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
@@ -7919,7 +8348,10 @@ spec:
                       type: object
                     type: array
                   version:
+                    default: latest
                     type: string
+                required:
+                - image
                 type: object
               nodeSelector:
                 additionalProperties:
@@ -7939,26 +8371,31 @@ spec:
                 type: string
               sslCerts:
                 properties:
-                  caPublicKey:
+                  caCert:
                     default: ca.crt
                     type: string
                   caSecret:
                     type: string
-                  clientPrivateKey:
-                    default: tls.key
+                  clientCACert:
+                    default: ca.crt
                     type: string
-                  clientPublicKey:
+                  clientCASecret:
+                    type: string
+                  clientCert:
                     default: tls.crt
+                    type: string
+                  clientKey:
+                    default: tls.key
                     type: string
                   clientSecret:
                     type: string
                   insecureSkipVerify:
                     type: boolean
-                  serverPrivateKey:
-                    default: tls.key
-                    type: string
-                  serverPublicKey:
+                  serverCert:
                     default: tls.crt
+                    type: string
+                  serverKey:
+                    default: tls.key
                     type: string
                   serverSecret:
                     type: string
@@ -8343,6 +8780,18 @@ spec:
                       properties:
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -8651,6 +9100,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -8745,6 +9204,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -8803,6 +9272,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -8893,6 +9374,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -9013,6 +9504,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -9073,6 +9574,18 @@ spec:
                     properties:
                       resources:
                         properties:
+                          claims:
+                            items:
+                              properties:
+                                name:
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
                           limits:
                             additionalProperties:
                               anyOf:
@@ -9109,6 +9622,16 @@ spec:
                       failureThreshold:
                         format: int32
                         type: integer
+                      grpc:
+                        properties:
+                          port:
+                            format: int32
+                            type: integer
+                          service:
+                            type: string
+                        required:
+                        - port
+                        type: object
                       httpGet:
                         properties:
                           host:
@@ -9171,6 +9694,18 @@ spec:
                     type: integer
                   resources:
                     properties:
+                      claims:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       limits:
                         additionalProperties:
                           anyOf:
@@ -9422,6 +9957,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -9516,6 +10061,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -9574,6 +10129,18 @@ spec:
                           type: object
                         resources:
                           properties:
+                            claims:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
                             limits:
                               additionalProperties:
                                 anyOf:
@@ -9664,6 +10231,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -9990,13 +10567,26 @@ spec:
                                           type: string
                                         name:
                                           type: string
+                                        namespace:
+                                          type: string
                                       required:
                                       - kind
                                       - name
                                       type: object
-                                      x-kubernetes-map-type: atomic
                                     resources:
                                       properties:
+                                        claims:
+                                          items:
+                                            properties:
+                                              name:
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - name
+                                          x-kubernetes-list-type: map
                                         limits:
                                           additionalProperties:
                                             anyOf:
@@ -10483,10 +11073,13 @@ spec:
                       type: object
                     type: array
                   version:
+                    default: latest
                     type: string
+                required:
+                - image
                 type: object
-              strategy:
-                type: string
+              suspend:
+                type: boolean
               toleration:
                 items:
                   properties:
@@ -10503,9 +11096,18 @@ spec:
                       type: string
                   type: object
                 type: array
-              unsatisfiableAction:
-                default: DoNotSchedule
-                type: string
+              topologySpreadConstraints:
+                items:
+                  properties:
+                    topologyKey:
+                      type: string
+                    whenUnsatisfiable:
+                      type: string
+                  required:
+                  - topologyKey
+                  - whenUnsatisfiable
+                  type: object
+                type: array
             required:
             - graphd
             - metad
@@ -10537,6 +11139,42 @@ spec:
                 type: array
               graphd:
                 properties:
+                  conditions:
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        message:
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
+                      required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                      type: object
+                    type: array
                   phase:
                     type: string
                   version:
@@ -10573,6 +11211,42 @@ spec:
                 type: object
               metad:
                 properties:
+                  conditions:
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        message:
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
+                      required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                      type: object
+                    type: array
                   phase:
                     type: string
                   version:
@@ -10613,6 +11287,42 @@ spec:
                     items:
                       format: int32
                       type: integer
+                    type: array
+                  conditions:
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        message:
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
+                      required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                      type: object
                     type: array
                   hostsAdded:
                     type: boolean

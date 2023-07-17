@@ -36,23 +36,20 @@ import (
 )
 
 type metadCluster struct {
-	clientSet            kube.ClientSet
-	dm                   discovery.Interface
-	updateManager        UpdateManager
-	enableEvenPodsSpread bool
+	clientSet     kube.ClientSet
+	dm            discovery.Interface
+	updateManager UpdateManager
 }
 
 func NewMetadCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
 	um UpdateManager,
-	enableEvenPodsSpread bool,
 ) ReconcileManager {
 	return &metadCluster{
-		clientSet:            clientSet,
-		dm:                   dm,
-		updateManager:        um,
-		enableEvenPodsSpread: enableEvenPodsSpread,
+		clientSet:     clientSet,
+		dm:            dm,
+		updateManager: um,
 	}
 }
 
@@ -100,7 +97,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	newWorkload, err := nc.MetadComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
+	newWorkload, err := nc.MetadComponent().GenerateWorkload(gvk, cm)
 	if err != nil {
 		klog.Errorf("generate metad cluster template failed: %v", err)
 		return err

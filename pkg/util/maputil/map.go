@@ -52,3 +52,30 @@ func ResetMap(first, second map[string]string) {
 		}
 	}
 }
+
+func MergeStringMaps(overwrite bool, ms ...map[string]string) map[string]string {
+	n := 0
+	for _, m := range ms {
+		n += len(m)
+	}
+	mp := make(map[string]string, n)
+	if n == 0 {
+		return mp
+	}
+	for _, m := range ms {
+		for k, v := range m {
+			if overwrite || !isStringMapExist(mp, k) {
+				mp[k] = v
+			}
+		}
+	}
+	return mp
+}
+
+func isStringMapExist(m map[string]string, key string) bool {
+	if m == nil {
+		return false
+	}
+	_, exist := m[key]
+	return exist
+}

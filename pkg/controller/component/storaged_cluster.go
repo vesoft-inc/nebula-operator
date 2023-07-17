@@ -36,11 +36,10 @@ import (
 )
 
 type storagedCluster struct {
-	clientSet            kube.ClientSet
-	dm                   discovery.Interface
-	scaleManager         ScaleManager
-	updateManager        UpdateManager
-	enableEvenPodsSpread bool
+	clientSet     kube.ClientSet
+	dm            discovery.Interface
+	scaleManager  ScaleManager
+	updateManager UpdateManager
 }
 
 func NewStoragedCluster(
@@ -48,14 +47,12 @@ func NewStoragedCluster(
 	dm discovery.Interface,
 	sm ScaleManager,
 	um UpdateManager,
-	enableEvenPodsSpread bool,
 ) ReconcileManager {
 	return &storagedCluster{
-		clientSet:            clientSet,
-		dm:                   dm,
-		scaleManager:         sm,
-		updateManager:        um,
-		enableEvenPodsSpread: enableEvenPodsSpread,
+		clientSet:     clientSet,
+		dm:            dm,
+		scaleManager:  sm,
+		updateManager: um,
 	}
 }
 
@@ -103,7 +100,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		return err
 	}
 
-	newWorkload, err := nc.StoragedComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
+	newWorkload, err := nc.StoragedComponent().GenerateWorkload(gvk, cm)
 	if err != nil {
 		klog.Errorf("generate storaged cluster template failed: %v", err)
 		return err

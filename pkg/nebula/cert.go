@@ -22,13 +22,13 @@ func getCerts(namespace string, cert *v1alpha1.SSLCertsSpec) ([]byte, []byte, []
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	caCert := caSecret.Data[cert.CAPublicKey]
+	caCert := caSecret.Data[cert.CACert]
 
 	clientSecret, err := client.Secret().GetSecret(namespace, cert.ClientSecret)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	clientCert := clientSecret.Data[cert.ClientPublicKey]
-	clientKey := clientSecret.Data[cert.ClientPrivateKey]
+	clientCert := clientSecret.Data[cert.ClientCert]
+	clientKey := clientSecret.Data[cert.ClientKey]
 	return caCert, clientCert, clientKey, nil
 }

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -54,14 +55,17 @@ func PvcGc(cli client.Client, namespace, clusterName string) error {
 	return nil
 }
 
-func PvcMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClusterComponentter, oldReplicas, newReplicas int32) error {
+func PVCMark(pvcClient kube.PersistentVolumeClaim, component v1alpha1.NebulaClusterComponent, oldReplicas, newReplicas int32) error {
 	ns := component.GetNamespace()
 	componentName := component.GetName()
 	for i := oldReplicas - 1; i >= newReplicas; i-- {
-		pvcNames := ordinalPVCNames(component.Type(), componentName, i)
+		pvcNames := ordinalPVCNames(component.ComponentType(), componentName, i)
 		for _, pvcName := range pvcNames {
 			pvc, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
 				return fmt.Errorf("get PVC %s for cluster [%s/%s] failed: %s",
 					pvcName, component.GetNamespace(), component.GetClusterName(), err)
 			}

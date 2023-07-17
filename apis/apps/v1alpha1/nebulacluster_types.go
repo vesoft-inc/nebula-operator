@@ -38,14 +38,14 @@ type ComponentPhase string
 const (
 	// RunningPhase represents normal state of nebula cluster.
 	RunningPhase ComponentPhase = "Running"
-	// UpgradePhase represents the upgrade state of nebula cluster.
-	UpgradePhase ComponentPhase = "Upgrade"
 	// ScaleInPhase represents the scaling state of nebula cluster.
 	ScaleInPhase ComponentPhase = "ScaleIn"
 	// ScaleOutPhase represents the scaling state of nebula cluster.
 	ScaleOutPhase ComponentPhase = "ScaleOut"
 	// UpdatePhase represents update state of nebula cluster.
 	UpdatePhase ComponentPhase = "Update"
+	// SuspendPhase represents the suspend state of nebula cluster.
+	SuspendPhase ComponentPhase = "Suspend"
 )
 
 // NebulaClusterSpec defines the desired state of NebulaCluster
@@ -62,15 +62,17 @@ type NebulaClusterSpec struct {
 	// +optional
 	Reference WorkloadReference `json:"reference,omitempty"`
 
+	// +optional
+	Suspend bool `json:"suspend,omitempty"`
+
 	// +kubebuilder:default=default-scheduler
 	// +optional
 	SchedulerName string `json:"schedulerName"`
 
-	// +kubebuilder:default=DoNotSchedule
-	// +optional
-	UnsatisfiableAction corev1.UnsatisfiableConstraintAction `json:"unsatisfiableAction"`
+	// TopologySpreadConstraints specifies how to spread matching pods among the given topology.
+	TopologySpreadConstraints []TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 
-	// Flag to enable/disable pv reclaim while the nebula cluster deleted , default false
+	// Flag to enable/disable PV reclaim while the nebula cluster deleted, default false
 	// +optional
 	EnablePVReclaim *bool `json:"enablePVReclaim,omitempty"`
 
@@ -89,10 +91,6 @@ type NebulaClusterSpec struct {
 	// +optional
 	Tolerations []corev1.Toleration `json:"toleration,omitempty"`
 
-	// UpdatePolicy indicates how pods should be updated
-	// +optional
-	UpdatePolicy string `json:"strategy,omitempty"`
-
 	// Flag to enable/disable sidecar container nebula-agent injection, default false.
 	// +optional
 	EnableBR *bool `json:"enableBR,omitempty"`
@@ -109,11 +107,12 @@ type NebulaClusterSpec struct {
 
 // NebulaClusterStatus defines the observed state of NebulaCluster
 type NebulaClusterStatus struct {
-	Graphd     ComponentStatus          `json:"graphd,omitempty"`
-	Metad      ComponentStatus          `json:"metad,omitempty"`
-	Storaged   StoragedStatus           `json:"storaged,omitempty"`
-	Conditions []NebulaClusterCondition `json:"conditions,omitempty"`
-	Version    string                   `json:"version,omitempty"`
+	ObservedGeneration int64                    `json:"observedGeneration,omitempty"`
+	Graphd             ComponentStatus          `json:"graphd,omitempty"`
+	Metad              ComponentStatus          `json:"metad,omitempty"`
+	Storaged           StoragedStatus           `json:"storaged,omitempty"`
+	Conditions         []NebulaClusterCondition `json:"conditions,omitempty"`
+	Version            string                   `json:"version,omitempty"`
 }
 
 // ComponentStatus is the status and version of a nebula component.
@@ -151,12 +150,11 @@ type WorkloadStatus struct {
 	// Replicas is the most recently observed number of replicas.
 	Replicas int32 `json:"replicas"`
 
-	// The number of pods in current version.
+	// The number of pods in updatedRevision.
 	UpdatedReplicas int32 `json:"updatedReplicas"`
 
-	// The number of ready current revision replicas for this Workload.
-	// +optional
-	UpdatedReadyReplicas int32 `json:"updatedReadyReplicas,omitempty"`
+	// The number of pods in currentRevision.
+	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
 
 	// Count of hash collisions for the Workload.
 	// +optional
@@ -165,8 +163,12 @@ type WorkloadStatus struct {
 	// CurrentRevision, if not empty, indicates the current version of the Workload.
 	CurrentRevision string `json:"currentRevision"`
 
-	// updateRevision, if not empty, indicates the version of the Workload used to generate Pods in the sequence
+	// UpdateRevision, if not empty, indicates the version of the Workload used to generate Pods in the sequence
 	UpdateRevision string `json:"updateRevision,omitempty"`
+
+	// Total number of available pods.
+	// +optional
+	AvailableReplicas int32 `json:"availableReplicas"`
 }
 
 // NebulaClusterCondition describes the state of a nebula cluster at a certain point.
@@ -211,7 +213,7 @@ type LogRotate struct {
 
 // ExporterSpec defines the desired state of Exporter
 type ExporterSpec struct {
-	PodSpec `json:",inline"`
+	ComponentSpec `json:",inline"`
 
 	// Maximum number of parallel scrape requests
 	// +kubebuilder:default=40
@@ -232,29 +234,36 @@ type SSLCertsSpec struct {
 	// The key to server PEM encoded public key certificate
 	// +kubebuilder:default=tls.crt
 	// +optional
-	ServerPublicKey string `json:"serverPublicKey,omitempty"`
+	ServerCert string `json:"serverCert,omitempty"`
 	// The key to server private key associated with given certificate
 	// +kubebuilder:default=tls.key
 	// +optional
-	ServerPrivateKey string `json:"serverPrivateKey,omitempty"`
+	ServerKey string `json:"serverKey,omitempty"`
 
 	// Name of the client cert secret
 	ClientSecret string `json:"clientSecret,omitempty"`
 	// The key to client PEM encoded public key certificate
 	// +kubebuilder:default=tls.crt
 	// +optional
-	ClientPublicKey string `json:"clientPublicKey,omitempty"`
+	ClientCert string `json:"clientCert,omitempty"`
 	// The key to client private key associated with given certificate
 	// +kubebuilder:default=tls.key
 	// +optional
-	ClientPrivateKey string `json:"clientPrivateKey,omitempty"`
+	ClientKey string `json:"clientKey,omitempty"`
 
 	// Name of the CA cert secret
 	CASecret string `json:"caSecret,omitempty"`
 	// The key to CA PEM encoded public key certificate
 	// +kubebuilder:default=ca.crt
 	// +optional
-	CAPublicKey string `json:"caPublicKey,omitempty"`
+	CACert string `json:"caCert,omitempty"`
+
+	// Name of the client CA cert secret
+	ClientCASecret string `json:"clientCASecret,omitempty"`
+	// The key to Client CA PEM encoded public key certificate
+	// +kubebuilder:default=ca.crt
+	// +optional
+	ClientCACert string `json:"clientCACert,omitempty"`
 
 	// InsecureSkipVerify controls whether a client verifies the server's
 	// certificate chain and host name.
@@ -262,9 +271,21 @@ type SSLCertsSpec struct {
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 }
 
+type TopologySpreadConstraint struct {
+	// TopologyKey is the key of node labels. Nodes that have a label with this key
+	// and identical values are considered to be in the same topology.
+	// We consider each <key, value> as a "bucket", and try to put balanced number
+	// of pods into each bucket.
+	// MaxSkew is default set to 1
+	// LabelSelector is generated by component type
+	TopologyKey string `json:"topologyKey"`
+
+	WhenUnsatisfiable corev1.UnsatisfiableConstraintAction `json:"whenUnsatisfiable"`
+}
+
 // GraphdSpec defines the desired state of Graphd
 type GraphdSpec struct {
-	PodSpec `json:",inline"`
+	ComponentSpec `json:",inline"`
 
 	// Config defines a graphd configuration load into ConfigMap
 	Config map[string]string `json:"config,omitempty"`
@@ -280,7 +301,7 @@ type GraphdSpec struct {
 
 // MetadSpec defines the desired state of Metad
 type MetadSpec struct {
-	PodSpec `json:",inline"`
+	ComponentSpec `json:",inline"`
 
 	// Config defines a metad configuration load into ConfigMap
 	Config map[string]string `json:"config,omitempty"`
@@ -306,7 +327,7 @@ type MetadSpec struct {
 
 // StoragedSpec defines the desired state of Storaged
 type StoragedSpec struct {
-	PodSpec `json:",inline"`
+	ComponentSpec `json:",inline"`
 
 	// Config defines a storaged configuration load into ConfigMap
 	Config map[string]string `json:"config,omitempty"`
@@ -332,8 +353,8 @@ type StoragedSpec struct {
 	EnableForceUpdate *bool `json:"enableForceUpdate,omitempty"`
 }
 
-// PodSpec is a common set of k8s resource configs for nebula components.
-type PodSpec struct {
+// ComponentSpec is a common set of k8s resource configs for nebula components.
+type ComponentSpec struct {
 	// K8S deployment replicas setting.
 	// +kubebuilder:validation:Minimum=0
 	Replicas *int32 `json:"replicas,omitempty"`
@@ -346,10 +367,11 @@ type PodSpec struct {
 	// +optional
 	EnvVars []corev1.EnvVar `json:"env,omitempty"`
 
-	// +optional
-	Image string `json:"image,omitempty"`
+	// Container image.
+	Image string `json:"image"`
 
-	// Version tag for docker images
+	// Version tag for container image.
+	// +kubebuilder:default=latest
 	// +optional
 	Version string `json:"version,omitempty"`
 

@@ -80,3 +80,6 @@ spec:
     rotate: 5
     size: "100M"
   imagePullPolicy: Always
+  topologySpreadConstraints:
+  - topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway

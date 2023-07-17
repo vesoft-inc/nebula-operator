@@ -34,23 +34,20 @@ import (
 )
 
 type graphdCluster struct {
-	clientSet            kube.ClientSet
-	dm                   discovery.Interface
-	updateManager        UpdateManager
-	enableEvenPodsSpread bool
+	clientSet     kube.ClientSet
+	dm            discovery.Interface
+	updateManager UpdateManager
 }
 
 func NewGraphdCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
 	um UpdateManager,
-	enableEvenPodsSpread bool,
 ) ReconcileManager {
 	return &graphdCluster{
-		clientSet:            clientSet,
-		dm:                   dm,
-		updateManager:        um,
-		enableEvenPodsSpread: enableEvenPodsSpread,
+		clientSet:     clientSet,
+		dm:            dm,
+		updateManager: um,
 	}
 }
 
@@ -88,7 +85,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	newWorkload, err := nc.GraphdComponent().GenerateWorkload(gvk, cm, c.enableEvenPodsSpread)
+	newWorkload, err := nc.GraphdComponent().GenerateWorkload(gvk, cm)
 	if err != nil {
 		klog.Errorf("generate graphd cluster template failed: %v", err)
 		return err
@@ -153,7 +150,7 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
 	} else if *newReplicas < *oldReplicas {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleInPhase
-		if err := PvcMark(c.clientSet.PVC(), nc.GraphdComponent(), *oldReplicas, *newReplicas); err != nil {
+		if err := PVCMark(c.clientSet.PVC(), nc.GraphdComponent(), *oldReplicas, *newReplicas); err != nil {
 			return err
 		}
 	} else if *newReplicas > *oldReplicas {

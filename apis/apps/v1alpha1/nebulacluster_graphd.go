@@ -38,7 +38,7 @@ const (
 	defaultGraphdImage      = "vesoft/nebula-graphd"
 )
 
-var _ NebulaClusterComponentter = &graphdComponent{}
+var _ NebulaClusterComponent = &graphdComponent{}
 
 // +k8s:deepcopy-gen=false
 func newGraphdComponent(nc *NebulaCluster) *graphdComponent {
@@ -58,24 +58,12 @@ func (c *graphdComponent) GetUpdateRevision() string {
 	return c.nc.Status.Graphd.Workload.UpdateRevision
 }
 
-func (c *graphdComponent) GetReplicas() int32 {
-	return *c.nc.Spec.Graphd.Replicas
-}
-
-func (c *graphdComponent) GetImage() string {
-	return getImage(c.nc.Spec.Graphd.Image, c.nc.Spec.Graphd.Version, defaultGraphdImage)
-}
-
 func (c *graphdComponent) GetConfig() map[string]string {
 	return c.nc.Spec.Graphd.Config
 }
 
 func (c *graphdComponent) GetConfigMapKey() string {
-	return getCmKey(c.Type().String())
-}
-
-func (c *graphdComponent) GetResources() *corev1.ResourceRequirements {
-	return getResources(c.nc.Spec.Graphd.Resources)
+	return getCmKey(c.ComponentType().String())
 }
 
 func (c *graphdComponent) GetLogStorageClass() *string {
@@ -98,61 +86,6 @@ func (c *graphdComponent) GetLogStorageResources() *corev1.ResourceRequirements 
 
 func (c *graphdComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
 	return nil, nil
-}
-
-func (c *graphdComponent) GetPodEnvVars() []corev1.EnvVar {
-	return c.nc.Spec.Graphd.PodSpec.EnvVars
-}
-
-func (c *graphdComponent) GetPodAnnotations() map[string]string {
-	return c.nc.Spec.Graphd.PodSpec.Annotations
-}
-
-func (c *graphdComponent) GetPodLabels() map[string]string {
-	return c.nc.Spec.Graphd.PodSpec.Labels
-}
-
-func (c *graphdComponent) NodeSelector() map[string]string {
-	selector := map[string]string{}
-	for k, v := range c.nc.Spec.NodeSelector {
-		selector[k] = v
-	}
-	for k, v := range c.nc.Spec.Graphd.PodSpec.NodeSelector {
-		selector[k] = v
-	}
-	return selector
-}
-
-func (c *graphdComponent) Affinity() *corev1.Affinity {
-	affinity := c.nc.Spec.Graphd.PodSpec.Affinity
-	if affinity == nil {
-		affinity = c.nc.Spec.Affinity
-	}
-	return affinity
-}
-
-func (c *graphdComponent) Tolerations() []corev1.Toleration {
-	tolerations := c.nc.Spec.Graphd.PodSpec.Tolerations
-	if len(tolerations) == 0 {
-		return c.nc.Spec.Tolerations
-	}
-	return tolerations
-}
-
-func (c *graphdComponent) InitContainers() []corev1.Container {
-	return c.nc.Spec.Graphd.PodSpec.InitContainers
-}
-
-func (c *graphdComponent) SidecarContainers() []corev1.Container {
-	return c.nc.Spec.Graphd.PodSpec.SidecarContainers
-}
-
-func (c *graphdComponent) SidecarVolumes() []corev1.Volume {
-	return c.nc.Spec.Graphd.PodSpec.SidecarVolumes
-}
-
-func (c *graphdComponent) ReadinessProbe() *corev1.Probe {
-	return c.nc.Spec.Graphd.PodSpec.ReadinessProbe
 }
 
 func (c *graphdComponent) IsSSLEnabled() bool {
@@ -197,7 +130,7 @@ func (c *graphdComponent) GetEndpoints(portName string) []string {
 	return getConnAddresses(
 		c.GetConnAddress(portName),
 		c.GetName(),
-		c.GetReplicas())
+		c.ComponentSpec().Replicas())
 }
 
 func (c *graphdComponent) IsReady() bool {
@@ -230,7 +163,7 @@ func (c *graphdComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 		return nil
 	}
 
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	mounts := []corev1.VolumeMount{
 		{
 			Name:      logVolume(componentType),
@@ -271,7 +204,7 @@ func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
 		return nil
 	}
 
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	volumes := []corev1.Volume{
 		{
 			Name: logVolume(componentType),
@@ -292,7 +225,7 @@ func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.ServerPublicKey,
+								Key:  c.nc.Spec.SSLCerts.ServerCert,
 								Path: "server.crt",
 							},
 						},
@@ -306,7 +239,7 @@ func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.ServerPrivateKey,
+								Key:  c.nc.Spec.SSLCerts.ServerKey,
 								Path: "server.key",
 							},
 						},
@@ -320,7 +253,7 @@ func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.CASecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.CAPublicKey,
+								Key:  c.nc.Spec.SSLCerts.CACert,
 								Path: "ca.crt",
 							},
 						},
@@ -339,7 +272,7 @@ func (c *graphdComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim,
 		return nil, nil
 	}
 
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()
 	storageRequest, err := parseStorageRequest(logRes.Requests)
 	if err != nil {
@@ -361,12 +294,8 @@ func (c *graphdComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim,
 	return claims, nil
 }
 
-func (c *graphdComponent) GenerateWorkload(
-	gvk schema.GroupVersionKind,
-	cm *corev1.ConfigMap,
-	enableEvenPodsSpread bool,
-) (*unstructured.Unstructured, error) {
-	return generateWorkload(c, gvk, cm, enableEvenPodsSpread)
+func (c *graphdComponent) GenerateWorkload(gvk schema.GroupVersionKind, cm *corev1.ConfigMap) (*unstructured.Unstructured, error) {
+	return generateWorkload(c, gvk, cm)
 }
 
 func (c *graphdComponent) GenerateService() *corev1.Service {
@@ -375,7 +304,7 @@ func (c *graphdComponent) GenerateService() *corev1.Service {
 
 func (c *graphdComponent) GenerateConfigMap() *corev1.ConfigMap {
 	cm := generateConfigMap(c)
-	configKey := getCmKey(c.Type().String())
+	configKey := getCmKey(c.ComponentType().String())
 	cm.Data[configKey] = GraphdConfigTemplate
 	return cm
 }

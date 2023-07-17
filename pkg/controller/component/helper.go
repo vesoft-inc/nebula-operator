@@ -47,7 +47,7 @@ const (
 )
 
 func syncComponentStatus(
-	component v1alpha1.NebulaClusterComponentter,
+	component v1alpha1.NebulaClusterComponent,
 	status *v1alpha1.ComponentStatus,
 	workload *unstructured.Unstructured,
 ) error {
@@ -60,7 +60,7 @@ func syncComponentStatus(
 		return err
 	}
 
-	image := getContainerImage(workload, component.Type().String())
+	image := getContainerImage(workload, component.ComponentType().String())
 	if image != "" && strings.Contains(image, ":") {
 		status.Version = strings.Split(image, ":")[1]
 	}
@@ -153,7 +153,7 @@ func serviceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
 }
 
 func syncConfigMap(
-	component v1alpha1.NebulaClusterComponentter,
+	component v1alpha1.NebulaClusterComponent,
 	cmClient kube.ConfigMap,
 	template,
 	cmKey string,
@@ -236,7 +236,7 @@ func getContainerImage(
 }
 
 func isUpdating(
-	component v1alpha1.NebulaClusterComponentter,
+	component v1alpha1.NebulaClusterComponent,
 	podClient kube.Pod,
 	obj *unstructured.Unstructured,
 ) (bool, error) {
@@ -277,7 +277,7 @@ func setPartition(obj *unstructured.Unstructured, upgradeOrdinal int64, advanced
 	return extender.SetUpdatePartition(obj, upgradeOrdinal, InPlaceGracePeriodSeconds, advanced)
 }
 
-func getNextUpdatePod(component v1alpha1.NebulaClusterComponentter, replicas int32, podClient kube.Pod) (int32, error) {
+func getNextUpdatePod(component v1alpha1.NebulaClusterComponent, replicas int32, podClient kube.Pod) (int32, error) {
 	namespace := component.GetNamespace()
 	updateRevision := component.GetUpdateRevision()
 	for index := replicas - 1; index >= 0; index-- {

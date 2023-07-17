@@ -8,9 +8,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/maputil"
 )
 
 const defaultMetricsPort = 9100
@@ -63,7 +66,7 @@ func (e *nebulaExporter) syncExporterDeployment(nc *v1alpha1.NebulaCluster) erro
 func (e *nebulaExporter) generateService(nc *v1alpha1.NebulaCluster) *corev1.Service {
 	namespace := nc.GetNamespace()
 	svcName := fmt.Sprintf("%s-exporter-svc", nc.GetName())
-	labels := nc.GetExporterLabels()
+	labels := e.getExporterLabels(nc)
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -92,18 +95,18 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 	namespace := nc.GetNamespace()
 	ncName := nc.GetName()
 	deployName := fmt.Sprintf("%s-exporter", nc.GetName())
-	labels := nc.GetExporterLabels()
-	livenessProbe := nc.GetExporterLivenessProbe()
+	labels := e.getExporterLabels(nc)
+	livenessProbe := nc.ExporterComponent().ComponentSpec().LivenessProbe()
 	containers := make([]corev1.Container, 0)
 
 	container := corev1.Container{
 		Name:  "ng-exporter",
-		Image: nc.GetExporterImage(),
+		Image: nc.ExporterComponent().ComponentSpec().PodImage(),
 		Args: []string{
 			"--listen-address=0.0.0.0:9100", fmt.Sprintf("--namespace=%s", namespace),
-			fmt.Sprintf("--cluster=%s", ncName), fmt.Sprintf("--max-request=%d", nc.Spec.Exporter.MaxRequests),
+			fmt.Sprintf("--cluster=%s", ncName), fmt.Sprintf("--max-request=%d", nc.ExporterComponent().MaxRequests()),
 		},
-		Env: nc.GetExporterEnvVars(),
+		Env: nc.ExporterComponent().ComponentSpec().PodEnvVars(),
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "metrics",
@@ -131,7 +134,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 		}
 	}
 
-	resources := nc.GetExporterResources()
+	resources := nc.ExporterComponent().ComponentSpec().Resources()
 	if resources != nil {
 		container.Resources = *resources
 	}
@@ -142,7 +145,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 	}
 
 	containers = append(containers, container)
-	containers = append(containers, nc.GetExporterSidecarContainers()...)
+	containers = append(containers, nc.ExporterComponent().ComponentSpec().SidecarContainers()...)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -152,30 +155,38 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 			OwnerReferences: nc.GenerateOwnerReferences(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: nc.GetExporterReplicas(),
+			Replicas: pointer.Int32(nc.ExporterComponent().ComponentSpec().Replicas()),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
-					Annotations: nc.GetExporterPodAnnotations(),
+					Annotations: nc.ExporterComponent().ComponentSpec().PodAnnotations(),
 				},
 				Spec: corev1.PodSpec{
 					SchedulerName:    nc.Spec.SchedulerName,
-					NodeSelector:     nc.GetExporterNodeSelector(),
-					InitContainers:   nc.GetExporterInitContainers(),
+					NodeSelector:     nc.ExporterComponent().ComponentSpec().NodeSelector(),
+					InitContainers:   nc.ExporterComponent().ComponentSpec().InitContainers(),
 					Containers:       containers,
 					ImagePullSecrets: nc.Spec.ImagePullSecrets,
-					Affinity:         nc.GetExporterAffinity(),
-					Tolerations:      nc.GetExporterTolerations(),
-					Volumes:          nc.GetExporterSidecarVolumes(),
+					Affinity:         nc.ExporterComponent().ComponentSpec().Affinity(),
+					Tolerations:      nc.ExporterComponent().ComponentSpec().Tolerations(),
+					Volumes:          nc.ExporterComponent().ComponentSpec().SidecarVolumes(),
 				},
 			},
 		},
 	}
 
 	return deployment
+}
+
+func (e *nebulaExporter) getExporterLabels(nc *v1alpha1.NebulaCluster) map[string]string {
+	selector := label.New().Cluster(nc.GetName()).Exporter()
+	labels := selector.Copy().Labels()
+	podLabels := nc.Spec.Exporter.ComponentSpec.Labels
+
+	return maputil.MergeStringMaps(true, labels, podLabels)
 }
 
 type FakeNebulaExporter struct {

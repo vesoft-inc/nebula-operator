@@ -40,7 +40,7 @@ const (
 	defaultStoragedImage      = "vesoft/nebula-storaged"
 )
 
-var _ NebulaClusterComponentter = &storagedComponent{}
+var _ NebulaClusterComponent = &storagedComponent{}
 
 // +k8s:deepcopy-gen=false
 func newStoragedComponent(nc *NebulaCluster) *storagedComponent {
@@ -60,24 +60,12 @@ func (c *storagedComponent) GetUpdateRevision() string {
 	return c.nc.Status.Storaged.Workload.UpdateRevision
 }
 
-func (c *storagedComponent) GetReplicas() int32 {
-	return *c.nc.Spec.Storaged.Replicas
-}
-
-func (c *storagedComponent) GetImage() string {
-	return getImage(c.nc.Spec.Storaged.Image, c.nc.Spec.Storaged.Version, defaultStoragedImage)
-}
-
 func (c *storagedComponent) GetConfig() map[string]string {
 	return c.nc.Spec.Storaged.Config
 }
 
 func (c *storagedComponent) GetConfigMapKey() string {
-	return getCmKey(c.Type().String())
-}
-
-func (c *storagedComponent) GetResources() *corev1.ResourceRequirements {
-	return getResources(c.nc.Spec.Storaged.Resources)
+	return getCmKey(c.ComponentType().String())
 }
 
 func (c *storagedComponent) GetLogStorageClass() *string {
@@ -117,61 +105,6 @@ func (c *storagedComponent) GetDataStorageResources() (*corev1.ResourceRequireme
 		resources.Requests.Storage().Add(storageRequest.Requests.Storage().DeepCopy())
 	}
 	return &resources, nil
-}
-
-func (c *storagedComponent) GetPodEnvVars() []corev1.EnvVar {
-	return c.nc.Spec.Storaged.PodSpec.EnvVars
-}
-
-func (c *storagedComponent) GetPodAnnotations() map[string]string {
-	return c.nc.Spec.Storaged.PodSpec.Annotations
-}
-
-func (c *storagedComponent) GetPodLabels() map[string]string {
-	return c.nc.Spec.Storaged.PodSpec.Labels
-}
-
-func (c *storagedComponent) NodeSelector() map[string]string {
-	selector := map[string]string{}
-	for k, v := range c.nc.Spec.NodeSelector {
-		selector[k] = v
-	}
-	for k, v := range c.nc.Spec.Storaged.PodSpec.NodeSelector {
-		selector[k] = v
-	}
-	return selector
-}
-
-func (c *storagedComponent) Affinity() *corev1.Affinity {
-	affinity := c.nc.Spec.Storaged.PodSpec.Affinity
-	if affinity == nil {
-		affinity = c.nc.Spec.Affinity
-	}
-	return affinity
-}
-
-func (c *storagedComponent) Tolerations() []corev1.Toleration {
-	tolerations := c.nc.Spec.Storaged.PodSpec.Tolerations
-	if len(tolerations) == 0 {
-		return c.nc.Spec.Tolerations
-	}
-	return tolerations
-}
-
-func (c *storagedComponent) InitContainers() []corev1.Container {
-	return c.nc.Spec.Storaged.PodSpec.InitContainers
-}
-
-func (c *storagedComponent) SidecarContainers() []corev1.Container {
-	return c.nc.Spec.Storaged.PodSpec.SidecarContainers
-}
-
-func (c *storagedComponent) SidecarVolumes() []corev1.Volume {
-	return c.nc.Spec.Storaged.PodSpec.SidecarVolumes
-}
-
-func (c *storagedComponent) ReadinessProbe() *corev1.Probe {
-	return c.nc.Spec.Storaged.PodSpec.ReadinessProbe
 }
 
 func (c *storagedComponent) IsSSLEnabled() bool {
@@ -215,7 +148,7 @@ func (c *storagedComponent) GetEndpoints(portName string) []string {
 	return getConnAddresses(
 		c.GetConnAddress(portName),
 		c.GetName(),
-		c.GetReplicas())
+		c.ComponentSpec().Replicas())
 }
 
 func (c *storagedComponent) IsReady() bool {
@@ -248,7 +181,7 @@ func (c *storagedComponent) GenerateContainerPorts() []corev1.ContainerPort {
 }
 
 func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	mounts := make([]corev1.VolumeMount, 0)
 
 	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
@@ -305,7 +238,7 @@ func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 }
 
 func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	volumes := make([]corev1.Volume, 0)
 
 	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
@@ -341,7 +274,7 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.ServerPublicKey,
+								Key:  c.nc.Spec.SSLCerts.ServerCert,
 								Path: "server.crt",
 							},
 						},
@@ -355,7 +288,7 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.ServerSecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.ServerPrivateKey,
+								Key:  c.nc.Spec.SSLCerts.ServerKey,
 								Path: "server.key",
 							},
 						},
@@ -369,7 +302,7 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 						SecretName: c.nc.Spec.SSLCerts.CASecret,
 						Items: []corev1.KeyToPath{
 							{
-								Key:  c.nc.Spec.SSLCerts.CAPublicKey,
+								Key:  c.nc.Spec.SSLCerts.CACert,
 								Path: "ca.crt",
 							},
 						},
@@ -384,7 +317,7 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 }
 
 func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error) {
-	componentType := c.Type().String()
+	componentType := c.ComponentType().String()
 	claims := make([]corev1.PersistentVolumeClaim, 0)
 
 	dataClaims, err := storageDataVolumeClaims(c.nc.Spec.Storaged.DataVolumeClaims, componentType)
@@ -415,12 +348,8 @@ func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClai
 	return claims, nil
 }
 
-func (c *storagedComponent) GenerateWorkload(
-	gvk schema.GroupVersionKind,
-	cm *corev1.ConfigMap,
-	enableEvenPodsSpread bool,
-) (*unstructured.Unstructured, error) {
-	return generateWorkload(c, gvk, cm, enableEvenPodsSpread)
+func (c *storagedComponent) GenerateWorkload(gvk schema.GroupVersionKind, cm *corev1.ConfigMap) (*unstructured.Unstructured, error) {
+	return generateWorkload(c, gvk, cm)
 }
 
 func (c *storagedComponent) GenerateService() *corev1.Service {
@@ -429,7 +358,7 @@ func (c *storagedComponent) GenerateService() *corev1.Service {
 
 func (c *storagedComponent) GenerateConfigMap() *corev1.ConfigMap {
 	cm := generateConfigMap(c)
-	configKey := getCmKey(c.Type().String())
+	configKey := getCmKey(c.ComponentType().String())
 	cm.Data[configKey] = StoragedConfigTemplate
 	return cm
 }

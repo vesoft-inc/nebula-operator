@@ -70,6 +70,16 @@ spec:
   exporter:
     replicas: 1
     maxRequests: 20
+  agent:
+    image: vesoft/nebula-agent
+    version: latest
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
   reference:
     name: statefulsets.apps
     version: v1

@@ -103,6 +103,8 @@ type NebulaClusterSpec struct {
 
 	// SSLCerts defines SSL certs load into secret
 	SSLCerts *SSLCertsSpec `json:"sslCerts,omitempty"`
+
+	Agent *AgentContainerSpec `json:"agent,omitempty"`
 }
 
 // NebulaClusterStatus defines the observed state of NebulaCluster
@@ -219,6 +221,22 @@ type ExporterSpec struct {
 	// +kubebuilder:default=40
 	// +optional
 	MaxRequests int32 `json:"maxRequests,omitempty"`
+}
+
+// AgentContainerSpec defines the desired state of Agent
+type AgentContainerSpec struct {
+
+	// url for docker image
+	// +optional
+	Image string `json:"image,omitempty"`
+
+	// Version tag for docker images
+	// +optional
+	Version string `json:"version,omitempty"`
+
+	// K8S resources settings.
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type LicenseSpec struct {

@@ -166,8 +166,8 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 		},
 		Spec: v1alpha1.NebulaClusterSpec{
 			Graphd: &v1alpha1.GraphdSpec{
-				PodSpec: v1alpha1.PodSpec{
-					Replicas: pointer.Int32Ptr(1),
+				ComponentSpec: v1alpha1.ComponentSpec{
+					Replicas: pointer.Int32(1),
 					Resources: &corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("1"),
@@ -179,8 +179,8 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 				},
 			},
 			Metad: &v1alpha1.MetadSpec{
-				PodSpec: v1alpha1.PodSpec{
-					Replicas: pointer.Int32Ptr(1),
+				ComponentSpec: v1alpha1.ComponentSpec{
+					Replicas: pointer.Int32(1),
 					Resources: &corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("1"),
@@ -192,8 +192,8 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 				},
 			},
 			Storaged: &v1alpha1.StoragedSpec{
-				PodSpec: v1alpha1.PodSpec{
-					Replicas: pointer.Int32Ptr(1),
+				ComponentSpec: v1alpha1.ComponentSpec{
+					Replicas: pointer.Int32(1),
 					Resources: &corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("1"),

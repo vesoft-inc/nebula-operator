@@ -21,7 +21,7 @@ const (
 	// AnnPVCDeferDeletingKey is pvc defer deletion annotation key used in PVC for defer deleting PVC
 	AnnPVCDeferDeletingKey = "nebula-graph.io/pvc-defer-deleting"
 	// AnnPodNameKey is pod name annotation key used in PV/PVC for synchronizing nebula cluster meta info
-	AnnPodNameKey string = "nebula-graph.io/pod-name"
+	AnnPodNameKey = "nebula-graph.io/pod-name"
 	// AnnLastSyncTimestampKey is annotation key to indicate the last timestamp the operator sync the workload
 	AnnLastSyncTimestampKey = "nebula-graph.io/sync-timestamp"
 	// AnnHaModeKey is annotation key to indicate whether in ha mode

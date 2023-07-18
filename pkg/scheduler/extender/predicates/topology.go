@@ -82,7 +82,7 @@ func (t *topology) Filter(pod *corev1.Pod, preNodes []corev1.Node) ([]corev1.Nod
 		return nil, fmt.Errorf("waiting for Pod %s/%s scheduling", pod.GetNamespace(), nextPodName)
 	}
 
-	replicas := component.GetReplicas()
+	replicas := component.ComponentSpec().Replicas()
 	maxSkew := int(math.Ceil(float64(replicas) / float64(len(preNodes))))
 
 	nodeMap := make(map[string]*Record)
@@ -122,13 +122,13 @@ func (t *topology) Filter(pod *corev1.Pod, preNodes []corev1.Node) ([]corev1.Nod
 	return resNodes, nil
 }
 
-func getNextSchedulingPodName(component v1alpha1.NebulaClusterComponentter, pods []corev1.Pod) (string, error) {
+func getNextSchedulingPodName(component v1alpha1.NebulaClusterComponent, pods []corev1.Pod) (string, error) {
 	podMap := make(map[string]*corev1.Pod, len(pods))
 	for i := range pods {
 		podMap[pods[i].GetName()] = &pods[i]
 	}
 
-	replicas := component.GetReplicas()
+	replicas := component.ComponentSpec().Replicas()
 	for i := int32(0); i < replicas; i++ {
 		podName := component.GetPodName(i)
 		pod, ok := podMap[podName]

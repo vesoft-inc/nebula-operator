@@ -57,8 +57,8 @@ func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1al
 		},
 		Spec: v1alpha1.NebulaClusterSpec{
 			Graphd: &v1alpha1.GraphdSpec{
-				PodSpec: v1alpha1.PodSpec{
-					Replicas: pointer.Int32Ptr(1),
+				ComponentSpec: v1alpha1.ComponentSpec{
+					Replicas: pointer.Int32(1),
 					Image:    "vesoft/nebula-graphd",
 					Version:  nebulaVersion,
 				},
@@ -72,8 +72,8 @@ func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1al
 				},
 			},
 			Metad: &v1alpha1.MetadSpec{
-				PodSpec: v1alpha1.PodSpec{
-					Replicas: pointer.Int32Ptr(1),
+				ComponentSpec: v1alpha1.ComponentSpec{
+					Replicas: pointer.Int32(1),
 					Image:    "vesoft/nebula-metad",
 					Version:  nebulaVersion,
 				},
@@ -95,8 +95,8 @@ func getNebulaCluster(runtimeClient client.Client, namespace, name string) *v1al
 				},
 			},
 			Storaged: &v1alpha1.StoragedSpec{
-				PodSpec: v1alpha1.PodSpec{
-					Replicas: pointer.Int32Ptr(1),
+				ComponentSpec: v1alpha1.ComponentSpec{
+					Replicas: pointer.Int32(1),
 					Image:    "vesoft/nebula-storaged",
 					Version:  nebulaVersion,
 				},

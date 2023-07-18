@@ -75,8 +75,8 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 			nc: &v1alpha1.NebulaCluster{
 				Spec: v1alpha1.NebulaClusterSpec{
 					Graphd: &v1alpha1.GraphdSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 					Metad:    &v1alpha1.MetadSpec{},
@@ -116,13 +116,13 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 			nc: &v1alpha1.NebulaCluster{
 				Spec: v1alpha1.NebulaClusterSpec{
 					Graphd: &v1alpha1.GraphdSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 					Metad: &v1alpha1.MetadSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 					Storaged: &v1alpha1.StoragedSpec{},
@@ -163,18 +163,18 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 			nc: &v1alpha1.NebulaCluster{
 				Spec: v1alpha1.NebulaClusterSpec{
 					Graphd: &v1alpha1.GraphdSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 					Metad: &v1alpha1.MetadSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 					Storaged: &v1alpha1.StoragedSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 				},
@@ -216,18 +216,18 @@ func Test_nebulaClusterConditionUpdater_updateReadyCondition(t *testing.T) {
 			nc: &v1alpha1.NebulaCluster{
 				Spec: v1alpha1.NebulaClusterSpec{
 					Graphd: &v1alpha1.GraphdSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 					Metad: &v1alpha1.MetadSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 					Storaged: &v1alpha1.StoragedSpec{
-						PodSpec: v1alpha1.PodSpec{
-							Replicas: pointer.Int32Ptr(3),
+						ComponentSpec: v1alpha1.ComponentSpec{
+							Replicas: pointer.Int32(3),
 						},
 					},
 				},

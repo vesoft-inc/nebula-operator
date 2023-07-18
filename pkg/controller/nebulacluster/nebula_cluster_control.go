@@ -82,6 +82,7 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 		return errorutils.NewAggregate(errs)
 	}
 
+	nc.Status.ObservedGeneration = nc.Generation
 	if err := c.nebulaClient.UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
 		errs = append(errs, err)
 	}

@@ -44,7 +44,6 @@ const (
 	DefaultAgentPortGRPC      = 8888
 	agentPortNameGRPC         = "grpc"
 	defaultAgentImage         = "vesoft/nebula-agent:latest"
-	defaultExporterImage      = "vesoft/nebula-stats-exporter"
 )
 
 func getComponentName(clusterName string, typ ComponentType) string {

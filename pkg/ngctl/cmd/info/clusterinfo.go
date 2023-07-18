@@ -94,7 +94,7 @@ func NewNebulaClusterInfo(clusterName, namespace string, runtimeCli client.Clien
 		Phase:         string(nc.Status.Graphd.Phase),
 		Replicas:      nc.Status.Graphd.Workload.Replicas,
 		ReadyReplicas: nc.Status.Graphd.Workload.ReadyReplicas,
-		Image:         nc.GraphdComponent().GetImage(),
+		Image:         nc.GraphdComponent().ComponentSpec().PodImage(),
 	}
 	if err := setComponentInfo(&graphd, nc.GraphdComponent()); err != nil {
 		return nil, err
@@ -243,9 +243,9 @@ func (i *NebulaClusterInfo) appendEndpointsClusterIP(svc *corev1.Service) {
 	})
 }
 
-func setComponentInfo(info *NebulaComponentInfo, c appsv1alpha1.NebulaClusterComponentter) error {
-	info.Type = string(c.Type())
-	if res := c.GetResources(); res != nil {
+func setComponentInfo(info *NebulaComponentInfo, c appsv1alpha1.NebulaClusterComponent) error {
+	info.Type = string(c.ComponentType())
+	if res := c.ComponentSpec().Resources(); res != nil {
 		if cpu := res.Requests.Cpu(); cpu != nil {
 			info.CPU = *cpu
 		}
@@ -267,7 +267,7 @@ func setComponentInfo(info *NebulaComponentInfo, c appsv1alpha1.NebulaClusterCom
 			info.Storage.Add(*storage)
 		}
 	}
-	info.Image = c.GetImage()
+	info.Image = c.ComponentSpec().PodImage()
 
 	return nil
 }

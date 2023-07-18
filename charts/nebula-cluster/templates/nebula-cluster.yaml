@@ -186,6 +186,11 @@ spec:
     livenessProbe:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    maxRequests: {{ .Values.nebula.exporter.maxRequests }}
+  agent:
+    image: {{ .Values.nebula.agent.image }}
+    version: {{ .Values.nebula.agent.version }}
+    resources: {{ toYaml .Values.nebula.agent.resources | nindent 6 }}
   reference: {{ toYaml .Values.nebula.reference | nindent 4 }}
   imagePullPolicy: {{ .Values.nebula.imagePullPolicy }}
   {{- if .Values.imagePullSecrets }}

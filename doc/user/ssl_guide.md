@@ -83,19 +83,19 @@ sslCerts:
   # Name of the server cert secret
   serverSecret: "server-cert"
   # The key to server PEM encoded public key certificate, default name is tls.crt
-  serverPublicKey: ""
+  serverCert: ""
   # The key to server private key associated with given certificate, default name is tls.key
-  serverPrivateKey: ""
+  serverKey: ""
   # Name of the client cert secret
   clientSecret: "client-cert"
   # The key to server PEM encoded public key certificate, default name is tls.crt
-  clientPublicKey: ""
+  clientCert: ""
   # The key to client private key associated with given certificate, default name is tls.key
-  clientPrivateKey: ""
+  clientKey: ""
   # Name of the CA cert secret
   caSecret: "ca-cert"
   # The key to CA PEM encoded public key certificate, default name is ca.crt
-  caPublicKey: ""
+  caCert: ""
   # InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name
   insecureSkipVerify: false
 ```

@@ -4,8 +4,8 @@ metadata:
   name: aws-s3-secret
 type: Opaque
 data:
-  access-key: QVNJQVE0WFlSWFE1TlhVMlczNlUK
-  secret-key: ZFJ6OEdNcDdxenMwVGFGdExVM2RpYkk4b2hHRWRSamgvNTdzWkg3Ugo=
+  access-key: <ACCESS_KEY>
+  secret-key: <SECRET_KEY>
 ---
 apiVersion: batch/v1
 kind: Job
@@ -13,12 +13,12 @@ metadata:
   name: nebula-incr-backup
 spec:
   parallelism: 1
-  ttlSecondsAfterFinished: 60
+  ttlSecondsAfterFinished: 600
   template:
     spec:
       restartPolicy: OnFailure
       containers:
-        - image: vesoft/br-ent:v3.4.0
+        - image: vesoft/br-ent:v3.5.0
           imagePullPolicy: Always
           name: backup
           command:

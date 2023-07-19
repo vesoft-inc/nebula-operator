@@ -108,7 +108,7 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) 
 		}
 		updated, err := c.clientSet.NebulaRestore().GetNebulaRestore(ns, rt.Name)
 		if err != nil {
-			klog.Error("Fail to get NebulaRestore [%s/%s], %v", ns, name, err)
+			klog.Errorf("Fail to get NebulaRestore [%s/%s], %v", ns, name, err)
 		}
 		if err := c.deleteRestoredCluster(ns, updated.Status.ClusterName); err != nil {
 			klog.Errorf("Fail to delete NebulaCluster %v", err)

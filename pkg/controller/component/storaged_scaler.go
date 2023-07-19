@@ -140,7 +140,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	defer func() {
 		err := metaClient.Disconnect()
 		if err != nil {
-			klog.Error("meta client disconnect failed: %v", err)
+			klog.Errorf("meta client disconnect failed: %v", err)
 		}
 	}()
 

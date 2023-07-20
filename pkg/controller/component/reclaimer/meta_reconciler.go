@@ -103,7 +103,7 @@ func (m *meta) resolvePVCFromPod(pod *corev1.Pod) ([]*corev1.PersistentVolumeCla
 		}
 		pvc, err := m.clientSet.PVC().GetPVC(pod.Namespace, pvcName)
 		if err != nil {
-			klog.Error(err, "pod [%s/%s] get PVC %s failed: %v", pod.Namespace, pod.Name, pvcName, err)
+			klog.Errorf("pod [%s/%s] get PVC %s failed: %v", pod.Namespace, pod.Name, pvcName, err)
 			continue
 		}
 		pvcs = append(pvcs, pvc)

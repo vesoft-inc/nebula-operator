@@ -13,7 +13,7 @@ metadata:
   name: nebula-restore
 spec:
   containers:
-    - image: vesoft/br-ent:v3.4.0
+    - image: vesoft/br-ent:v3.5.0
       imagePullPolicy: Always
       name: restore
       command:

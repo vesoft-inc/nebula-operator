@@ -4,12 +4,12 @@ metadata:
   name: nebula-full-backup
 spec:
   parallelism: 1
-  ttlSecondsAfterFinished: 60
+  ttlSecondsAfterFinished: 600
   template:
     spec:
       restartPolicy: OnFailure
       containers:
-        - image: vesoft/br-ent:v3.4.0
+        - image: vesoft/br-ent:v3.5.0
           imagePullPolicy: Always
           name: backup
           command:

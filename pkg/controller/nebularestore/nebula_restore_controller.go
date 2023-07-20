@@ -70,7 +70,7 @@ func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
 	var restore v1alpha1.NebulaRestore
 	key := req.NamespacedName.String()
-	subCtx, cancel := context.WithTimeout(ctx, reconcileTimeOut)
+	subCtx, cancel := context.WithTimeout(ctx, time.Minute*1)
 	defer cancel()
 
 	startTime := time.Now()
@@ -115,6 +115,6 @@ func (r *Reconciler) syncNebulaRestore(restore *v1alpha1.NebulaRestore) error {
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, opts controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.NebulaRestore{}).
-		WithOptions(opts).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
 		Complete(r)
 }

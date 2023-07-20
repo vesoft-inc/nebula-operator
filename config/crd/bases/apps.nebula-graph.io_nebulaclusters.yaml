@@ -424,6 +424,44 @@ spec:
                         type: array
                     type: object
                 type: object
+              agent:
+                properties:
+                  image:
+                    type: string
+                  resources:
+                    properties:
+                      claims:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
+                  version:
+                    type: string
+                type: object
               enableBR:
                 type: boolean
               enablePVReclaim:
@@ -11139,49 +11177,19 @@ spec:
                 type: array
               graphd:
                 properties:
-                  conditions:
-                    items:
-                      properties:
-                        lastTransitionTime:
-                          format: date-time
-                          type: string
-                        message:
-                          maxLength: 32768
-                          type: string
-                        observedGeneration:
-                          format: int64
-                          minimum: 0
-                          type: integer
-                        reason:
-                          maxLength: 1024
-                          minLength: 1
-                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                          type: string
-                        status:
-                          enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                          type: string
-                        type:
-                          maxLength: 316
-                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                          type: string
-                      required:
-                      - lastTransitionTime
-                      - message
-                      - reason
-                      - status
-                      - type
-                      type: object
-                    type: array
                   phase:
                     type: string
                   version:
                     type: string
                   workload:
                     properties:
+                      availableReplicas:
+                        format: int32
+                        type: integer
                       collisionCount:
+                        format: int32
+                        type: integer
+                      currentReplicas:
                         format: int32
                         type: integer
                       currentRevision:
@@ -11197,9 +11205,6 @@ spec:
                         type: integer
                       updateRevision:
                         type: string
-                      updatedReadyReplicas:
-                        format: int32
-                        type: integer
                       updatedReplicas:
                         format: int32
                         type: integer
@@ -11211,49 +11216,19 @@ spec:
                 type: object
               metad:
                 properties:
-                  conditions:
-                    items:
-                      properties:
-                        lastTransitionTime:
-                          format: date-time
-                          type: string
-                        message:
-                          maxLength: 32768
-                          type: string
-                        observedGeneration:
-                          format: int64
-                          minimum: 0
-                          type: integer
-                        reason:
-                          maxLength: 1024
-                          minLength: 1
-                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                          type: string
-                        status:
-                          enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                          type: string
-                        type:
-                          maxLength: 316
-                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                          type: string
-                      required:
-                      - lastTransitionTime
-                      - message
-                      - reason
-                      - status
-                      - type
-                      type: object
-                    type: array
                   phase:
                     type: string
                   version:
                     type: string
                   workload:
                     properties:
+                      availableReplicas:
+                        format: int32
+                        type: integer
                       collisionCount:
+                        format: int32
+                        type: integer
+                      currentReplicas:
                         format: int32
                         type: integer
                       currentRevision:
@@ -11269,9 +11244,6 @@ spec:
                         type: integer
                       updateRevision:
                         type: string
-                      updatedReadyReplicas:
-                        format: int32
-                        type: integer
                       updatedReplicas:
                         format: int32
                         type: integer
@@ -11281,48 +11253,15 @@ spec:
                     - updatedReplicas
                     type: object
                 type: object
+              observedGeneration:
+                format: int64
+                type: integer
               storaged:
                 properties:
                   balancedSpaces:
                     items:
                       format: int32
                       type: integer
-                    type: array
-                  conditions:
-                    items:
-                      properties:
-                        lastTransitionTime:
-                          format: date-time
-                          type: string
-                        message:
-                          maxLength: 32768
-                          type: string
-                        observedGeneration:
-                          format: int64
-                          minimum: 0
-                          type: integer
-                        reason:
-                          maxLength: 1024
-                          minLength: 1
-                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                          type: string
-                        status:
-                          enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                          type: string
-                        type:
-                          maxLength: 316
-                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                          type: string
-                      required:
-                      - lastTransitionTime
-                      - message
-                      - reason
-                      - status
-                      - type
-                      type: object
                     type: array
                   hostsAdded:
                     type: boolean
@@ -11341,7 +11280,13 @@ spec:
                     type: string
                   workload:
                     properties:
+                      availableReplicas:
+                        format: int32
+                        type: integer
                       collisionCount:
+                        format: int32
+                        type: integer
+                      currentReplicas:
                         format: int32
                         type: integer
                       currentRevision:
@@ -11357,9 +11302,6 @@ spec:
                         type: integer
                       updateRevision:
                         type: string
-                      updatedReadyReplicas:
-                        format: int32
-                        type: integer
                       updatedReplicas:
                         format: int32
                         type: integer

@@ -49,7 +49,7 @@ const (
 	S3SecretKey = "secret-key"
 )
 
-type Restore struct {
+type RestoreAgent struct {
 	ctx      context.Context
 	cfg      *rtutil.Config
 	sto      storage.ExternalStorage
@@ -60,7 +60,6 @@ type Restore struct {
 
 	rootURI    string
 	backupName string
-	backSuffix string
 
 	metaDir      *ng.DirInfo
 	storageHosts []*meta.ServiceInfo
@@ -78,7 +77,6 @@ var _ Manager = (*restoreManager)(nil)
 
 type restoreManager struct {
 	clientSet kube.ClientSet
-	restore   *Restore
 }
 
 func NewRestoreManager(clientSet kube.ClientSet) Manager {
@@ -127,7 +125,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		}
 		nc.Annotations = nil
 		if err := rm.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
-			klog.Error("remove cluster [%s/%s] annotations failed: %v", ns, restoredName, err)
+			klog.Errorf("remove cluster [%s/%s] annotations failed: %v", ns, restoredName, err)
 		}
 
 		return rm.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(rt,
@@ -157,11 +155,12 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		return err
 	}
 
-	if err := rm.initRestore(rt); err != nil {
+	restoreAgent, err := initRestoreAgent(rm.clientSet, rt)
+	if err != nil {
 		return err
 	}
 
-	if err := rm.loadCluster(original, restored, options); err != nil {
+	if err := rm.loadCluster(original, restored, restoreAgent, options); err != nil {
 		return err
 	}
 
@@ -169,21 +168,21 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		return err
 	}
 
-	if err := rm.restore.loadBakMetas(rm.restore.backupName); err != nil {
+	if err := restoreAgent.loadBakMetas(restoreAgent.backupName); err != nil {
 		return err
 	}
 	klog.Infof("[%s/%s] load backup metad file successfully", ns, restoredName)
 
-	if err := rm.restore.checkTopology(rm.restore.bakMetas[0], rm.restore.storageHosts); err != nil {
+	if err := restoreAgent.checkTopology(); err != nil {
 		return err
 	}
 
 	if !condition.IsRestoreMetadComplete(rt) {
-		if !rm.endpointsConnected(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)) {
+		if !rm.endpointsConnected(restoreAgent, restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)) {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for metad init agent are connected", ns, restoredName)
 		}
 
-		if err := rm.restore.downloadMetaData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)); err != nil {
+		if err := restoreAgent.downloadMetaData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)); err != nil {
 			klog.Errorf("download metad files failed: %v", err)
 			return err
 		}
@@ -198,9 +197,9 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for metad running", ns, restoredName)
 		}
 
-		hostPairs := rm.restore.genHostPairs(rm.restore.bakMetas[0], restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift))
+		hostPairs := restoreAgent.genHostPairs(restoreAgent.bakMetas[0], restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift))
 		metaEndpoints := restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)
-		restoreResp, err := rm.restore.restoreMeta(rm.restore.bakMetas[0], hostPairs, metaEndpoints, options)
+		restoreResp, err := restoreAgent.restoreMeta(restoreAgent.bakMetas[0], hostPairs, metaEndpoints, options)
 		if err != nil {
 			klog.Errorf("restore metad data [%s/%s] failed, error: %v", ns, restoredName, err)
 			return err
@@ -231,11 +230,11 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 	}
 
 	if !condition.IsRestoreStoragedComplete(rt) {
-		if !rm.endpointsConnected(restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift)) {
+		if !rm.endpointsConnected(restoreAgent, restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift)) {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for storaged init agent are connected", ns, restoredName)
 		}
 
-		checkpoints, err := rm.restore.downloadStorageData(rt.Status.Partitions, rm.restore.storageHosts)
+		checkpoints, err := restoreAgent.downloadStorageData(rt.Status.Partitions, restoreAgent.storageHosts)
 		if err != nil {
 			klog.Errorf("download storaged files failed: %v", err)
 			return err
@@ -243,7 +242,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 
 		klog.Infof("restoring [%s/%s] in stage1, download storaged files successfully", ns, restoredName)
 
-		if err := rm.restore.playBackStorageData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift), rm.restore.storageHosts); err != nil {
+		if err := restoreAgent.playBackStorageData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift), restoreAgent.storageHosts); err != nil {
 			return err
 		}
 
@@ -275,11 +274,11 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for cluster ready", ns, restoredName)
 	}
 
-	if !rm.endpointsConnected(restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift)) {
+	if !rm.endpointsConnected(restoreAgent, restored.GetStoragedEndpoints(v1alpha1.StoragedPortNameThrift)) {
 		return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for storaged sidecar agent are connected", ns, restoredName)
 	}
 
-	if err := rm.restore.removeDownloadCheckpoints(rt.Status.Checkpoints); err != nil {
+	if err := restoreAgent.removeDownloadCheckpoints(rt.Status.Checkpoints); err != nil {
 		klog.Errorf("remove downloaded checkpoints failed: %v", err)
 		return err
 	}
@@ -294,7 +293,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 	return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage2, waiting for cluster ready", ns, restoredName)
 }
 
-func (rm *restoreManager) loadCluster(original, restored *v1alpha1.NebulaCluster, options []nebula.Option) error {
+func (rm *restoreManager) loadCluster(original, restored *v1alpha1.NebulaCluster, restoreAgent *RestoreAgent, options []nebula.Option) error {
 	mc, err := nebula.NewMetaClient([]string{original.GetMetadThriftConnAddress()}, options...)
 	if err != nil {
 		return err
@@ -310,19 +309,19 @@ func (rm *restoreManager) loadCluster(original, restored *v1alpha1.NebulaCluster
 		return err
 	}
 
-	rm.restore.metaDir = hosts.GetMetas()[0].Dir
-	rm.replaceStorageHosts(hosts.GetStorages(), restored)
+	restoreAgent.metaDir = hosts.GetMetas()[0].Dir
+	rm.replaceStorageHosts(hosts.GetStorages(), restored, restoreAgent)
 
-	klog.Infof("restore metad dir info, root: %s data: %s", string(rm.restore.metaDir.Root), string(rm.restore.metaDir.Data[0]))
+	klog.Infof("restore metad dir info, root: %s data: %s", string(restoreAgent.metaDir.Root), string(restoreAgent.metaDir.Data[0]))
 
 	return nil
 }
 
-func (rm *restoreManager) replaceStorageHosts(original []*meta.ServiceInfo, restored *v1alpha1.NebulaCluster) {
+func (rm *restoreManager) replaceStorageHosts(original []*meta.ServiceInfo, restored *v1alpha1.NebulaCluster, restoreAgent *RestoreAgent) {
 	for i := range original {
 		original[i].Addr.Host = restored.StoragedComponent().GetPodFQDN(int32(i))
 	}
-	rm.restore.storageHosts = original
+	restoreAgent.storageHosts = original
 }
 
 func (rm *restoreManager) genNebulaCluster(restoredName string, rt *v1alpha1.NebulaRestore, original *v1alpha1.NebulaCluster) *v1alpha1.NebulaCluster {
@@ -350,17 +349,16 @@ func (rm *restoreManager) genNebulaCluster(restoredName string, rt *v1alpha1.Neb
 	return nc
 }
 
-func (rm *restoreManager) initRestore(restore *v1alpha1.NebulaRestore) error {
-	var err error
+func initRestoreAgent(clientSet kube.ClientSet, restore *v1alpha1.NebulaRestore) (*RestoreAgent, error) {
 	backend := &pb.Backend{}
 	if err := backend.SetUri(fmt.Sprintf("s3://%s", restore.Spec.BR.S3.Bucket)); err != nil {
-		return err
+		return nil, err
 	}
 	backend.GetS3().Region = restore.Spec.BR.S3.Region
 	backend.GetS3().Endpoint = restore.Spec.BR.S3.Endpoint
-	accessKey, secretKey, err := rm.getS3Key(restore.Namespace, restore.Spec.BR.S3.SecretName)
+	accessKey, secretKey, err := getS3Key(clientSet, restore.Namespace, restore.Spec.BR.S3.SecretName)
 	if err != nil {
-		return fmt.Errorf("get S3 key failed: %v", err)
+		return nil, fmt.Errorf("get S3 key failed: %v", err)
 	}
 	backend.GetS3().AccessKey = accessKey
 	backend.GetS3().SecretKey = secretKey
@@ -371,22 +369,21 @@ func (rm *restoreManager) initRestore(restore *v1alpha1.NebulaRestore) error {
 		Backend:     backend,
 	}
 
-	if rm.restore == nil {
-		if rm.restore, err = newRestore(cfg); err != nil {
-			return err
-		}
+	ra, err := newRestoreAgent(cfg)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	return ra, nil
 }
 
-func newRestore(cfg *rtutil.Config) (*Restore, error) {
+func newRestoreAgent(cfg *rtutil.Config) (*RestoreAgent, error) {
 	sto, err := storage.New(cfg.Backend)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Restore{
+	return &RestoreAgent{
 		ctx:        context.TODO(),
 		cfg:        cfg,
 		sto:        sto,
@@ -396,15 +393,15 @@ func newRestore(cfg *rtutil.Config) (*Restore, error) {
 	}, nil
 }
 
-func (r *Restore) checkTopology(bak *meta.BackupMeta, storageHosts []*meta.ServiceInfo) error {
-	if len(storageHosts) != len(bak.GetStorageHosts()) {
+func (r *RestoreAgent) checkTopology() error {
+	if len(r.bakMetas[0].GetStorageHosts()) != len(r.storageHosts) {
 		return fmt.Errorf("the cluster topology of storaged count must be consistent")
 	}
 
 	return nil
 }
 
-func (r *Restore) loadBakMetas(backupName string) error {
+func (r *RestoreAgent) loadBakMetas(backupName string) error {
 	// check backup dir existence
 	rootURI, err := rtutil.UriJoin(r.cfg.Backend.Uri(), backupName)
 	if err != nil {
@@ -437,7 +434,7 @@ func (r *Restore) loadBakMetas(backupName string) error {
 	return nil
 }
 
-func (r *Restore) downloadMetaData(metaEndpoints []string) error {
+func (r *RestoreAgent) downloadMetaData(metaEndpoints []string) error {
 	// {backupRoot}/{backupName}/meta/*.sst
 	externalUri, _ := rtutil.UriJoin(r.rootURI, r.backupName, "meta")
 	backend, err := r.sto.GetDir(r.ctx, externalUri)
@@ -473,7 +470,7 @@ func (r *Restore) downloadMetaData(metaEndpoints []string) error {
 	return nil
 }
 
-func (r *Restore) downloadStorageData(parts map[string][]*ng.HostAddr, storageHosts []*meta.ServiceInfo) (map[string]map[string]string, error) {
+func (r *RestoreAgent) downloadStorageData(parts map[string][]*ng.HostAddr, storageHosts []*meta.ServiceInfo) (map[string]map[string]string, error) {
 	// checkpoints save the download checkpoint paths, make cleanup restore data easier
 	checkpoints := make(map[string]map[string]string)
 
@@ -543,7 +540,7 @@ func (r *Restore) downloadStorageData(parts map[string][]*ng.HostAddr, storageHo
 	return checkpoints, group.Wait()
 }
 
-func (r *Restore) restoreMeta(backup *meta.BackupMeta, storageMap map[string]string, metaEndpoints []string, options []nebula.Option) (*meta.RestoreMetaResp, error) {
+func (r *RestoreAgent) restoreMeta(backup *meta.BackupMeta, storageMap map[string]string, metaEndpoints []string, options []nebula.Option) (*meta.RestoreMetaResp, error) {
 	addrMap := make([]*meta.HostPair, 0, len(storageMap))
 	for from, to := range storageMap {
 		fromAddr, err := rtutil.ParseAddr(from)
@@ -593,7 +590,7 @@ func (r *Restore) restoreMeta(backup *meta.BackupMeta, storageMap map[string]str
 }
 
 // genHostPairs generate old:new storage host pairs
-func (r *Restore) genHostPairs(backup *meta.BackupMeta, restoreHosts []string) map[string]string {
+func (r *RestoreAgent) genHostPairs(backup *meta.BackupMeta, restoreHosts []string) map[string]string {
 	hostPairs := make(map[string]string)
 	backupHosts := make([]string, 0)
 
@@ -611,7 +608,7 @@ func (r *Restore) genHostPairs(backup *meta.BackupMeta, restoreHosts []string) m
 	return hostPairs
 }
 
-func (r *Restore) playBackStorageData(metaEndpoints []string, storageHosts []*meta.ServiceInfo) error {
+func (r *RestoreAgent) playBackStorageData(metaEndpoints []string, storageHosts []*meta.ServiceInfo) error {
 	group := async.NewGroup(context.TODO(), r.cfg.Concurrency)
 	for _, s := range storageHosts {
 		agent, err := r.agentMgr.GetAgent(s.GetAddr())
@@ -661,7 +658,7 @@ func (r *Restore) playBackStorageData(metaEndpoints []string, storageHosts []*me
 	return nil
 }
 
-func (r *Restore) removeDownloadCheckpoints(checkpoints map[string]map[string]string) error {
+func (r *RestoreAgent) removeDownloadCheckpoints(checkpoints map[string]map[string]string) error {
 	for addr, paths := range checkpoints {
 		host, err := rtutil.ParseAddr(addr)
 		if err != nil {
@@ -688,7 +685,7 @@ func (rm *restoreManager) removeInitAgentContainer(namespace, ncName string) err
 	}
 
 	updated.SetAnnotations(map[string]string{annotation.AnnRestoreStageKey: annotation.AnnRestoreStage2Val})
-	updated.Spec.Storaged.EnableForceUpdate = pointer.Bool(false)
+	updated.Spec.Storaged.EnableForceUpdate = nil
 
 	m := make([]corev1.Container, 0)
 	for _, c := range updated.Spec.Metad.InitContainers {
@@ -740,14 +737,14 @@ func (rm *restoreManager) updateClusterAnnotations(namespace, ncName string, ann
 	return nil
 }
 
-func (rm *restoreManager) endpointsConnected(endpoints []string) bool {
+func (rm *restoreManager) endpointsConnected(restoreAgent *RestoreAgent, endpoints []string) bool {
 	for _, ep := range endpoints {
 		host, err := rtutil.ParseAddr(ep)
 		if err != nil {
 			klog.Error(err)
 			return false
 		}
-		agent, err := rm.restore.agentMgr.GetAgent(host)
+		agent, err := restoreAgent.agentMgr.GetAgent(host)
 		if err != nil {
 			klog.Error(err)
 			return false
@@ -798,9 +795,9 @@ func (rm *restoreManager) getRestoredName(rt *v1alpha1.NebulaRestore) (string, e
 	return rt.Status.ClusterName, nil
 }
 
-func (rm *restoreManager) getS3Key(namespace, secretName string) (accessKey string, secretKey string, err error) {
+func getS3Key(clientSet kube.ClientSet, namespace, secretName string) (accessKey string, secretKey string, err error) {
 	var secret *corev1.Secret
-	secret, err = rm.clientSet.Secret().GetSecret(namespace, secretName)
+	secret, err = clientSet.Secret().GetSecret(namespace, secretName)
 	if err != nil {
 		return
 	}

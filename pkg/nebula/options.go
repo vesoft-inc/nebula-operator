@@ -61,6 +61,7 @@ func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error)
 		return nil, err
 	}
 	tlsConfig.InsecureSkipVerify = nc.InsecureSkipVerify()
+	tlsConfig.MaxVersion = tls.VersionTLS12
 	options = append(options, SetTLSConfig(tlsConfig))
 	options = append(options, opts...)
 	return options, nil

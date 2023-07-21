@@ -17,123 +17,128 @@ spec:
     singular: nebularestore
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - description: The current status of the restore
-      jsonPath: .status.phase
-      name: Status
-      type: string
-    - description: The time at which the restore was started
-      jsonPath: .status.timeStarted
-      name: Started
-      type: date
-    - description: The time at which the restore was completed
-      jsonPath: .status.timeCompleted
-      name: Completed
-      type: date
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-          kind:
-            type: string
-          metadata:
-            type: object
-          spec:
-            properties:
-              br:
-                properties:
-                  backupName:
-                    type: string
-                  clusterName:
-                    type: string
-                  clusterNamespace:
-                    type: string
-                  concurrency:
-                    format: int32
-                    type: integer
-                  s3:
-                    properties:
-                      bucket:
-                        type: string
-                      endpoint:
-                        type: string
-                      region:
-                        type: string
-                      secretName:
-                        type: string
-                    type: object
-                required:
-                - backupName
-                - clusterName
-                type: object
-              nodeSelector:
-                additionalProperties:
-                  type: string
-                type: object
-            type: object
-          status:
-            properties:
-              checkpoints:
-                additionalProperties:
+    - additionalPrinterColumns:
+        - description: The current status of the restore
+          jsonPath: .status.phase
+          name: Status
+          type: string
+        - description: The time at which the restore was started
+          jsonPath: .status.timeStarted
+          name: Started
+          type: date
+        - description: The time at which the restore was completed
+          jsonPath: .status.timeCompleted
+          name: Completed
+          type: date
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                br:
+                  properties:
+                    backupName:
+                      type: string
+                    clusterName:
+                      type: string
+                    clusterNamespace:
+                      type: string
+                    concurrency:
+                      format: int32
+                      type: integer
+                    s3:
+                      properties:
+                        bucket:
+                          type: string
+                        endpoint:
+                          type: string
+                        region:
+                          type: string
+                        secretName:
+                          type: string
+                      type: object
+                  required:
+                    - backupName
+                    - clusterName
+                  type: object
+                nodeSelector:
                   additionalProperties:
                     type: string
                   type: object
-                type: object
-              clusterName:
-                type: string
-              conditions:
-                items:
-                  properties:
-                    lastTransitionTime:
-                      format: date-time
+              type: object
+            status:
+              properties:
+                checkpoints:
+                  additionalProperties:
+                    additionalProperties:
                       type: string
-                    lastUpdateTime:
-                      format: date-time
-                      type: string
-                    message:
-                      type: string
-                    reason:
-                      type: string
-                    status:
-                      type: string
-                    type:
-                      type: string
-                  required:
-                  - status
-                  - type
+                    type: object
+                  nullable: true
                   type: object
-                type: array
-              partitions:
-                additionalProperties:
+                clusterName:
+                  type: string
+                conditions:
                   items:
                     properties:
-                      host:
+                      lastTransitionTime:
+                        format: date-time
                         type: string
-                      port:
-                        format: int32
-                        type: integer
+                      lastUpdateTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        type: string
                     required:
-                    - host
-                    - port
+                      - status
+                      - type
                     type: object
+                  nullable: true
                   type: array
-                type: object
-              phase:
-                type: string
-              timeCompleted:
-                format: date-time
-                type: string
-              timeStarted:
-                format: date-time
-                type: string
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
+                partitions:
+                  additionalProperties:
+                    items:
+                      properties:
+                        host:
+                          type: string
+                        port:
+                          format: int32
+                          type: integer
+                      required:
+                        - host
+                        - port
+                      type: object
+                    type: array
+                  nullable: true
+                  type: object
+                phase:
+                  type: string
+                timeCompleted:
+                  format: date-time
+                  nullable: true
+                  type: string
+                timeStarted:
+                  format: date-time
+                  nullable: true
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

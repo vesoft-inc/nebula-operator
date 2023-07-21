@@ -310,9 +310,11 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 
 	mounts := c.GenerateVolumeMounts()
 	if cm != nil {
+		subPath := getCmKey(c.ComponentType().String())
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      c.GetName(),
-			MountPath: "/usr/local/nebula/etc",
+			MountPath: fmt.Sprintf("/usr/local/nebula/etc/%s", subPath),
+			SubPath:   subPath,
 		})
 	}
 

@@ -40,15 +40,15 @@ type Options struct {
 
 func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error) {
 	options := []Option{SetTimeout(DefaultTimeout)}
-	if nc.Spec.SSLCerts == nil || (nc.IsGraphdSSLEnabled() && !nc.IsMetadSSLEnabled() && !nc.IsClusterEnabled()) {
+	if nc.Spec.SSLCerts == nil || (nc.IsGraphdSSLEnabled() && !nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled()) {
 		return options, nil
 	}
 
-	if nc.IsMetadSSLEnabled() && !nc.IsClusterEnabled() {
+	if nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled() {
 		options = append(options, SetMetaTLS(true))
 		klog.Infof("cluster [%s/%s] metad SSL enabled", nc.Namespace, nc.Name)
 	}
-	if nc.IsClusterEnabled() {
+	if nc.IsClusterSSLEnabled() {
 		options = append(options, SetClusterTLS(true))
 		klog.Infof("cluster [%s/%s] SSL enabled", nc.Namespace, nc.Name)
 	}
@@ -61,6 +61,7 @@ func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error)
 		return nil, err
 	}
 	tlsConfig.InsecureSkipVerify = nc.InsecureSkipVerify()
+	tlsConfig.MaxVersion = tls.VersionTLS12
 	options = append(options, SetTLSConfig(tlsConfig))
 	options = append(options, opts...)
 	return options, nil

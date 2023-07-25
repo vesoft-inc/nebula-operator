@@ -119,7 +119,7 @@ func (nc *NebulaCluster) IsMetadSSLEnabled() bool {
 		nc.Spec.Storaged.Config["enable_meta_ssl"] == "true"
 }
 
-func (nc *NebulaCluster) IsClusterEnabled() bool {
+func (nc *NebulaCluster) IsClusterSSLEnabled() bool {
 	return nc.Spec.Graphd.Config["enable_ssl"] == "true" &&
 		nc.Spec.Metad.Config["enable_ssl"] == "true" &&
 		nc.Spec.Storaged.Config["enable_ssl"] == "true"

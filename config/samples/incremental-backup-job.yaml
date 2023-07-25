@@ -17,18 +17,19 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: nebula-image
       containers:
-        - image: vesoft/br-ent:v3.5.0
+        - image: reg.vesoft-inc.com/cloud-dev/br-ent:v3.5.1
           imagePullPolicy: Always
           name: backup
           command:
             - /bin/sh
             - -ecx
-            - exec /usr/local/bin/nebula-br backup incr
-            - --meta $META_ADDRESS:9559
-            - --base $BACKUP_NAME
-            - --storage s3://$BUCKET
-            - --s3.access_key $ACCESS_KEY
-            - --s3.secret_key $SECRET_KEY
-            - --s3.region $REGION
-            - --s3.endpoint https://s3.$REGION.amazonaws.com
+            - 'exec /usr/local/bin/br-ent incr full 
+            --meta META_ADDRESS:9559 
+            --storage s3://BUCKET 
+            --s3.access_key ACCESS_KEY 
+            --s3.secret_key SECRET_KEY 
+            --s3.region REGION 
+            --s3.endpoint https://s3.REGION.amazonaws.com'

@@ -3,7 +3,7 @@ image:
     image: vesoft/nebula-operator:v1.4.2
     imagePullPolicy: Always
   kubeRBACProxy:
-    image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+    image: bitnami/kube-rbac-proxy:0.14.2
     imagePullPolicy: Always
   kubeScheduler:
     image: registry.k8s.io/kube-scheduler:v1.24.11

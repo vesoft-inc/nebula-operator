@@ -63,6 +63,8 @@ func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 }
 
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;list
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=restores/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=restores/finalizers,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=restores,verbs=get;list;watch;create;update;patch;delete

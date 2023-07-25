@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
@@ -120,6 +121,57 @@ func getTopologySpreadConstraints(constraints []TopologySpreadConstraint, labels
 	return tscs
 }
 
+func getClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {
+	if sslCerts == nil {
+		return nil
+	}
+
+	return []corev1.Volume{
+		{
+			Name: "client-crt",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: sslCerts.ClientSecret,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  sslCerts.ClientCert,
+							Path: "client.crt",
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "client-key",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: sslCerts.ClientSecret,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  sslCerts.ClientKey,
+							Path: "client.key",
+						},
+					},
+				},
+			},
+		},
+		{
+			Name: "client-ca-crt",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: sslCerts.CASecret,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  sslCerts.CACert,
+							Path: "ca.crt",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func upgradeStatefulSet(sts *appsv1.StatefulSet) (*kruisev1alpha1.StatefulSet, error) {
 	data, err := json.Marshal(sts)
 	if err != nil {
@@ -199,45 +251,58 @@ func GenerateInitAgentContainer(c NebulaClusterComponent) corev1.Container {
 }
 
 func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Container {
+	nc := c.GetNebulaCluster()
 	componentType := c.ComponentType().String()
-	metadAddr := c.GetNebulaCluster().GetMetadThriftConnAddress()
-	agentCmd := []string{"/bin/sh", "-ecx"}
+	metadAddr := nc.GetMetadThriftConnAddress()
+
+	cmd := []string{"/bin/sh", "-ecx"}
+	initCmd := "sleep 30; exec /usr/local/bin/agent" +
+		fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC) +
+		" --ratelimit=1073741824 --debug"
+	brCmd := initCmd + " --meta=" + metadAddr
+	logCmd := "sh /logrotate.sh; /etc/init.d/cron start;"
+	logfgCmd := "sh /logrotate.sh; exec cron -f"
+
+	if nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled() {
+		initCmd += " --enable_ssl"
+		brCmd += " --enable_ssl"
+		if nc.InsecureSkipVerify() {
+			initCmd += " --insecure_skip_verify"
+			brCmd += " --insecure_skip_verify"
+		}
+	}
+
 	if init {
-		agentCmd = append(agentCmd, "exec /usr/local/bin/agent"+
-			fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
-			" --ratelimit=1073741824 --debug")
+		cmd = append(cmd, initCmd)
 	} else {
-		if c.GetNebulaCluster().IsLogRotateEnabled() && c.GetNebulaCluster().IsBREnabled() {
-			agentCmd = append(agentCmd, "sh /logrotate.sh; /etc/init.d/cron start;"+
-				" sleep 30; exec /usr/local/bin/agent"+
-				fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
-				" --meta="+metadAddr+
-				" --ratelimit=1073741824 --debug")
-		} else if c.GetNebulaCluster().IsLogRotateEnabled() {
-			agentCmd = append(agentCmd, "sh /logrotate.sh; exec cron -f")
-		} else if c.GetNebulaCluster().IsBREnabled() {
-			agentCmd = append(agentCmd, "sleep 30; exec /usr/local/bin/agent"+
-				fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC)+
-				" --meta="+metadAddr+
-				" --ratelimit=1073741824 --debug")
+		if nc.IsLogRotateEnabled() && nc.IsBREnabled() {
+			cmd = append(cmd, logCmd, brCmd)
+		} else if nc.IsLogRotateEnabled() {
+			cmd = append(cmd, logfgCmd)
+		} else if nc.IsBREnabled() {
+			cmd = append(cmd, brCmd)
 		}
 	}
 
 	agentImage := defaultAgentImage
-	if c.GetNebulaCluster().Spec.Agent.Image != "" {
-		agentImage = c.GetNebulaCluster().Spec.Agent.Image
+	if nc.Spec.Agent.Image != "" {
+		agentImage = nc.Spec.Agent.Image
 	}
-	if c.GetNebulaCluster().Spec.Agent.Version != "" {
-		agentImage = fmt.Sprintf("%s:%s", agentImage, c.GetNebulaCluster().Spec.Agent.Version)
+	if nc.Spec.Agent.Version != "" {
+		agentImage = fmt.Sprintf("%s:%s", agentImage, nc.Spec.Agent.Version)
 	}
 	container := corev1.Container{
 		Name:      AgentSidecarContainerName,
 		Image:     agentImage,
-		Command:   agentCmd,
-		Resources: c.GetNebulaCluster().Spec.Agent.Resources,
+		Command:   cmd,
+		Resources: nc.Spec.Agent.Resources,
+	}
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
 	}
 
-	if c.GetNebulaCluster().IsBREnabled() {
+	if nc.IsBREnabled() {
 		if c.ComponentType() != GraphdComponentType {
 			container.VolumeMounts = []corev1.VolumeMount{
 				{
@@ -256,8 +321,8 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		}
 	}
 
-	if c.GetNebulaCluster().IsLogRotateEnabled() {
-		logRotate := c.GetNebulaCluster().Spec.LogRotate
+	if nc.IsLogRotateEnabled() {
+		logRotate := nc.Spec.LogRotate
 		container.Env = []corev1.EnvVar{
 			{
 				Name:  "LOGROTATE_ROTATE",
@@ -274,6 +339,30 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 			MountPath: "/usr/local/nebula/logs",
 			SubPath:   "logs",
 		})
+	}
+
+	if c.IsSSLEnabled() {
+		certMounts := []corev1.VolumeMount{
+			{
+				Name:      "client-crt",
+				ReadOnly:  true,
+				MountPath: "/usr/local/certs/client.crt",
+				SubPath:   "client.crt",
+			},
+			{
+				Name:      "client-key",
+				ReadOnly:  true,
+				MountPath: "/usr/local/certs/client.key",
+				SubPath:   "client.key",
+			},
+			{
+				Name:      "client-ca-crt",
+				ReadOnly:  true,
+				MountPath: "/usr/local/certs/ca.crt",
+				SubPath:   "ca.crt",
+			},
+		}
+		container.VolumeMounts = append(container.VolumeMounts, certMounts...)
 	}
 
 	return container
@@ -302,7 +391,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 		" --ws_ip=$(hostname)." + c.GetServiceFQDN() +
 		" --daemonize=false" + dataPath
 	if c.ComponentType() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
-		flags += " --license_manager_url=" + *nc.Spec.Metad.LicenseManagerURL
+		flags += " --license_manager_url=" + pointer.StringDeref(nc.Spec.Metad.LicenseManagerURL, "")
 	}
 
 	cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
@@ -310,9 +399,11 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 
 	mounts := c.GenerateVolumeMounts()
 	if cm != nil {
+		subPath := getCmKey(c.ComponentType().String())
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      c.GetName(),
-			MountPath: "/usr/local/nebula/etc",
+			MountPath: fmt.Sprintf("/usr/local/nebula/etc/%s", subPath),
+			SubPath:   subPath,
 		})
 	}
 
@@ -395,6 +486,11 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 			},
 		})
 	}
+	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() {
+		certVolumes := getClientCertsVolume(nc.Spec.SSLCerts)
+		volumes = append(volumes, certVolumes...)
+	}
+
 	volumes = mergeVolumes(volumes, c.ComponentSpec().SidecarVolumes())
 
 	podSpec := corev1.PodSpec{

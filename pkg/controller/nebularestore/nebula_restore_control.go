@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -98,6 +99,9 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) 
 
 	err := c.restoreManager.Sync(rt)
 	if err != nil && !errors.IsReconcileError(err) {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		if err := c.restoreManager.UpdateCondition(rt, &v1alpha1.RestoreCondition{
 			Type:    v1alpha1.RestoreFailed,
 			Status:  corev1.ConditionTrue,

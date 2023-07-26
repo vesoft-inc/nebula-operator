@@ -341,7 +341,7 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		})
 	}
 
-	if c.IsSSLEnabled() {
+	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() {
 		certMounts := []corev1.VolumeMount{
 			{
 				Name:      "client-crt",

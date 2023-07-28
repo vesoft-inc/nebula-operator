@@ -18,6 +18,7 @@ package extender
 
 import (
 	"encoding/json"
+	"strings"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,7 +81,7 @@ func GetContainers(obj *unstructured.Unstructured) []map[string]interface{} {
 	return containers
 }
 
-func GetVolumeClaims(obj *unstructured.Unstructured) []map[string]interface{} {
+func GetDataVolumeClaims(obj *unstructured.Unstructured) []map[string]interface{} {
 	fields := []string{"spec", "volumeClaimTemplates"}
 	volumeClaims := make([]map[string]interface{}, 0)
 	vcs, ok, err := unstructured.NestedFieldCopy(obj.Object, fields...)
@@ -93,6 +94,12 @@ func GetVolumeClaims(obj *unstructured.Unstructured) []map[string]interface{} {
 	vcList := vcs.([]interface{})
 	for _, volumeClaim := range vcList {
 		vc := volumeClaim.(map[string]interface{})
+		pvcObj := unstructured.Unstructured{
+			Object: vc,
+		}
+		if strings.Contains(pvcObj.GetName(), "log") {
+			continue
+		}
 		volumeClaims = append(volumeClaims, vc)
 	}
 	return volumeClaims

@@ -260,7 +260,7 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC) +
 		" --ratelimit=1073741824 --debug"
 	brCmd := initCmd + " --meta=" + metadAddr
-	logCmd := "sh /logrotate.sh; /etc/init.d/cron start;"
+	logCmd := "sh /logrotate.sh; /etc/init.d/cron start"
 	logfgCmd := "sh /logrotate.sh; exec cron -f"
 
 	if nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled() {
@@ -276,7 +276,7 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		cmd = append(cmd, initCmd)
 	} else {
 		if nc.IsLogRotateEnabled() && nc.IsBREnabled() {
-			cmd = append(cmd, logCmd, brCmd)
+			cmd = append(cmd, fmt.Sprintf(`%s; %s`, logCmd, brCmd))
 		} else if nc.IsLogRotateEnabled() {
 			cmd = append(cmd, logfgCmd)
 		} else if nc.IsBREnabled() {

@@ -18,12 +18,13 @@ package extender
 
 import (
 	"encoding/json"
+	"strings"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
-	"strings"
 
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"

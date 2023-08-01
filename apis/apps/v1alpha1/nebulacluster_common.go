@@ -285,11 +285,13 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 	}
 
 	agentImage := defaultAgentImage
-	if nc.Spec.Agent.Image != "" {
-		agentImage = nc.Spec.Agent.Image
-	}
-	if nc.Spec.Agent.Version != "" {
-		agentImage = fmt.Sprintf("%s:%s", agentImage, nc.Spec.Agent.Version)
+	if nc.Spec.Agent != nil {
+		if nc.Spec.Agent.Image != "" {
+			agentImage = nc.Spec.Agent.Image
+		}
+		if nc.Spec.Agent.Version != "" {
+			agentImage = fmt.Sprintf("%s:%s", agentImage, nc.Spec.Agent.Version)
+		}
 	}
 	container := corev1.Container{
 		Name:      AgentSidecarContainerName,

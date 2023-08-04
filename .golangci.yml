@@ -1,246 +1,49 @@
-linters-settings:
-  depguard:
-    list-type: blacklist
-    packages:
-      # logging is allowed only by logutils.Log, logrus
-      # is allowed to use only in logutils package
-      - github.com/sirupsen/logrus
-    packages-with-error-message:
-      - github.com/sirupsen/logrus: "logging is allowed only by logutils.Log"
-  dupl:
-    threshold: 100
-  funlen:
-    lines: 100
-    statements: 50
-  gci:
-    local-prefixes: github.com/vesoft-inc
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
-  gocyclo:
-    min-complexity: 20
-  goimports:
-    local-prefixes: github.com/vesoft-inc
-  golint:
-    min-confidence: 0
-  gomnd:
-    settings:
-      mnd:
-        # don't include the "operation" and "assign"
-        checks: argument,case,condition,return
-  govet:
-    check-shadowing: false
-  lll:
-    line-length: 140
-  maligned:
-    suggest-new: true
-  misspell:
-    locale: US
-  nolintlint:
-    allow-leading-space: true # don't require machine-readable nolint directives (i.e. with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: false # don't require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
-  revive:
-    ignore-generated-header: true
-    severity: error
-    rules:
-      - name: context-keys-type
-      - name: time-naming
-      - name: var-declaration
-      - name: unexported-return
-      - name: errorf
-      - name: blank-imports
-      - name: context-as-argument
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      # - name: exported # TODO: remove the comment exclude, and add comments
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-        arguments: [[],[]]
-      # - name: package-comments # TODO: remove the comment exclude, and add comments
-      - name: range
-      - name: receiver-naming
-      - name: indent-error-flow
-      - name: argument-limit
-        arguments: [5]
-      - name: cyclomatic
-        arguments: [20]
-      - name: max-public-structs
-        arguments: [5]
-      - name: file-header
-        arguments: ["/*\nCopyright 2021 Vesoft Inc."]
-      - name: empty-block
-      - name: superfluous-else
-      # - name: confusing-naming
-      - name: get-return
-      - name: modifies-parameter
-      - name: confusing-results
-      - name: deep-exit
-      - name: unused-parameter
-      - name: unreachable-code
-      # - name: add-constant
-      # - name: flag-parameter
-      - name: unnecessary-stmt
-      - name: struct-tag
-      - name: modifies-value-receiver
-      - name: constant-logical-expr
-      - name: bool-literal-in-expr
-      - name: redefines-builtin-id
-      - name: function-result-limit
-        arguments: [ 5 ]
-      - name: imports-blacklist
-        arguments: []
-      - name: range-val-in-closure
-      - name: range-val-address
-      - name: waitgroup-by-value
-      - name: atomic
-      - name: empty-lines
-      - name: line-length-limit
-        arguments: [ 140 ]
-      - name: call-to-gc
-      - name: duplicated-imports
-      # - name: import-shadowing
-      - name: bare-return
-      # - name: unused-receiver
-      - name: unhandled-error
-        arguments: []
-      - name: cognitive-complexity
-        arguments: [50]
-      - name: string-of-int
-#      - name: string-format
-#        arguments: []
-      - name: early-return
-      - name: unconditional-recursion
-      - name: identical-branches
-      - name: defer
-        arguments: [["call-chain","loop","method-call","recover", "return"]]
-      - name: unexported-naming
-#      - name: function-length
-#        arguments: [50, 100]
+run:
+  concurrency: 4
+  timeout: 10m
+  issues-exit-code: 1
+  skip-files:
+    - "^zz_generated.*"
+  skip-dirs:
+    - vendor
+    - test
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
 
 linters:
-  # please, do not use `enable-all`: it's deprecated and will be removed soon.
-  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
+  fast: false
   disable-all: true
   enable:
-    - bodyclose
-    - deadcode
-    - depguard
-    - dogsled
-    - dupl
-    - errcheck
-    - exportloopref
-    - exhaustive
-    - gochecknoinits
-    - goconst
-    - gocritic
     - gofmt
-    - gofumpt
-    - goimports
-    - goprintffuncname
-    - gosec
-    - gosimple
     - govet
+    - goimports
     - ineffassign
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - revive
-    - rowserrcheck
     - staticcheck
-    - structcheck
-    - stylecheck
-    - typecheck
+    - misspell
+    - vet
     - unconvert
-    - unparam
-    - unused
-    - varcheck
-    - whitespace
 
-  # don't enable:
-  # - asciicheck
-  # - funlen
-  # - gochecknoglobals
-  # - gocognit
-  # - gocyclo
-  # - godot
-  # - godox
-  # - goerr113
-  # - gomnd
-  # - interfacer
-  # - lll
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - scopelint
-  # - testpackage
-  # - wsl
-
-issues:
-  # The default exclusion rules are a bit too permissive, so copying the relevant ones below
-  exclude-use-default: false
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gomnd
-        - funlen
-        - dupl
-    - path: _test\.go
-      text: "function-length:"
-      linters:
-        - revive
-    - source: newFakeNebulaClusterControl # TODO: Optimize return parameters
-      text: "function-result-limit:"
-      linters:
-        - revive
-    - source: "NewDefaultNebulaClusterControl|waitForExecuteNebulaSchema" # TODO: Optimize parameters
-      text: "argument-limit:"
-      linters:
-        - revive
-    - path: _types\.go|cmd
-      linters:
-        - gochecknoinits
-    - source: "^// *\\+kubebuilder"
-      linters:
-        - revive
-    - path: _types\.go
-      text: "max-public-structs:"
-      linters:
-        - revive
-    - source: "`json:\",inline\"`"
-      text: "struct-tag: unknown option 'inline' in JSON tag"
-      linters:
-        - revive
-    # https://github.com/go-critic/go-critic/issues/926
-    - text: "unnecessaryDefer:"
-      linters:
-        - gocritic
-    - source: "Handle\\(.* context.Context, req admission.Request\\) .*admission.Response.*{"
-      linters:
-        - gocritic
-    - text: "ST1000:"
-      linters:
-        - stylecheck
-
-run:
-  skip-dirs: {}
-  timeout: 10m
+linters-settings:
+  golint:
+    # minimal confidence for issues, default is 0.8
+    min-confidence: 0.8
+  gofmt:
+    # simplify code: gofmt with `-s` option, true by default
+    simplify: true
+  misspell:
+    locale: US
+  staticcheck:
+    go: "1.19"
+    checks: [
+      "all",
+      "-ST1000",  # Incorrect or missing package comment
+      "-ST1003",  # Poorly chosen identifier
+      "-ST1005",  # Incorrectly formatted error string
+      "-ST1006",  # Poorly chosen receiver name
+      "-ST1012",  # Poorly chosen name for error variable
+      "-ST1016",  # Use consistent method receiver names
+      "-SA1019",  # Using a deprecated function, variable, constant or field
+    ]

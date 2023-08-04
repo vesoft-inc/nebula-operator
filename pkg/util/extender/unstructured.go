@@ -60,7 +60,7 @@ func GetReplicas(obj *unstructured.Unstructured) *int32 {
 	if err != nil || !found {
 		return nil
 	}
-	return pointer.Int32Ptr(int32(replicas))
+	return pointer.Int32(int32(replicas))
 }
 
 func GetContainers(obj *unstructured.Unstructured) []map[string]interface{} {

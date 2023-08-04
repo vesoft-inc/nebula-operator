@@ -5,7 +5,7 @@ LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
 DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
-IMAGE_TAG ?= v1.4.2
+IMAGE_TAG ?= latest
 
 CHARTS_VERSION ?= 1.4.2
 
@@ -15,6 +15,7 @@ GOARCH := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV  := GO15VENDOREXPERIMENT="1" CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO     := $(GOENV) go
 GO_BUILD := $(GO) build -trimpath
+TARGETDIR := "$(GOOS)/$(GOARCH)"
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -42,57 +43,39 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: $(GOBIN)/controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(GOBIN)/controller-gen $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
-generate: $(GOBIN)/controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(GOBIN)/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-check: tidy fmt vet imports lint
+check: fmt vet lint ## Run check against code.
 
-tidy:
-	go mod tidy
-
-fmt: $(GOBIN)/gofumpt
-	# go fmt ./...
-	$(GOBIN)/gofumpt -w -l ./
+fmt:
+	go fmt $(shell go list ./... | grep -v /vendor/)
 
 vet:
-	go vet ./...
+	go vet $(shell go list ./... | grep -v /vendor/)
 
-imports: $(GOBIN)/goimports $(GOBIN)/impi
-	# $(GOBIN)/goimports -w -l -local github.com/vesoft-inc ./
-	$(GOBIN)/impi --local github.com/vesoft-inc --scheme stdThirdPartyLocal -ignore-generated ./... ||( \
-		echo "\nThere are some files need to reviser the imports." && \
-		echo "1. Manual reviser." && \
-		echo "2. Auto reviser all files with 'make imports-reviser', which will take a while." && \
-		echo "3. Auto reviser the specified file via '$(GOBIN)/goimports-reviser -project-name github.com/vesoft-inc -rm-unused -file-path file-path'." && \
-		exit 1 )
-
-imports-reviser: $(GOBIN)/goimports-reviser
-	find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./hack/*" -exec \
-		$(GOBIN)/goimports-reviser -project-name github.com/vesoft-inc -rm-unused -file-path {} \;
-
-lint: $(GOBIN)/golangci-lint
+lint: golangci-lint
 	$(GOBIN)/golangci-lint run
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate check ## Run tests.
+test: manifests generate check ## Run unit-tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... ./apis/... -coverprofile cover.out
+	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.0/hack/setup-envtest.sh
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... -coverprofile cover.out
 
 ##@ e2e
-e2e: $(GOBIN)/ginkgo $(GOBIN)/kind
+e2e: ginkgo kind ## Run e2e test.
 	PATH="${GOBIN}:${PATH}" ./hack/e2e.sh
 
 ##@ Build
+build: ## Build binary.
+	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/controller-manager cmd/controller-manager/main.go
+	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/scheduler cmd/scheduler/main.go
 
-build: generate check ## Build binary.
-	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o images/nebula-operator/bin/controller-manager cmd/controller-manager/main.go
-	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o images/nebula-operator/bin/scheduler cmd/scheduler/main.go
-
-helm-charts:
+helm-charts: ## Build helm charts.
 	helm package charts/nebula-operator --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
 	helm package charts/nebula-cluster --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
 	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/
@@ -106,70 +89,65 @@ run-controller-manager: manifests generate check
 run-scheduler: manifests generate check
 	go run -ldflags '$(LDFLAGS)' cmd/scheduler/main.go
 
-docker-build: build ## Build docker images.
-	docker build -t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" images/nebula-operator/
+docker-build: ## Build docker images.
+	docker build -t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
 
 docker-push: ## Push docker images.
 	docker push "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}"
 
-docker-manifest: ## Build all docker images and push it to registry.
-	bash build.sh ${DOCKER_REPO}/nebula-operator ${IMAGE_TAG}
+ensure-buildx:
+	./hack/init-buildx.sh
+
+PLATFORMS = arm64 amd64
+BUILDX_PLATFORMS = linux/arm64,linux/amd64
+
+docker-multiarch: ensure-buildx ## Build and push the multiarchitecture docker images and manifest.
+	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build;)
+	echo "Building and pushing nebula-operator image... $(BUILDX_PLATFORMS)"
+	docker buildx build \
+    		--no-cache \
+    		--pull \
+    		--push \
+    		--progress plain \
+    		--platform $(BUILDX_PLATFORMS) \
+    		-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
 
 ##@ Deployment
 
-install: manifests $(GOBIN)/kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(GOBIN)/kustomize build config/crd | kubectl apply -f -
 
-uninstall: manifests $(GOBIN)/kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
+uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(GOBIN)/kustomize build config/crd | kubectl delete -f -
 
-deploy: manifests $(GOBIN)/kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(GOBIN)/kustomize edit set image controller=${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}
 	$(GOBIN)/kustomize build config/default | kubectl apply -f -
 
-undeploy: $(GOBIN)/kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
+undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(GOBIN)/kustomize build config/default | kubectl delete -f -
 
 ##@ Tools
-tools: $(GOBIN)/goimports \
-	$(GOBIN)/impi \
-	$(GOBIN)/goimports-reviser \
-	$(GOBIN)/gofumpt \
-	$(GOBIN)/golangci-lint \
-	$(GOBIN)/controller-gen \
-	$(GOBIN)/kustomize \
-	$(GOBIN)/ginkgo \
-	$(GOBIN)/kind
 
-$(GOBIN)/goimports:
-	$(call go-get-tool,$(GOBIN)/goimports,golang.org/x/tools/cmd/goimports)
+tools: golangci-lint controller-gen kustomize ginkgo kind ## Download all go tools locally if necessary.
 
-$(GOBIN)/impi:
-	$(call go-get-tool,$(GOBIN)/impi,github.com/pavius/impi/cmd/impi)
-
-$(GOBIN)/goimports-reviser:
-	$(call go-get-tool,$(GOBIN)/goimports-reviser,github.com/incu6us/goimports-reviser/v2)
-
-$(GOBIN)/gofumpt:
-	$(call go-get-tool,$(GOBIN)/gofumpt,mvdan.cc/gofumpt)
-
-$(GOBIN)/golangci-lint:
+golangci-lint:
 	@[ -f $(GOBIN)/golangci-lint ] || { \
 	set -e ;\
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.51.1 ;\
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) v1.53.0 ;\
 	}
 
-$(GOBIN)/controller-gen:
+controller-gen:
 	$(call go-get-tool,$(GOBIN)/controller-gen,sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3)
 
-$(GOBIN)/kustomize:
+kustomize:
 	$(call go-get-tool,$(GOBIN)/kustomize,sigs.k8s.io/kustomize/kustomize/v4@v4.5.7)
 
-$(GOBIN)/ginkgo:
+ginkgo:
 	$(call go-get-tool,$(GOBIN)/ginkgo,github.com/onsi/ginkgo/ginkgo@v1.16.5)
 
-$(GOBIN)/kind:
-	$(call go-get-tool,$(GOBIN)/kind,sigs.k8s.io/kind@v0.17.0)
+kind:
+	$(call go-get-tool,$(GOBIN)/kind,sigs.k8s.io/kind@v0.19.0)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool

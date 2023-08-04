@@ -111,7 +111,7 @@ type S3StorageProvider struct {
 	// Endpoint of S3 compatible storage service
 	Endpoint string `json:"endpoint,omitempty"`
 	// SecretName is the name of secret which stores access key and secret key.
-	// Secret keys: access-key, access-key
+	// Secret keys: access-key, secret-key
 	SecretName string `json:"secretName,omitempty"`
 }
 

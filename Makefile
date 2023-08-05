@@ -96,7 +96,7 @@ docker-push: ## Push docker images.
 	docker push "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}"
 
 ensure-buildx:
-	./hack/init-buildx.sh
+	chmod +x hack/init-buildx.sh && ./hack/init-buildx.sh
 
 PLATFORMS = arm64 amd64
 BUILDX_PLATFORMS = linux/arm64,linux/amd64

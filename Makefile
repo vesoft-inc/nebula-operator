@@ -90,13 +90,13 @@ run-scheduler: manifests generate check
 	go run -ldflags '$(LDFLAGS)' cmd/scheduler/main.go
 
 docker-build: ## Build docker images.
-	docker build -t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
+	docker build --build-arg TARGETDIR=$(TARGETDIR) -t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
 
 docker-push: ## Push docker images.
 	docker push "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}"
 
 ensure-buildx:
-	./hack/init-buildx.sh
+	chmod +x hack/init-buildx.sh && ./hack/init-buildx.sh
 
 PLATFORMS = arm64 amd64
 BUILDX_PLATFORMS = linux/arm64,linux/amd64
@@ -110,6 +110,7 @@ docker-multiarch: ensure-buildx ## Build and push the multiarchitecture docker i
     		--push \
     		--progress plain \
     		--platform $(BUILDX_PLATFORMS) \
+    		--file Dockerfile.multiarch \
     		-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
 
 ##@ Deployment

@@ -7,7 +7,7 @@ DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
 IMAGE_TAG ?= latest
 
-CHARTS_VERSION ?= 1.4.2
+CHARTS_VERSION ?= 1.5.0
 
 export GO111MODULE := on
 GOOS := $(if $(GOOS),$(GOOS),linux)

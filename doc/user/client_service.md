@@ -15,7 +15,7 @@ The client service is of type `ClusterIP` and accessible only from within the Ku
 For example, access the service from a pod in the cluster:
 
 ```shell script
-$ kubectl run --rm -ti --image vesoft/nebula-console:v3.4.0 --restart=Never -- /bin/sh
+$ kubectl run --rm -ti --image vesoft/nebula-console:v3.5.0 --restart=Never -- /bin/sh
 / # nebula-console -u user -p password --address=nebula-graphd-svc --port=9669
 2021/04/12 08:16:30 [INFO] connection pool is initialized successfully
 

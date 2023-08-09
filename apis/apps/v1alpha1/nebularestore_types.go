@@ -119,7 +119,9 @@ type S3StorageProvider struct {
 type RestoreSpec struct {
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-	BR           *BRConfig         `json:"br,omitempty"`
+	// +optional
+	AutoRemoveFailed bool      `json:"autoRemoveFailed,omitempty"`
+	BR               *BRConfig `json:"br,omitempty"`
 }
 
 // RestoreStatus represents the current status of a nebula cluster restore.

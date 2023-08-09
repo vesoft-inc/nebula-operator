@@ -1,13 +1,14 @@
 nebula:
-  version: v3.4.0
+  version: v3.5.0
   imagePullPolicy: Always
   storageClassName: ""
   enablePVReclaim: false
   enableBR: false
   enableForceUpdate: false
   schedulerName: default-scheduler # nebula-scheduler
+  topologySpreadConstraints: []
   unsatisfiableAction: ScheduleAnyway
-  logRotate: { }
+  logRotate: {}
   reference:
     name: statefulsets.apps
     version: v1
@@ -31,6 +32,7 @@ nebula:
     tolerations: []
     affinity: {}
     readinessProbe: {}
+    livenessProbe: {}
     initContainers: []
     sidecarContainers: []
     sidecarVolumes: []
@@ -57,6 +59,7 @@ nebula:
     tolerations: []
     affinity: {}
     readinessProbe: {}
+    livenessProbe: {}
     initContainers: []
     sidecarContainers: []
     sidecarVolumes: []
@@ -82,6 +85,7 @@ nebula:
     tolerations: []
     affinity: {}
     readinessProbe: {}
+    livenessProbe: {}
     initContainers: []
     sidecarContainers: []
     sidecarVolumes: []
@@ -90,7 +94,7 @@ nebula:
     image: vesoft/nebula-stats-exporter
     version: v3.3.0
     replicas: 1
-    env: [ ]
+    env: []
     resources:
       requests:
         cpu: "100m"
@@ -98,12 +102,13 @@ nebula:
       limits:
         cpu: "200m"
         memory: "256Mi"
-    podLabels: { }
-    podAnnotations: { }
-    nodeSelector: { }
-    tolerations: [ ]
-    affinity: { }
-    livenessProbe: { }
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    livenessProbe: {}
+    readinessProbe: {}
     maxRequests: 20
 
   agent:

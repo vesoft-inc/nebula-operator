@@ -89,8 +89,10 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) 
 				}); err != nil {
 					klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
 				}
-				if err := c.deleteRestoredCluster(ns, rt.Status.ClusterName); err != nil {
-					klog.Errorf("Fail to delete NebulaCluster [%s/%s], %v", ns, rt.Status.ClusterName, err)
+				if rt.Spec.AutoRemoveFailed {
+					if err := c.deleteRestoredCluster(ns, rt.Status.ClusterName); err != nil {
+						klog.Errorf("Fail to delete NebulaCluster [%s/%s], %v", ns, rt.Status.ClusterName, err)
+					}
 				}
 				return nil
 			}
@@ -114,8 +116,10 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) 
 		if err != nil {
 			klog.Errorf("Fail to get NebulaRestore [%s/%s], %v", ns, name, err)
 		}
-		if err := c.deleteRestoredCluster(ns, updated.Status.ClusterName); err != nil {
-			klog.Errorf("Fail to delete NebulaCluster %v", err)
+		if rt.Spec.AutoRemoveFailed {
+			if err := c.deleteRestoredCluster(ns, updated.Status.ClusterName); err != nil {
+				klog.Errorf("Fail to delete NebulaCluster %v", err)
+			}
 		}
 		return nil
 	}

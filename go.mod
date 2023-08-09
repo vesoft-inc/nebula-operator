@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.1
-	github.com/vesoft-inc/nebula-agent/v3 v3.4.0
+	github.com/vesoft-inc/nebula-agent/v3 v3.6.0
 	github.com/vesoft-inc/nebula-go/v3 v3.5.0
 	github.com/vesoft-inc/nebula-operator/apis v0.0.0-00010101000000-000000000000
 	k8s.io/api v0.26.5

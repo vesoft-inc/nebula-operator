@@ -8,4 +8,4 @@ RUN addgroup -S -g 65532 ng-user && \
 
 ADD bin/${TARGETDIR}/controller-manager /usr/local/bin/controller-manager
 ADD bin/${TARGETDIR}/scheduler /usr/local/bin/scheduler
-USER ng-user
+USER 65532:65532

@@ -45,6 +45,8 @@ spec:
               type: object
             spec:
               properties:
+                autoRemoveFailed:
+                  type: boolean
                 br:
                   properties:
                     backupName:

@@ -389,8 +389,8 @@ github.com/twitchyliquid64/golang-asm v0.15.1 h1:SU5vSMR7hnwNxj24w34ZyCi/FmDZTkS
 github.com/twitchyliquid64/golang-asm v0.15.1/go.mod h1:a1lVb/DtPvCB8fslRZhAngC2+aY1QWCk3Cedj/Gdt08=
 github.com/ugorji/go/codec v1.2.9 h1:rmenucSohSTiyL09Y+l2OCk+FrMxGMzho2+tjr5ticU=
 github.com/ugorji/go/codec v1.2.9/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
-github.com/vesoft-inc/nebula-agent/v3 v3.4.0 h1:u9fFaix/L6bZhTgL4LL6LqDSaj7WgpjOgYDuoMKC6Ak=
-github.com/vesoft-inc/nebula-agent/v3 v3.4.0/go.mod h1:tTn9VFyzrVMUOE3aUkl7pHe2wqzq1qbie8RcNAHbgUc=
+github.com/vesoft-inc/nebula-agent/v3 v3.6.0 h1:Un81HyISo9fBQFb9S2qOdKzney1jBDdHCJbdiJFWPXo=
+github.com/vesoft-inc/nebula-agent/v3 v3.6.0/go.mod h1:tTn9VFyzrVMUOE3aUkl7pHe2wqzq1qbie8RcNAHbgUc=
 github.com/vesoft-inc/nebula-go/v3 v3.4.0/go.mod h1:+sXv05jYQBARdTbTcIEsWVXCnF/6ttOlDK35xQ6m54s=
 github.com/vesoft-inc/nebula-go/v3 v3.5.0 h1:2ZSkoBxtIfs15AXJXqrAPDPd0Z9HrzKR7YKXPqlJcR0=
 github.com/vesoft-inc/nebula-go/v3 v3.5.0/go.mod h1:+sXv05jYQBARdTbTcIEsWVXCnF/6ttOlDK35xQ6m54s=

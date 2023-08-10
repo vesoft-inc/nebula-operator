@@ -159,17 +159,15 @@ func (c *graphdComponent) GenerateContainerPorts() []corev1.ContainerPort {
 }
 
 func (c *graphdComponent) GenerateVolumeMounts() []corev1.VolumeMount {
-	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
-		return nil
-	}
-
 	componentType := c.ComponentType().String()
-	mounts := []corev1.VolumeMount{
-		{
+	mounts := make([]corev1.VolumeMount, 0)
+
+	if c.nc.Spec.Graphd.LogVolumeClaim != nil {
+		mounts = append(mounts, corev1.VolumeMount{
 			Name:      logVolume(componentType),
 			MountPath: "/usr/local/nebula/logs",
 			SubPath:   "logs",
-		},
+		})
 	}
 
 	if c.IsSSLEnabled() {
@@ -200,20 +198,18 @@ func (c *graphdComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 }
 
 func (c *graphdComponent) GenerateVolumes() []corev1.Volume {
-	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
-		return nil
-	}
-
 	componentType := c.ComponentType().String()
-	volumes := []corev1.Volume{
-		{
+	volumes := make([]corev1.Volume, 0)
+
+	if c.nc.Spec.Graphd.LogVolumeClaim != nil {
+		volumes = append(volumes, corev1.Volume{
 			Name: logVolume(componentType),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 					ClaimName: logVolume(componentType),
 				},
 			},
-		},
+		})
 	}
 
 	if c.IsSSLEnabled() {

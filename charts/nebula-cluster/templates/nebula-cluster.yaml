@@ -73,7 +73,7 @@ spec:
         requests:
           storage: {{ .Values.nebula.metad.dataStorage }}
       {{- if .Values.nebula.storageClassName }}
-      storageClassName: {{ .Values }}
+      storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
     labels: {{ toYaml .Values.nebula.metad.podLabels | nindent 6 }}
     annotations: {{ toYaml .Values.nebula.metad.podAnnotations | nindent 6 }}

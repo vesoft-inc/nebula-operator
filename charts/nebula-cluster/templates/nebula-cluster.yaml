@@ -197,8 +197,7 @@ spec:
   imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 4 }}
   {{- end }}
   schedulerName: {{ .Values.nebula.schedulerName }}
-  topologySpreadConstraints: {{ .Values.nebula.topologySpreadConstraints }}
-  unsatisfiableAction: {{ .Values.nebula.unsatisfiableAction }}
+  topologySpreadConstraints: {{ toYaml .Values.nebula.topologySpreadConstraints | nindent 4 }}
   enablePVReclaim: {{ .Values.nebula.enablePVReclaim }}
   enableBR: {{ .Values.nebula.enableBR }}
   {{- if .Values.nebula.logRotate }}

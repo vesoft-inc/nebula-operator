@@ -6,8 +6,9 @@ nebula:
   enableBR: false
   enableForceUpdate: false
   schedulerName: default-scheduler # nebula-scheduler
-  topologySpreadConstraints: []
-  unsatisfiableAction: ScheduleAnyway
+  topologySpreadConstraints:
+  - topologyKey: "kubernetes.io/hostname"
+    whenUnsatisfiable: "ScheduleAnyway"
   logRotate: {}
   reference:
     name: statefulsets.apps
@@ -107,8 +108,11 @@ nebula:
     nodeSelector: {}
     tolerations: []
     affinity: {}
-    livenessProbe: {}
     readinessProbe: {}
+    livenessProbe: {}
+    initContainers: []
+    sidecarContainers: []
+    sidecarVolumes: []
     maxRequests: 20
 
   agent:

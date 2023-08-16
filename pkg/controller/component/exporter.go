@@ -107,8 +107,12 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 		Name:  "ng-exporter",
 		Image: nc.ExporterComponent().ComponentSpec().PodImage(),
 		Args: []string{
-			"--listen-address=0.0.0.0:9100", fmt.Sprintf("--namespace=%s", namespace),
-			fmt.Sprintf("--cluster=%s", ncName), fmt.Sprintf("--max-request=%d", nc.ExporterComponent().MaxRequests()),
+			"--listen-address=0.0.0.0:9100",
+			fmt.Sprintf("--namespace=%s", namespace),
+			fmt.Sprintf("--cluster=%s", ncName),
+			fmt.Sprintf("--max-request=%d", nc.ExporterComponent().MaxRequests()),
+			fmt.Sprintf("--collect=%s", nc.ExporterComponent().Collect()),
+			fmt.Sprintf("--ignore=%s", nc.ExporterComponent().Ignore()),
 		},
 		Env: nc.ExporterComponent().ComponentSpec().PodEnvVars(),
 		Ports: []corev1.ContainerPort{

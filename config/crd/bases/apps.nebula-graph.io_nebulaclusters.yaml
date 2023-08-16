@@ -839,6 +839,8 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  collect:
+                    type: string
                   env:
                     items:
                       properties:
@@ -903,6 +905,8 @@ spec:
                       - name
                       type: object
                     type: array
+                  ignore:
+                    type: string
                   image:
                     type: string
                   initContainers:

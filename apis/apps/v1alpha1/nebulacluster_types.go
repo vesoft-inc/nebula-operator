@@ -224,6 +224,14 @@ type ExporterSpec struct {
 	// +kubebuilder:default=40
 	// +optional
 	MaxRequests int32 `json:"maxRequests,omitempty"`
+
+	// Collect means the regex to filter metrics
+	// +optional
+	Collect string `json:"collect,omitempty"`
+
+	// Ingore means the regex to ignore metrics
+	// +optional
+	Ignore string `json:"ignore,omitempty"`
 }
 
 // AgentContainerSpec defines the desired state of Agent

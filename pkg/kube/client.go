@@ -35,21 +35,27 @@ type ClientSet interface {
 	Deployment() Deployment
 	NebulaCluster() NebulaCluster
 	NebulaRestore() NebulaRestore
+	Role() Role
+	RoleBinding() RoleBinding
+	ServiceAccount() ServiceAccount
 }
 
 type clientSet struct {
-	secretClient   Secret
-	cmClient       ConfigMap
-	pvClient       PersistentVolume
-	pvcClient      PersistentVolumeClaim
-	podClient      Pod
-	epClient       Endpoint
-	svcClient      Service
-	ingressClient  Ingress
-	workloadClient Workload
-	deployClient   Deployment
-	nebulaClient   NebulaCluster
-	restoreClient  NebulaRestore
+	secretClient         Secret
+	cmClient             ConfigMap
+	pvClient             PersistentVolume
+	pvcClient            PersistentVolumeClaim
+	podClient            Pod
+	epClient             Endpoint
+	svcClient            Service
+	ingressClient        Ingress
+	workloadClient       Workload
+	deployClient         Deployment
+	nebulaClient         NebulaCluster
+	restoreClient        NebulaRestore
+	roleClient           Role
+	roleBindingClient    RoleBinding
+	serviceAccountClient ServiceAccount
 }
 
 func NewClientSet(config *rest.Config) (ClientSet, error) {
@@ -58,18 +64,21 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		return nil, errors.Errorf("error building runtime client: %v", err)
 	}
 	return &clientSet{
-		secretClient:   NewSecret(cli),
-		cmClient:       NewConfigMap(cli),
-		pvClient:       NewPV(cli),
-		pvcClient:      NewPVC(cli),
-		podClient:      NewPod(cli),
-		epClient:       NewEndpointClient(cli),
-		svcClient:      NewService(cli),
-		ingressClient:  NewIngress(cli),
-		workloadClient: NewWorkload(cli),
-		deployClient:   NewDeployment(cli),
-		nebulaClient:   NewNebulaCluster(cli),
-		restoreClient:  NewNebulaRestore(cli),
+		secretClient:         NewSecret(cli),
+		cmClient:             NewConfigMap(cli),
+		pvClient:             NewPV(cli),
+		pvcClient:            NewPVC(cli),
+		podClient:            NewPod(cli),
+		epClient:             NewEndpointClient(cli),
+		svcClient:            NewService(cli),
+		ingressClient:        NewIngress(cli),
+		workloadClient:       NewWorkload(cli),
+		deployClient:         NewDeployment(cli),
+		nebulaClient:         NewNebulaCluster(cli),
+		restoreClient:        NewNebulaRestore(cli),
+		roleClient:           NewRole(cli),
+		roleBindingClient:    NewRoleBinding(cli),
+		serviceAccountClient: NewServiceAccount(cli),
 	}, nil
 }
 
@@ -119,4 +128,16 @@ func (c *clientSet) NebulaCluster() NebulaCluster {
 
 func (c *clientSet) NebulaRestore() NebulaRestore {
 	return c.restoreClient
+}
+
+func (c *clientSet) Role() Role {
+	return c.roleClient
+}
+
+func (c *clientSet) RoleBinding() RoleBinding {
+	return c.roleBindingClient
+}
+
+func (c *clientSet) ServiceAccount() ServiceAccount {
+	return c.serviceAccountClient
 }

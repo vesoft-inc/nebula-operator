@@ -31,6 +31,10 @@ func (e *nebulaExporter) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
+	if err := e.checkExporterRBAC(nc.Namespace); err != nil {
+		return err
+	}
+
 	if err := e.syncExporterService(nc); err != nil {
 		return err
 	}
@@ -165,14 +169,15 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 					Annotations: nc.ExporterComponent().ComponentSpec().PodAnnotations(),
 				},
 				Spec: corev1.PodSpec{
-					SchedulerName:    nc.Spec.SchedulerName,
-					NodeSelector:     nc.ExporterComponent().ComponentSpec().NodeSelector(),
-					InitContainers:   nc.ExporterComponent().ComponentSpec().InitContainers(),
-					Containers:       containers,
-					ImagePullSecrets: nc.Spec.ImagePullSecrets,
-					Affinity:         nc.ExporterComponent().ComponentSpec().Affinity(),
-					Tolerations:      nc.ExporterComponent().ComponentSpec().Tolerations(),
-					Volumes:          nc.ExporterComponent().ComponentSpec().SidecarVolumes(),
+					SchedulerName:      nc.Spec.SchedulerName,
+					NodeSelector:       nc.ExporterComponent().ComponentSpec().NodeSelector(),
+					InitContainers:     nc.ExporterComponent().ComponentSpec().InitContainers(),
+					Containers:         containers,
+					ImagePullSecrets:   nc.Spec.ImagePullSecrets,
+					Affinity:           nc.ExporterComponent().ComponentSpec().Affinity(),
+					Tolerations:        nc.ExporterComponent().ComponentSpec().Tolerations(),
+					Volumes:            nc.ExporterComponent().ComponentSpec().SidecarVolumes(),
+					ServiceAccountName: exporterServiceAccountName,
 				},
 			},
 		},

@@ -31,7 +31,7 @@ func (e *nebulaExporter) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
-	if err := e.checkExporterRBAC(nc.Namespace); err != nil {
+	if err := e.checkExporterRBAC(nc); err != nil {
 		return err
 	}
 

@@ -40,11 +40,15 @@ import (
 )
 
 const (
+	NebulaServiceAccountName  = "nebula-sa"
+	NebulaRoleName            = "nebula-role"
+	NebulaRoleBindingName     = "nebula-rolebinding"
 	AgentSidecarContainerName = "ng-agent"
 	AgentInitContainerName    = "ng-init-agent"
 	DefaultAgentPortGRPC      = 8888
 	agentPortNameGRPC         = "grpc"
 	defaultAgentImage         = "vesoft/nebula-agent:latest"
+	defaultAlpineImage        = "vesoft/nebula-alpine:latest"
 )
 
 func getComponentName(clusterName string, typ ComponentType) string {
@@ -370,13 +374,75 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 	return container
 }
 
+func genNodeLabelsContainer(nc *NebulaCluster) corev1.Container {
+	script := `
+set -eo pipefail
+
+TOKEN=$(cat ${SERVICEACCOUNT}/token)
+CACERT=${SERVICEACCOUNT}/ca.crt
+            
+curl --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/nodes/${NODENAME} | jq .metadata.labels > /node/labels.json
+
+NODE_ZONE=$(jq '."topology.kubernetes.io/zone"' -r /node/labels.json)
+echo "NODE_ZONE is ${NODE_ZONE}"
+echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
+`
+	image := defaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	return corev1.Container{
+		Name:    "node-labels",
+		Image:   image,
+		Command: []string{"/bin/sh", "-c"},
+		Args:    []string{`echo "$SCRIPT" > /tmp/script && sh /tmp/script`},
+		Env: []corev1.EnvVar{
+			{
+				Name: "NODENAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "spec.nodeName",
+					},
+				},
+			},
+			{
+				Name:  "APISERVER",
+				Value: "https://kubernetes.default.svc",
+			},
+			{
+				Name:  "SERVICEACCOUNT",
+				Value: "/var/run/secrets/kubernetes.io/serviceaccount",
+			},
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "node-info",
+				MountPath: "/node",
+			},
+		},
+	}
+}
+
+func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
+	containers := c.ComponentSpec().InitContainers()
+	nc := c.GetNebulaCluster()
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+		nodeLabelsContainer := genNodeLabelsContainer(nc)
+		containers = append(containers, nodeLabelsContainer)
+	}
+	return containers
+}
+
 func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1.Container {
 	componentType := c.ComponentType().String()
 	nc := c.GetNebulaCluster()
 
 	containers := make([]corev1.Container, 0, 1)
-
-	cmd := []string{"/bin/bash", "-ecx"}
 
 	var dataPath string
 	volumes := len(nc.Spec.Storaged.DataVolumeClaims)
@@ -395,9 +461,18 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 	if c.ComponentType() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
 		flags += " --license_manager_url=" + pointer.StringDeref(nc.Spec.Metad.LicenseManagerURL, "")
 	}
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+		flags += " --assigned_zone=$NODE_ZONE"
+	}
 
-	cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
-		fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+flags)
+	cmd := []string{"/bin/sh", "-ecx"}
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+		cmd = append(cmd, fmt.Sprintf("source /node/zone; echo $NODE_ZONE; exec /usr/local/nebula/bin/nebula-%s", componentType)+
+			fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+flags)
+	} else {
+		cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+
+			fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+flags)
+	}
 
 	mounts := c.GenerateVolumeMounts()
 	if cm != nil {
@@ -406,6 +481,12 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 			Name:      c.GetName(),
 			MountPath: fmt.Sprintf("/usr/local/nebula/etc/%s", subPath),
 			SubPath:   subPath,
+		})
+	}
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      "node-info",
+			MountPath: "/node",
 		})
 	}
 
@@ -470,6 +551,7 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 	nc := c.GetNebulaCluster()
 
 	cmKey := getCmKey(componentType)
+	initContainers := generateInitContainers(c)
 	containers := generateContainers(c, cm)
 	volumes := c.GenerateVolumes()
 	if cm != nil {
@@ -493,17 +575,29 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		volumes = append(volumes, certVolumes...)
 	}
 
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+		volumes = append(volumes, corev1.Volume{
+			Name: "node-info",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory,
+				},
+			},
+		})
+	}
+
 	volumes = mergeVolumes(volumes, c.ComponentSpec().SidecarVolumes())
 
 	podSpec := corev1.PodSpec{
-		SchedulerName:    nc.Spec.SchedulerName,
-		NodeSelector:     c.ComponentSpec().NodeSelector(),
-		InitContainers:   c.ComponentSpec().InitContainers(),
-		Containers:       containers,
-		Volumes:          volumes,
-		ImagePullSecrets: nc.Spec.ImagePullSecrets,
-		Affinity:         c.ComponentSpec().Affinity(),
-		Tolerations:      c.ComponentSpec().Tolerations(),
+		SchedulerName:      nc.Spec.SchedulerName,
+		NodeSelector:       c.ComponentSpec().NodeSelector(),
+		InitContainers:     initContainers,
+		Containers:         containers,
+		Volumes:            volumes,
+		ImagePullSecrets:   nc.Spec.ImagePullSecrets,
+		Affinity:           c.ComponentSpec().Affinity(),
+		Tolerations:        c.ComponentSpec().Tolerations(),
+		ServiceAccountName: NebulaServiceAccountName,
 	}
 
 	if nc.Spec.SchedulerName == corev1.DefaultSchedulerName {

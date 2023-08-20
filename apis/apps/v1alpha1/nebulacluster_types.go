@@ -105,6 +105,9 @@ type NebulaClusterSpec struct {
 	SSLCerts *SSLCertsSpec `json:"sslCerts,omitempty"`
 
 	Agent *AgentContainerSpec `json:"agent,omitempty"`
+
+	// +optional
+	AlpineImage *string `json:"alpineImage,omitempty"`
 }
 
 // NebulaClusterStatus defines the observed state of NebulaCluster

@@ -68,6 +68,8 @@ spec:
           storage: 1Gi
       storageClassName: ebs-sc
   exporter:
+    image: vesoft/nebula-stats-exporter
+    version: v3.3.0
     replicas: 1
     maxRequests: 20
   agent:

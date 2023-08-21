@@ -123,7 +123,7 @@ alpine-tools: ## Build and push the alpine-tools docker images and manifest.
     		--push \
     		--progress plain \
     		--platform $(BUILDX_PLATFORMS) \
-    		--file alpine-tools.multiarch \
+    		--file alpine.multiarch \
     		-t "${DOCKER_REPO}/nebula-alpine:latest" .
 
 ##@ Deployment

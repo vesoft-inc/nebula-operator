@@ -20,6 +20,8 @@ package v1alpha1
 type NebulaExporterComponent interface {
 	ComponentSpec() ComponentAccessor
 	MaxRequests() int32
+	CollectRegex() string
+	IgnoreRegex() string
 }
 
 var _ NebulaExporterComponent = &exporterComponent{}
@@ -40,4 +42,12 @@ func (e *exporterComponent) ComponentSpec() ComponentAccessor {
 
 func (e *exporterComponent) MaxRequests() int32 {
 	return e.nc.Spec.Exporter.MaxRequests
+}
+
+func (e *exporterComponent) CollectRegex() string {
+	return e.nc.Spec.Exporter.CollectRegex
+}
+
+func (e *exporterComponent) IgnoreRegex() string {
+	return e.nc.Spec.Exporter.IgnoreRegex
 }

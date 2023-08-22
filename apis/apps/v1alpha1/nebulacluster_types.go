@@ -225,13 +225,13 @@ type ExporterSpec struct {
 	// +optional
 	MaxRequests int32 `json:"maxRequests,omitempty"`
 
-	// Collect means the regex to filter metrics
+	// CollectRegex means the regex to filter metrics
 	// +optional
-	Collect string `json:"collect,omitempty"`
+	CollectRegex string `json:"collectRegex,omitempty"`
 
-	// Ingore means the regex to ignore metrics
+	// IgnoreRegex means the regex to ignore metrics
 	// +optional
-	Ignore string `json:"ignore,omitempty"`
+	IgnoreRegex string `json:"ignoreRegex,omitempty"`
 }
 
 // AgentContainerSpec defines the desired state of Agent

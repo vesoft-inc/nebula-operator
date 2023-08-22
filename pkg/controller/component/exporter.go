@@ -31,10 +31,6 @@ func (e *nebulaExporter) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
-	if err := e.checkExporterRBAC(nc); err != nil {
-		return err
-	}
-
 	if err := e.syncExporterService(nc); err != nil {
 		return err
 	}
@@ -111,8 +107,8 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 			fmt.Sprintf("--namespace=%s", namespace),
 			fmt.Sprintf("--cluster=%s", ncName),
 			fmt.Sprintf("--max-request=%d", nc.ExporterComponent().MaxRequests()),
-			fmt.Sprintf("--collect=%s", nc.ExporterComponent().Collect()),
-			fmt.Sprintf("--ignore=%s", nc.ExporterComponent().Ignore()),
+			fmt.Sprintf("--collect=%s", nc.ExporterComponent().CollectRegex()),
+			fmt.Sprintf("--ignore=%s", nc.ExporterComponent().IgnoreRegex()),
 		},
 		Env: nc.ExporterComponent().ComponentSpec().PodEnvVars(),
 		Ports: []corev1.ContainerPort{
@@ -181,7 +177,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 					Affinity:           nc.ExporterComponent().ComponentSpec().Affinity(),
 					Tolerations:        nc.ExporterComponent().ComponentSpec().Tolerations(),
 					Volumes:            nc.ExporterComponent().ComponentSpec().SidecarVolumes(),
-					ServiceAccountName: exporterServiceAccountName,
+					ServiceAccountName: v1alpha1.NebulaServiceAccountName,
 				},
 			},
 		},

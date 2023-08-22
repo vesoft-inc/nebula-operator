@@ -839,7 +839,7 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
-                  collect:
+                  collectRegex:
                     type: string
                   env:
                     items:
@@ -905,7 +905,7 @@ spec:
                       - name
                       type: object
                     type: array
-                  ignore:
+                  ignoreRegex:
                     type: string
                   image:
                     type: string

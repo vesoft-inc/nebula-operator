@@ -35,27 +35,21 @@ type ClientSet interface {
 	Deployment() Deployment
 	NebulaCluster() NebulaCluster
 	NebulaRestore() NebulaRestore
-	Role() Role
-	RoleBinding() RoleBinding
-	ServiceAccount() ServiceAccount
 }
 
 type clientSet struct {
-	secretClient         Secret
-	cmClient             ConfigMap
-	pvClient             PersistentVolume
-	pvcClient            PersistentVolumeClaim
-	podClient            Pod
-	epClient             Endpoint
-	svcClient            Service
-	ingressClient        Ingress
-	workloadClient       Workload
-	deployClient         Deployment
-	nebulaClient         NebulaCluster
-	restoreClient        NebulaRestore
-	roleClient           Role
-	roleBindingClient    RoleBinding
-	serviceAccountClient ServiceAccount
+	secretClient   Secret
+	cmClient       ConfigMap
+	pvClient       PersistentVolume
+	pvcClient      PersistentVolumeClaim
+	podClient      Pod
+	epClient       Endpoint
+	svcClient      Service
+	ingressClient  Ingress
+	workloadClient Workload
+	deployClient   Deployment
+	nebulaClient   NebulaCluster
+	restoreClient  NebulaRestore
 }
 
 func NewClientSet(config *rest.Config) (ClientSet, error) {
@@ -128,16 +122,4 @@ func (c *clientSet) NebulaCluster() NebulaCluster {
 
 func (c *clientSet) NebulaRestore() NebulaRestore {
 	return c.restoreClient
-}
-
-func (c *clientSet) Role() Role {
-	return c.roleClient
-}
-
-func (c *clientSet) RoleBinding() RoleBinding {
-	return c.roleBindingClient
-}
-
-func (c *clientSet) ServiceAccount() ServiceAccount {
-	return c.serviceAccountClient
 }

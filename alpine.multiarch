@@ -1,0 +1,7 @@
+FROM --platform=$BUILDPLATFORM alpine:3.18.2
+
+RUN apk update \
+  && apk upgrade \
+  && apk add --no-cache \
+    curl jq \
+  && rm -rf /var/cache/apk/*

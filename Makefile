@@ -101,7 +101,7 @@ ensure-buildx:
 PLATFORMS = arm64 amd64
 BUILDX_PLATFORMS = linux/arm64,linux/amd64
 
-docker-multiarch: ensure-buildx ## Build and push the multiarchitecture docker images and manifest.
+docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchitecture docker images and manifest.
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build;)
 	echo "Building and pushing nebula-operator image... $(BUILDX_PLATFORMS)"
 	docker buildx build \
@@ -112,6 +112,19 @@ docker-multiarch: ensure-buildx ## Build and push the multiarchitecture docker i
     		--platform $(BUILDX_PLATFORMS) \
     		--file Dockerfile.multiarch \
     		-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
+
+alpine-tools: ## Build and push the alpine-tools docker images and manifest.
+	echo "Building and pushing alpine-tools image... $(BUILDX_PLATFORMS)"
+	docker buildx rm alpine-tools || true
+	docker buildx create --driver-opt network=host --use --name=alpine-tools
+	docker buildx build \
+    		--no-cache \
+    		--pull \
+    		--push \
+    		--progress plain \
+    		--platform $(BUILDX_PLATFORMS) \
+    		--file alpine.multiarch \
+    		-t "${DOCKER_REPO}/nebula-alpine:latest" .
 
 ##@ Deployment
 

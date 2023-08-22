@@ -17,9 +17,12 @@ limitations under the License.
 package nebulacluster
 
 import (
+	"context"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
@@ -36,6 +39,7 @@ type ControlInterface interface {
 var _ ControlInterface = &defaultNebulaClusterControl{}
 
 func NewDefaultNebulaClusterControl(
+	client client.Client,
 	nebulaClient kube.NebulaCluster,
 	graphdCluster component.ReconcileManager,
 	metadCluster component.ReconcileManager,
@@ -46,6 +50,7 @@ func NewDefaultNebulaClusterControl(
 	conditionUpdater ClusterConditionUpdater,
 ) ControlInterface {
 	return &defaultNebulaClusterControl{
+		client:           client,
 		nebulaClient:     nebulaClient,
 		graphdCluster:    graphdCluster,
 		metadCluster:     metadCluster,
@@ -58,6 +63,7 @@ func NewDefaultNebulaClusterControl(
 }
 
 type defaultNebulaClusterControl struct {
+	client           client.Client
 	nebulaClient     kube.NebulaCluster
 	graphdCluster    component.ReconcileManager
 	metadCluster     component.ReconcileManager
@@ -91,6 +97,10 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 }
 
 func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaCluster) error {
+	if err := kube.CheckRBAC(context.TODO(), c.client, nc.Namespace); err != nil {
+		return err
+	}
+
 	if err := c.metadCluster.Reconcile(nc); err != nil {
 		klog.Errorf("reconcile metad cluster failed: %v", err)
 		return err

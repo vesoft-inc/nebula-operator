@@ -88,6 +88,7 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 
 	return &ClusterReconciler{
 		Control: NewDefaultNebulaClusterControl(
+			mgr.GetClient(),
 			clientSet.NebulaCluster(),
 			component.NewGraphdCluster(
 				clientSet,

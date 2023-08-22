@@ -108,6 +108,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 			continue
 		}
 		if err := ss.balanceSpace(metaClient, nc, *space.Id.SpaceID); err != nil {
+			klog.Errorf("balance space %d failed: %v", *space.Id.SpaceID, err)
 			return err
 		}
 	}
@@ -150,7 +151,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	}
 
 	if oldReplicas-newReplicas > 0 {
-		scaleSets := sets.NewString()
+		scaleSets := sets.New[string]()
 		hosts := make([]*nebulago.HostAddr, 0, oldReplicas-newReplicas)
 		port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 		for i := oldReplicas - 1; i >= newReplicas; i-- {
@@ -167,17 +168,19 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 				if err != nil {
 					return err
 				}
-				removed := filterRemovedHosts(sets.NewString(leaderSets...), scaleSets, hosts)
+				removed := filterRemovedHosts(sets.New[string](leaderSets...), scaleSets, hosts)
 				if len(removed) == 0 {
 					continue
 				}
 				if err := ss.removeHost(metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
+					klog.Errorf("remove hosts %v failed: %v", hosts, err)
 					return err
 				}
 				klog.Infof("cluster [%s/%s] remove hosts from space %s successfully", ns, ncName, space.Name)
 			}
 		}
 		if err := metaClient.DropHosts(hosts); err != nil {
+			klog.Errorf("drop hosts %v failed: %v", hosts, err)
 			return err
 		}
 		klog.Infof("cluster [%s/%s] drop hosts successfully", ns, ncName)
@@ -245,6 +248,9 @@ func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.Nebu
 				SpaceID: spaceID,
 				JobID:   jobID,
 			}
+			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
+				return err
+			}
 		}
 		return err
 	}
@@ -267,14 +273,17 @@ func (ss *storageScaler) removeHost(
 				SpaceID: spaceID,
 				JobID:   jobID,
 			}
+			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
+				return err
+			}
 		}
 		return err
 	}
 	return nil
 }
 
-func filterRemovedHosts(leaderSets, scaleSets sets.String, scaledHosts []*nebulago.HostAddr) []*nebulago.HostAddr {
-	result := sets.NewString()
+func filterRemovedHosts(leaderSets, scaleSets sets.Set[string], scaledHosts []*nebulago.HostAddr) []*nebulago.HostAddr {
+	result := sets.New[string]()
 	for key := range scaleSets {
 		if leaderSets.Has(key) {
 			result.Insert(key)

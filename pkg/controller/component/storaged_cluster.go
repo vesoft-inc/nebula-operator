@@ -138,6 +138,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	if *newReplicas > *oldReplicas {
 		if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
+			klog.Errorf("add storage hosts failed: %v", err)
 			return err
 		}
 		klog.Infof("storaged cluster [%s/%s] add hosts succeed", namespace, componentName)

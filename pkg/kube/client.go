@@ -58,21 +58,18 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		return nil, errors.Errorf("error building runtime client: %v", err)
 	}
 	return &clientSet{
-		secretClient:         NewSecret(cli),
-		cmClient:             NewConfigMap(cli),
-		pvClient:             NewPV(cli),
-		pvcClient:            NewPVC(cli),
-		podClient:            NewPod(cli),
-		epClient:             NewEndpointClient(cli),
-		svcClient:            NewService(cli),
-		ingressClient:        NewIngress(cli),
-		workloadClient:       NewWorkload(cli),
-		deployClient:         NewDeployment(cli),
-		nebulaClient:         NewNebulaCluster(cli),
-		restoreClient:        NewNebulaRestore(cli),
-		roleClient:           NewRole(cli),
-		roleBindingClient:    NewRoleBinding(cli),
-		serviceAccountClient: NewServiceAccount(cli),
+		secretClient:   NewSecret(cli),
+		cmClient:       NewConfigMap(cli),
+		pvClient:       NewPV(cli),
+		pvcClient:      NewPVC(cli),
+		podClient:      NewPod(cli),
+		epClient:       NewEndpointClient(cli),
+		svcClient:      NewService(cli),
+		ingressClient:  NewIngress(cli),
+		workloadClient: NewWorkload(cli),
+		deployClient:   NewDeployment(cli),
+		nebulaClient:   NewNebulaCluster(cli),
+		restoreClient:  NewNebulaRestore(cli),
 	}, nil
 }
 

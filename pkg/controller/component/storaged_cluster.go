@@ -95,7 +95,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
-	cm, cmHash, e, err := c.syncStoragedConfigMap(nc.DeepCopy())
+	cm, cmHash, err := c.syncStoragedConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	if nc.StoragedComponent().IsReady() {
 		endpoints := nc.GetStoragedEndpoints(v1alpha1.StoragedPortNameHTTP)
-		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations(), e); err != nil {
+		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update storaged cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 	}
@@ -195,7 +195,7 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 	return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
 }
 
-func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, bool, error) {
+func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.ConfigMap, string, error) {
 	return syncConfigMap(
 		nc.StoragedComponent(),
 		c.clientSet.ConfigMap(),

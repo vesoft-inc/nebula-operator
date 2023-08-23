@@ -26,8 +26,10 @@ const (
 	AnnLastSyncTimestampKey = "nebula-graph.io/sync-timestamp"
 	// AnnHaModeKey is annotation key to indicate whether in ha mode
 	AnnHaModeKey = "nebula-graph.io/ha-mode"
-	// AnnLastAppliedFlagsKey is annotation key to indicate the last applied custom flags
-	AnnLastAppliedFlagsKey = "nebula-graph.io/last-applied-flags"
+	// AnnLastAppliedDynamicFlagsKey is annotation key to indicate the last applied custom dynamic flags
+	AnnLastAppliedDynamicFlagsKey = "nebula-graph.io/last-applied-dynamic-flags"
+	// AnnLastAppliedStaticFlagsKey is annotation key to indicate the last applied custom static flags
+	AnnLastAppliedStaticFlagsKey = "nebula-graph.io/last-applied-static-flags"
 	// AnnLastAppliedConfigKey is annotation key to indicate the last applied configuration
 	AnnLastAppliedConfigKey = "nebula-graph.io/last-applied-configuration"
 	// AnnPodSchedulingKey is pod scheduling annotation key, it represents whether the pod is scheduling

@@ -609,7 +609,12 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		return nil, err
 	}
 
-	apply, err := json.Marshal(c.GetConfig())
+	dynamic, static := separateFlags(c.GetConfig())
+	dynamicFlags, err := json.Marshal(dynamic)
+	if err != nil {
+		return nil, err
+	}
+	staticFlags, err := json.Marshal(static)
 	if err != nil {
 		return nil, err
 	}
@@ -618,9 +623,12 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 	replicas := c.ComponentSpec().Replicas()
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            c.GetName(),
-			Namespace:       namespace,
-			Annotations:     map[string]string{annotation.AnnLastAppliedFlagsKey: string(apply)},
+			Name:      c.GetName(),
+			Namespace: namespace,
+			Annotations: map[string]string{
+				annotation.AnnLastAppliedDynamicFlagsKey: string(dynamicFlags),
+				annotation.AnnLastAppliedStaticFlagsKey:  string(staticFlags),
+			},
 			Labels:          componentLabel,
 			OwnerReferences: c.GenerateOwnerReferences(),
 		},
@@ -824,4 +832,17 @@ func mergeSidecarContainers(origins, injected []corev1.Container) []corev1.Conta
 
 	origins = append(origins, appContainers...)
 	return origins
+}
+
+func separateFlags(config map[string]string) (map[string]string, map[string]string) {
+	dynamic := make(map[string]string)
+	static := make(map[string]string)
+	for k, v := range config {
+		if _, ok := DynamicFlags[k]; ok {
+			dynamic[k] = v
+		} else {
+			static[k] = v
+		}
+	}
+	return dynamic, static
 }

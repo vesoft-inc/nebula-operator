@@ -18,6 +18,7 @@ package component
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -220,6 +221,28 @@ func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplica
 	var start int32
 	if newReplicas > oldReplicas {
 		start = oldReplicas
+	}
+
+	if nc.IsZoneEnabled() {
+		zones := strings.Split(nc.Spec.Metad.Config["zone_list"], ",")
+		if len(zones) == 0 {
+			return fmt.Errorf("zone list %v is empty", zones)
+		}
+
+		port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
+		for i := start; i < newReplicas; i++ {
+			host := nc.StoragedComponent().GetPodFQDN(i)
+			hosts := []*nebulago.HostAddr{
+				{
+					Host: host,
+					Port: port,
+				},
+			}
+			zone := zones[int(i)%len(zones)]
+			if err := metaClient.AddHostsIntoZone(hosts, zone); err != nil {
+				return fmt.Errorf("add host %s into zone %s failed: %v", host, zone, err)
+			}
+		}
 	}
 
 	port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)

@@ -17,20 +17,19 @@ func CheckRBAC(ctx context.Context, c client.Client, namespace string) error {
 	if err := createServiceAccount(ctx, c, namespace); err != nil {
 		return err
 	}
-	if err := createRole(ctx, c, namespace); err != nil {
+	if err := createClusterRole(ctx, c); err != nil {
 		return err
 	}
-	if err := createRoleBinding(ctx, c, namespace); err != nil {
+	if err := createClusterRoleBinding(ctx, c, namespace); err != nil {
 		return err
 	}
 	return nil
 }
 
-func createRole(ctx context.Context, k8sClient client.Client, namespace string) error {
-	role := rbacv1.Role{
+func createClusterRole(ctx context.Context, k8sClient client.Client) error {
+	role := rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1.NebulaRoleName,
-			Namespace: namespace,
+			Name: v1alpha1.NebulaRoleName,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -50,25 +49,24 @@ func createRole(ctx context.Context, k8sClient client.Client, namespace string) 
 			},
 		},
 	}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleName, Namespace: namespace}, &rbacv1.Role{}); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleName}, &rbacv1.ClusterRole{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			if err := k8sClient.Create(ctx, &role); err != nil {
-				return fmt.Errorf("failed to create Role role: %v", err)
+				return fmt.Errorf("failed to create ClusterRole role: %v", err)
 			}
 		}
 	}
 	return nil
 }
 
-func createRoleBinding(ctx context.Context, k8sClient client.Client, namespace string) error {
-	binding := rbacv1.RoleBinding{
+func createClusterRoleBinding(ctx context.Context, k8sClient client.Client, namespace string) error {
+	binding := rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1.NebulaRoleBindingName,
-			Namespace: namespace,
+			Name: v1alpha1.NebulaRoleBindingName,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
+			Kind:     "ClusterRole",
 			Name:     v1alpha1.NebulaRoleName,
 		},
 		Subjects: []rbacv1.Subject{
@@ -79,10 +77,10 @@ func createRoleBinding(ctx context.Context, k8sClient client.Client, namespace s
 			},
 		},
 	}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleBindingName, Namespace: namespace}, &rbacv1.RoleBinding{}); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleBindingName}, &rbacv1.ClusterRoleBinding{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			if err := k8sClient.Create(ctx, &binding); err != nil {
-				return fmt.Errorf("failed to create RoleBinding: %v", err)
+				return fmt.Errorf("failed to create ClusterRoleBinding: %v", err)
 			}
 		}
 	}

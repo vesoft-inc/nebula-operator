@@ -128,3 +128,7 @@ func (nc *NebulaCluster) IsClusterSSLEnabled() bool {
 		nc.Spec.Metad.Config["enable_ssl"] == "true" &&
 		nc.Spec.Storaged.Config["enable_ssl"] == "true"
 }
+
+func (nc *NebulaCluster) IsZoneEnabled() bool {
+	return nc.Spec.Metad.Config["zone_list"] != ""
+}

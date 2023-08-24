@@ -42,6 +42,7 @@ type (
 		ListSpaces() ([]*meta.IdName, error)
 		ListCluster() (*meta.ListClusterInfoResp, error)
 		AddHosts(hosts []*nebula.HostAddr) error
+		AddHostsIntoZone(hosts []*nebula.HostAddr, zone string) error
 		DropHosts(hosts []*nebula.HostAddr) error
 		ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error)
 		ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.PartitionID) ([]*meta.PartItem, error)
@@ -192,6 +193,18 @@ func (m *metaClient) AddHosts(hosts []*nebula.HostAddr) error {
 	}
 	_, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
 		resp, err := m.client.AddHosts(req.(*meta.AddHostsReq))
+		return resp, err
+	})
+	return err
+}
+
+func (m *metaClient) AddHostsIntoZone(hosts []*nebula.HostAddr, zone string) error {
+	req := &meta.AddHostsIntoZoneReq{
+		Hosts:    hosts,
+		ZoneName: []byte(zone),
+	}
+	_, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.AddHostsIntoZone(req.(*meta.AddHostsIntoZoneReq))
 		return resp, err
 	})
 	return err

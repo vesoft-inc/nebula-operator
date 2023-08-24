@@ -19,6 +19,7 @@ package component
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -157,64 +158,71 @@ func syncConfigMap(
 	cmClient kube.ConfigMap,
 	template,
 	cmKey string,
-) (*corev1.ConfigMap, string, bool, error) {
+) (*corev1.ConfigMap, string, error) {
 	cmHash := hash.Hash(template)
 	cm := component.GenerateConfigMap()
 	cfg := component.GetConfig()
-	// If not all the custom flags in the dynamic flags map,
-	// then persist these flags to configmap and trigger rolling update
-	var e bool
 	if cfg != nil {
-		e = maputil.AllKeysExist(cfg, v1alpha1.DynamicFlags)
-		if !e {
-			customConf := config.AppendCustomConfig(template, cfg)
-			cm.Data[cmKey] = customConf
-			cmHash = hash.Hash(customConf)
-		}
+		namespace := component.GetNamespace()
+		clusterName := component.GetClusterName()
+		flags := staticFlags(cfg)
+		klog.Infof("cluster [%s/%s] sync configmap with custom static configs %v", namespace, clusterName, flags)
+		customConf := config.AppendCustomConfig(template, flags)
+		cm.Data[cmKey] = customConf
+		cmHash = hash.Hash(customConf)
 	}
 
 	if err := cmClient.CreateOrUpdateConfigMap(cm); err != nil {
-		return nil, "", e, err
+		return nil, "", err
 	}
-	return cm, cmHash, e, nil
+	return cm, cmHash, nil
 }
 
-func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[string]string, exists bool) error {
-	newFlags := newAnnotations[annotation.AnnLastAppliedFlagsKey]
-	apply, ok := oldAnnotations[annotation.AnnLastAppliedFlagsKey]
-	if ok {
-		if apply != "{}" && newFlags == "{}" {
-			oldFlags := map[string]string{}
-			if err := json.Unmarshal([]byte(apply), &oldFlags); err != nil {
-				return err
-			}
-			if maputil.AllKeysExist(oldFlags, v1alpha1.DynamicFlags) {
-				for _, endpoint := range endpoints {
-					url := fmt.Sprintf("http://%s/flags", endpoint)
-					maputil.ResetMap(oldFlags, v1alpha1.DynamicFlags)
-					b, err := codec.Encode(oldFlags)
-					if err != nil {
-						return err
-					}
-					if _, err := httputil.PutRequest(url, []byte(b)); err != nil {
-						return err
-					}
-				}
-				klog.Info("reset dynamic flags successfully")
-			}
-			return nil
+func staticFlags(config map[string]string) map[string]string {
+	static := make(map[string]string)
+	for k, v := range config {
+		if _, ok := v1alpha1.DynamicFlags[k]; !ok {
+			static[k] = v
 		}
+	}
+	return static
+}
+
+func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[string]string) error {
+	newFlags := make(map[string]string)
+	newFlagsVal, ok := newAnnotations[annotation.AnnLastAppliedDynamicFlagsKey]
+	if ok {
+		if err := json.Unmarshal([]byte(newFlagsVal), &newFlags); err != nil {
+			return err
+		}
+	}
+	oldFlags := make(map[string]string)
+	oldFlagsVal, ok := oldAnnotations[annotation.AnnLastAppliedDynamicFlagsKey]
+	if ok {
+		if err := json.Unmarshal([]byte(oldFlagsVal), &oldFlags); err != nil {
+			return err
+		}
+	}
+	if reflect.DeepEqual(newFlags, oldFlags) {
+		return nil
 	}
 
-	if exists && newFlags != "{}" {
-		for _, endpoint := range endpoints {
-			url := fmt.Sprintf("http://%s/flags", endpoint)
-			if _, err := httputil.PutRequest(url, []byte(newFlags)); err != nil {
-				return err
-			}
-		}
-		klog.Info("update dynamic flags successfully")
+	updated, removed := maputil.IntersectionDifference(oldFlags, newFlags)
+	_, added := maputil.IntersectionDifference(newFlags, oldFlags)
+	maputil.ResetMap(removed, v1alpha1.DynamicFlags)
+	merged := maputil.MergeStringMaps(true, updated, added, removed)
+	klog.Infof("merged dynamic flags: %v", merged)
+	str, err := codec.Encode(merged)
+	if err != nil {
+		return err
 	}
+	for _, endpoint := range endpoints {
+		url := fmt.Sprintf("http://%s/flags", endpoint)
+		if _, err := httputil.PutRequest(url, []byte(str)); err != nil {
+			return err
+		}
+	}
+	klog.Info("update dynamic flags successfully")
 
 	return nil
 }
@@ -252,7 +260,7 @@ func isUpdating(
 	pods, err := podClient.ListPods(component.GetNamespace(), selector)
 	if err != nil {
 		return false, fmt.Errorf(
-			"failed to get pods for cluster %s/%s, selector %s, error: %s",
+			"failed to get pods for cluster [%s/%s], selector %s, error: %s",
 			component.GetNamespace(),
 			component.GetClusterName(),
 			selector,

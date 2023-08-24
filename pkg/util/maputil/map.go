@@ -42,6 +42,37 @@ func AllKeysExist(first, second map[string]string) bool {
 	return true
 }
 
+func SymmetricDifference(first, second map[string]string) map[string]string {
+	result := make(map[string]string)
+	for k, v := range first {
+		if _, ok := second[k]; !ok {
+			result[k] = v
+		}
+	}
+	for k, v := range second {
+		if _, ok := first[k]; !ok {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+func IntersectionDifference(first, second map[string]string) (map[string]string, map[string]string) {
+	both := make(map[string]string)
+	diff := make(map[string]string)
+	for k, v := range first {
+		secv, ok := second[k]
+		if !ok {
+			diff[k] = v
+			continue
+		}
+		if v != secv {
+			both[k] = secv
+		}
+	}
+	return both, diff
+}
+
 func ResetMap(first, second map[string]string) {
 	for k := range first {
 		if second == nil {

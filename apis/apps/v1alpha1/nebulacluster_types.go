@@ -298,6 +298,11 @@ type SSLCertsSpec struct {
 	// certificate chain and host name.
 	// +optional
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+
+	// AutoMountServerCerts controls whether operator mounts server's
+	// certificate from secret.
+	// +optional
+	AutoMountServerCerts *bool `json:"autoMountServerCerts,omitempty"`
 }
 
 type TopologySpreadConstraint struct {

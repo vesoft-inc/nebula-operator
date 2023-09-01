@@ -376,12 +376,12 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 
 func genNodeLabelsContainer(nc *NebulaCluster) corev1.Container {
 	script := `
-set -eo pipefail
+set -exo pipefail
 
 TOKEN=$(cat ${SERVICEACCOUNT}/token)
 CACERT=${SERVICEACCOUNT}/ca.crt
             
-curl --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/nodes/${NODENAME} | jq .metadata.labels > /node/labels.json
+curl -s --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/nodes/${NODENAME} | jq .metadata.labels > /node/labels.json
 
 NODE_ZONE=$(jq '."topology.kubernetes.io/zone"' -r /node/labels.json)
 echo "NODE_ZONE is ${NODE_ZONE}"

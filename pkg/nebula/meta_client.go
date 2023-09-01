@@ -42,6 +42,7 @@ type (
 		ListSpaces() ([]*meta.IdName, error)
 		ListCluster() (*meta.ListClusterInfoResp, error)
 		AddHosts(hosts []*nebula.HostAddr) error
+		AddHostsIntoZone(hosts []*nebula.HostAddr, zone string) error
 		DropHosts(hosts []*nebula.HostAddr) error
 		ListHosts(hostType meta.ListHostType) ([]*meta.HostItem, error)
 		ListParts(spaceID nebula.GraphSpaceID, partIDs []nebula.PartitionID) ([]*meta.PartItem, error)
@@ -51,7 +52,9 @@ type (
 		BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) error
 		BalanceLeader(spaceID nebula.GraphSpaceID) error
 		BalanceData(spaceID nebula.GraphSpaceID) (int32, error)
+		BalanceDataInZone(spaceID nebula.GraphSpaceID) (int32, error)
 		RemoveHost(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error)
+		RemoveHostInZone(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error)
 		RestoreMeta(hosts []*meta.HostPair, files []string) (*meta.RestoreMetaResp, error)
 		Disconnect() error
 	}
@@ -192,6 +195,18 @@ func (m *metaClient) AddHosts(hosts []*nebula.HostAddr) error {
 	}
 	_, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
 		resp, err := m.client.AddHosts(req.(*meta.AddHostsReq))
+		return resp, err
+	})
+	return err
+}
+
+func (m *metaClient) AddHostsIntoZone(hosts []*nebula.HostAddr, zone string) error {
+	req := &meta.AddHostsIntoZoneReq{
+		Hosts:    hosts,
+		ZoneName: []byte(zone),
+	}
+	_, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
+		resp, err := m.client.AddHostsIntoZone(req.(*meta.AddHostsIntoZoneReq))
 		return resp, err
 	})
 	return err
@@ -348,6 +363,16 @@ func (m *metaClient) BalanceData(spaceID nebula.GraphSpaceID) (int32, error) {
 	return m.balance(req)
 }
 
+func (m *metaClient) BalanceDataInZone(spaceID nebula.GraphSpaceID) (int32, error) {
+	req := &meta.AdminJobReq{
+		SpaceID: spaceID,
+		Op:      meta.JobOp_ADD,
+		Type:    meta.JobType_DATA_BALANCE,
+	}
+
+	return m.balance(req)
+}
+
 func (m *metaClient) RemoveHost(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error) {
 	paras := make([][]byte, 0)
 	for _, endpoint := range hosts {
@@ -358,6 +383,22 @@ func (m *metaClient) RemoveHost(spaceID nebula.GraphSpaceID, hosts []*nebula.Hos
 		SpaceID: spaceID,
 		Op:      meta.JobOp_ADD,
 		Type:    meta.JobType_ZONE_BALANCE,
+		Paras:   paras,
+	}
+
+	return m.balance(req)
+}
+
+func (m *metaClient) RemoveHostInZone(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error) {
+	paras := make([][]byte, 0)
+	for _, endpoint := range hosts {
+		// The back quote need here to consistent with the host addr registered in meta
+		paras = append(paras, []byte(fmt.Sprintf(`"%s":%d`, endpoint.Host, endpoint.Port)))
+	}
+	req := &meta.AdminJobReq{
+		SpaceID: spaceID,
+		Op:      meta.JobOp_ADD,
+		Type:    meta.JobType_DATA_BALANCE,
 		Paras:   paras,
 	}
 

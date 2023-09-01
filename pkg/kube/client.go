@@ -23,6 +23,7 @@ import (
 )
 
 type ClientSet interface {
+	Node() Node
 	Secret() Secret
 	ConfigMap() ConfigMap
 	PV() PersistentVolume
@@ -38,6 +39,7 @@ type ClientSet interface {
 }
 
 type clientSet struct {
+	nodeClient     Node
 	secretClient   Secret
 	cmClient       ConfigMap
 	pvClient       PersistentVolume
@@ -58,6 +60,7 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		return nil, errors.Errorf("error building runtime client: %v", err)
 	}
 	return &clientSet{
+		nodeClient:     NewNode(cli),
 		secretClient:   NewSecret(cli),
 		cmClient:       NewConfigMap(cli),
 		pvClient:       NewPV(cli),
@@ -71,6 +74,10 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		nebulaClient:   NewNebulaCluster(cli),
 		restoreClient:  NewNebulaRestore(cli),
 	}, nil
+}
+
+func (c *clientSet) Node() Node {
+	return c.nodeClient
 }
 
 func (c *clientSet) Secret() Secret {

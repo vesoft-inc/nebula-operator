@@ -99,18 +99,24 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 	livenessProbe := nc.ExporterComponent().ComponentSpec().LivenessProbe()
 	containers := make([]corev1.Container, 0)
 
+	args := []string{
+		"--listen-address=0.0.0.0:9100",
+		fmt.Sprintf("--namespace=%s", namespace),
+		fmt.Sprintf("--cluster=%s", ncName),
+		fmt.Sprintf("--max-request=%d", nc.ExporterComponent().MaxRequests()),
+	}
+	if nc.ExporterComponent().CollectRegex() != "" {
+		args = append(args, fmt.Sprintf("--collect=%s", nc.ExporterComponent().CollectRegex()))
+	}
+	if nc.ExporterComponent().IgnoreRegex() != "" {
+		args = append(args, fmt.Sprintf("--ignore=%s", nc.ExporterComponent().IgnoreRegex()))
+	}
+
 	container := corev1.Container{
 		Name:  "ng-exporter",
 		Image: nc.ExporterComponent().ComponentSpec().PodImage(),
-		Args: []string{
-			"--listen-address=0.0.0.0:9100",
-			fmt.Sprintf("--namespace=%s", namespace),
-			fmt.Sprintf("--cluster=%s", ncName),
-			fmt.Sprintf("--max-request=%d", nc.ExporterComponent().MaxRequests()),
-			fmt.Sprintf("--collect=%s", nc.ExporterComponent().CollectRegex()),
-			fmt.Sprintf("--ignore=%s", nc.ExporterComponent().IgnoreRegex()),
-		},
-		Env: nc.ExporterComponent().ComponentSpec().PodEnvVars(),
+		Args:  args,
+		Env:   nc.ExporterComponent().ComponentSpec().PodEnvVars(),
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "metrics",

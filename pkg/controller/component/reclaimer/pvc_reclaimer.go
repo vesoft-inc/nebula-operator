@@ -110,7 +110,10 @@ func (p *pvcReclaimer) reclaimPV(nc *v1alpha1.NebulaCluster) error {
 		}
 
 		if err := p.clientSet.PVC().DeletePVC(pvc.Namespace, pvcName); err != nil {
-			return fmt.Errorf("cluster [%s/%s] delete PVC %s failed: %v", namespace, ncName, pvcName, err)
+			if !apierrors.IsNotFound(err) {
+				klog.Errorf("cluster [%s/%s] delete PVC %s failed: %v", namespace, ncName, pvcName, err)
+				return err
+			}
 		}
 		klog.Infof("cluster [%s/%s] reclaim PV %s successfully", namespace, ncName, pvName)
 	}

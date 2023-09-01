@@ -109,6 +109,10 @@ func (nc *NebulaCluster) InsecureSkipVerify() bool {
 	return pointer.BoolDeref(nc.Spec.SSLCerts.InsecureSkipVerify, false)
 }
 
+func (nc *NebulaCluster) AutoMountServerCerts() bool {
+	return pointer.BoolDeref(nc.Spec.SSLCerts.AutoMountServerCerts, false)
+}
+
 func (nc *NebulaCluster) IsIntraZoneRoutingEnabled() bool {
 	return nc.Spec.Graphd.Config["enable_intra_zone_routing"] == "true"
 }
@@ -127,4 +131,8 @@ func (nc *NebulaCluster) IsClusterSSLEnabled() bool {
 	return nc.Spec.Graphd.Config["enable_ssl"] == "true" &&
 		nc.Spec.Metad.Config["enable_ssl"] == "true" &&
 		nc.Spec.Storaged.Config["enable_ssl"] == "true"
+}
+
+func (nc *NebulaCluster) IsZoneEnabled() bool {
+	return nc.Spec.Metad.Config["zone_list"] != ""
 }

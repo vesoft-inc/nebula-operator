@@ -1,3 +1,19 @@
+/*
+Copyright 2023 Vesoft Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package kube
 
 import (
@@ -8,6 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -17,20 +34,19 @@ func CheckRBAC(ctx context.Context, c client.Client, namespace string) error {
 	if err := createServiceAccount(ctx, c, namespace); err != nil {
 		return err
 	}
-	if err := createRole(ctx, c, namespace); err != nil {
+	if err := createClusterRole(ctx, c); err != nil {
 		return err
 	}
-	if err := createRoleBinding(ctx, c, namespace); err != nil {
+	if err := createClusterRoleBinding(ctx, c, namespace); err != nil {
 		return err
 	}
 	return nil
 }
 
-func createRole(ctx context.Context, k8sClient client.Client, namespace string) error {
-	role := rbacv1.Role{
+func createClusterRole(ctx context.Context, k8sClient client.Client) error {
+	role := rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1.NebulaRoleName,
-			Namespace: namespace,
+			Name: v1alpha1.NebulaRoleName,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -50,40 +66,44 @@ func createRole(ctx context.Context, k8sClient client.Client, namespace string) 
 			},
 		},
 	}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleName, Namespace: namespace}, &rbacv1.Role{}); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleName}, &rbacv1.ClusterRole{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			if err := k8sClient.Create(ctx, &role); err != nil {
-				return fmt.Errorf("failed to create Role role: %v", err)
+				return fmt.Errorf("failed to create ClusterRole role: %v", err)
 			}
 		}
 	}
 	return nil
 }
 
-func createRoleBinding(ctx context.Context, k8sClient client.Client, namespace string) error {
-	binding := rbacv1.RoleBinding{
+func createClusterRoleBinding(ctx context.Context, k8sClient client.Client, namespace string) error {
+	binding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1.NebulaRoleBindingName,
-			Namespace: namespace,
+			Name: v1alpha1.NebulaRoleBindingName,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
+			Kind:     "ClusterRole",
 			Name:     v1alpha1.NebulaRoleName,
 		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      v1alpha1.NebulaServiceAccountName,
-				Namespace: namespace,
-			},
-		},
 	}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleBindingName, Namespace: namespace}, &rbacv1.RoleBinding{}); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleBindingName}, binding); err != nil {
 		if apierrors.IsNotFound(err) {
-			if err := k8sClient.Create(ctx, &binding); err != nil {
-				return fmt.Errorf("failed to create RoleBinding: %v", err)
+			if err := k8sClient.Create(ctx, binding); err != nil {
+				return fmt.Errorf("failed to create ClusterRoleBinding: %v", err)
 			}
+		}
+	}
+	if !isApplied(binding.Subjects, namespace) {
+		binding.Subjects = append(binding.Subjects, rbacv1.Subject{
+			Kind:      "ServiceAccount",
+			Name:      v1alpha1.NebulaServiceAccountName,
+			Namespace: namespace,
+		})
+		if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+			return k8sClient.Update(context.TODO(), binding)
+		}); err != nil {
+			return fmt.Errorf("failed to update ClusterRoleBinding subjects: %v", err)
 		}
 	}
 	return nil
@@ -104,4 +124,15 @@ func createServiceAccount(ctx context.Context, k8sClient client.Client, namespac
 		}
 	}
 	return nil
+}
+
+func isApplied(subjects []rbacv1.Subject, namespace string) bool {
+	for _, sj := range subjects {
+		if sj.Kind == "ServiceAccount" &&
+			sj.Name == v1alpha1.NebulaServiceAccountName &&
+			sj.Namespace == namespace {
+			return true
+		}
+	}
+	return false
 }

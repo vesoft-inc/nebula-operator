@@ -62,7 +62,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 	ns := nc.GetNamespace()
 	componentName := nc.StoragedComponent().GetName()
 	nc.Status.Storaged.Phase = v1alpha1.ScaleOutPhase
-	if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
+	if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
 		return err
 	}
 
@@ -108,7 +108,6 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 			continue
 		}
 		if err := ss.balanceSpace(metaClient, nc, *space.Id.SpaceID); err != nil {
-			klog.Errorf("balance space %d failed: %v", *space.Id.SpaceID, err)
 			return err
 		}
 	}
@@ -125,7 +124,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	ncName := nc.GetName()
 	componentName := nc.StoragedComponent().GetName()
 	nc.Status.Storaged.Phase = v1alpha1.ScaleInPhase
-	if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
+	if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
 		return err
 	}
 
@@ -183,7 +182,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 			klog.Errorf("drop hosts %v failed: %v", hosts, err)
 			return err
 		}
-		klog.Infof("cluster [%s/%s] drop hosts successfully", ns, ncName)
+		klog.Infof("cluster [%s/%s] drop hosts %v successfully", ns, ncName, hosts)
 	}
 
 	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
@@ -199,6 +198,9 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		}
 		if nc.Status.Storaged.LastBalanceJob != nil {
 			nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, nc.Status.Storaged.LastBalanceJob.SpaceID)
+			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -239,16 +241,38 @@ func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.Nebu
 			return err
 		}
 		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, nc.Status.Storaged.LastBalanceJob.SpaceID)
+		return ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
+	}
+
+	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
+	if nc.IsZoneEnabled() {
+		jobID, err := mc.BalanceDataInZone(spaceID)
+		if err != nil {
+			klog.Errorf("storaged cluster [%s/%s] balance data in zone error: %v", namespace, componentName, err)
+			if jobID > 0 {
+				nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
+					SpaceID: spaceID,
+					JobID:   jobID,
+				}
+				if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
+					return err
+				}
+			}
+			return err
+		}
 		return nil
 	}
+
 	jobID, err := mc.BalanceData(spaceID)
 	if err != nil {
+		klog.Errorf("storaged cluster [%s/%s] balance data cross zone error: %v", namespace, componentName, err)
 		if jobID > 0 {
 			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
 				SpaceID: spaceID,
 				JobID:   jobID,
 			}
-			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
+			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
 				return err
 			}
 		}
@@ -266,14 +290,36 @@ func (ss *storageScaler) removeHost(
 	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
 		return mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
 	}
+
+	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
+	if nc.IsZoneEnabled() {
+		jobID, err := mc.RemoveHostInZone(spaceID, hosts)
+		klog.Errorf("storaged cluster [%s/%s] remove host in zone error: %v", namespace, componentName, err)
+		if err != nil {
+			if jobID > 0 {
+				nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
+					SpaceID: spaceID,
+					JobID:   jobID,
+				}
+				if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
+					return err
+				}
+			}
+			return err
+		}
+		return nil
+	}
+
 	jobID, err := mc.RemoveHost(spaceID, hosts)
 	if err != nil {
+		klog.Errorf("storaged cluster [%s/%s] remove host cross zone error: %v", namespace, componentName, err)
 		if jobID > 0 {
 			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
 				SpaceID: spaceID,
 				JobID:   jobID,
 			}
-			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
+			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
 				return err
 			}
 		}

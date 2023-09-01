@@ -166,7 +166,8 @@ func syncConfigMap(
 		namespace := component.GetNamespace()
 		clusterName := component.GetClusterName()
 		flags := staticFlags(cfg)
-		klog.Infof("cluster [%s/%s] sync configmap with custom static configs %v", namespace, clusterName, flags)
+		klog.Infof("cluster [%s/%s] sync %s configmap with custom static configs %v", namespace, clusterName,
+			component.ComponentType().String(), flags)
 		customConf := config.AppendCustomConfig(template, flags)
 		cm.Data[cmKey] = customConf
 		cmHash = hash.Hash(customConf)

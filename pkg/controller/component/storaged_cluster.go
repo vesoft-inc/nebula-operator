@@ -19,9 +19,11 @@ package component
 import (
 	"fmt"
 
+	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
@@ -129,20 +131,30 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	oldReplicas := extender.GetReplicas(oldWorkload)
 	newReplicas := extender.GetReplicas(newWorkload)
-	if !nc.Status.Storaged.HostsAdded {
+	if !nc.Status.Storaged.HostsAdded && !nc.IsZoneEnabled() {
 		if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
 			return err
 		}
+		klog.Infof("storaged cluster [%s/%s] add hosts succeed", namespace, componentName)
 		nc.Status.Storaged.HostsAdded = true
 	}
 
 	if *newReplicas > *oldReplicas {
-		if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
-			klog.Errorf("add storage hosts failed: %v", err)
+		if !nc.IsZoneEnabled() {
+			if err := c.addStorageHosts(nc, *oldReplicas, *newReplicas); err != nil {
+				klog.Errorf("add storage hosts failed: %v", err)
+				return err
+			}
+			klog.Infof("storaged cluster [%s/%s] add hosts succeed", namespace, componentName)
+		}
+	}
+
+	if nc.IsZoneEnabled() && !nc.StoragedComponent().IsReady() {
+		if err := c.addStorageHostsToZone(nc, *newReplicas); err != nil {
 			return err
 		}
-		klog.Infof("storaged cluster [%s/%s] add hosts succeed", namespace, componentName)
 	}
+
 	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {
 		klog.Errorf("scale storaged cluster [%s/%s] failed: %v", namespace, componentName, err)
 		return err
@@ -232,6 +244,82 @@ func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplica
 	}
 
 	return metaClient.AddHosts(hosts)
+}
+
+func (c *storagedCluster) registeredHosts(mc nebula.MetaInterface) (sets.Set[string], error) {
+	registered := sets.New[string]()
+	hosts, err := mc.ListHosts(meta.ListHostType_STORAGE)
+	if err != nil {
+		return nil, err
+	}
+	for _, host := range hosts {
+		registered.Insert(host.HostAddr.Host)
+	}
+	return registered, nil
+}
+
+func (c *storagedCluster) addStorageHostsToZone(nc *v1alpha1.NebulaCluster, newReplicas int32) error {
+	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
+
+	options, err := nebula.ClientOptions(nc)
+	if err != nil {
+		return err
+	}
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(endpoints, options...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = metaClient.Disconnect()
+	}()
+
+	registered, err := c.registeredHosts(metaClient)
+	if err != nil {
+		return err
+	}
+	klog.Infof("storaged cluster [%s/%s] registered hosts list: %v", namespace, componentName, registered.UnsortedList())
+
+	port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
+	for i := int32(0); i < newReplicas; i++ {
+		host := nc.StoragedComponent().GetPodFQDN(i)
+		if registered.Has(host) {
+			klog.Infof("host %s had been registered into metad, ignored!", host)
+			continue
+		}
+		podName := nc.StoragedComponent().GetPodName(i)
+		pod, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				klog.Errorf("pod %s not found, it will be registered as new storaged host", podName)
+				continue
+			}
+			return err
+		}
+		if pod.Spec.NodeName == "" {
+			continue
+		}
+		node, err := c.clientSet.Node().GetNode(pod.Spec.NodeName)
+		if err != nil {
+			return err
+		}
+		dbZone, ok := node.GetLabels()[corev1.LabelTopologyZone]
+		if !ok {
+			return fmt.Errorf("node %s topology zone not found", pod.Spec.NodeName)
+		}
+		klog.Infof("pod [%s/%s] scheduled on node %s in zone %s", namespace, podName, pod.Spec.NodeName, dbZone)
+		hosts := []*nebulago.HostAddr{
+			{
+				Host: host,
+				Port: port,
+			},
+		}
+		if err := metaClient.AddHostsIntoZone(hosts, dbZone); err != nil {
+			return fmt.Errorf("add host %s into zone %s error: %v", host, dbZone, err)
+		}
+	}
+	return nil
 }
 
 type FakeStoragedCluster struct {

@@ -8415,6 +8415,8 @@ spec:
                 type: string
               sslCerts:
                 properties:
+                  autoMountServerCerts:
+                    type: boolean
                   caCert:
                     default: ca.crt
                     type: string

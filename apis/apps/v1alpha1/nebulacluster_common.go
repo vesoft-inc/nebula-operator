@@ -376,7 +376,7 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 
 func genNodeLabelsContainer(nc *NebulaCluster) corev1.Container {
 	script := `
-set -eo pipefail
+set -exo pipefail
 
 TOKEN=$(cat ${SERVICEACCOUNT}/token)
 CACERT=${SERVICEACCOUNT}/ca.crt

@@ -210,7 +210,7 @@ func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 		})
 	}
 
-	if c.IsSSLEnabled() {
+	if c.IsSSLEnabled() && c.nc.AutoMountServerCerts() {
 		certMounts := []corev1.VolumeMount{
 			{
 				Name:      "server-crt",
@@ -265,7 +265,7 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 		})
 	}
 
-	if c.IsSSLEnabled() {
+	if c.IsSSLEnabled() && c.nc.AutoMountServerCerts() {
 		certVolumes := []corev1.Volume{
 			{
 				Name: "server-crt",

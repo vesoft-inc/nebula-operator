@@ -17,6 +17,7 @@ limitations under the License.
 package component
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/resource"
@@ -42,6 +44,9 @@ const (
 	TransLeaderBeginTime = "transLeaderBeginTime"
 	// TransLeaderTimeout is the timeout limit of trans leader
 	TransLeaderTimeout = 30 * time.Minute
+
+	// Concurrency is the count of goroutines to transfer partition leader
+	Concurrency = 3
 )
 
 type storagedUpdater struct {
@@ -130,10 +135,11 @@ func (s *storagedUpdater) updateStoragedPod(
 	empty bool,
 ) error {
 	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
 	updatePodName := nc.StoragedComponent().GetPodName(ordinal)
 	updatePod, err := s.clientSet.Pod().GetPod(namespace, updatePodName)
 	if err != nil {
-		klog.Errorf("cluster [%s/%s] get pod failed: %v", nc.Namespace, nc.Name, err)
+		klog.Errorf("storaged cluster [%s/%s] get pod failed: %v", namespace, componentName, err)
 		return err
 	}
 
@@ -143,15 +149,27 @@ func (s *storagedUpdater) updateStoragedPod(
 
 	_, ok := updatePod.Annotations[TransLeaderBeginTime]
 	if !ok {
-		return s.transLeaderIfNecessary(nc, mc, ordinal, updatePod)
+		if updatePod.Annotations == nil {
+			updatePod.Annotations = make(map[string]string, 0)
+		}
+		now := time.Now().Format(time.RFC3339)
+		updatePod.Annotations[TransLeaderBeginTime] = now
+		if err := s.clientSet.Pod().UpdatePod(updatePod); err != nil {
+			return err
+		}
+		klog.Infof("set pod %s annotation %v successfully", updatePod.Name, TransLeaderBeginTime)
 	}
 
-	podFQDN := nc.StoragedComponent().GetPodFQDN(ordinal)
-	if s.readyToUpdate(mc, podFQDN, updatePod) {
+	host := nc.StoragedComponent().GetPodFQDN(ordinal)
+	if s.readyToUpdate(mc, host, updatePod) {
 		return setPartition(newUnstruct, int64(ordinal), advanced)
 	}
 
-	return fmt.Errorf("storaged pod: %s is transferring leader", updatePodName)
+	if err := s.transLeaderIfNecessary(nc, mc, ordinal); err != nil {
+		return &utilerrors.ReconcileError{Msg: fmt.Sprintf("%v", err)}
+	}
+
+	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("storaged pod %s is transferring leader", updatePodName)}
 }
 
 func (s *storagedUpdater) readyToUpdate(mc nebula.MetaInterface, leaderHost string, updatePod *corev1.Pod) bool {
@@ -173,66 +191,77 @@ func (s *storagedUpdater) readyToUpdate(mc nebula.MetaInterface, leaderHost stri
 			return false
 		}
 		if time.Now().After(transLeaderBeginTime.Add(TransLeaderTimeout)) {
-			klog.Errorf("pod [%s/%s] transfer leader timeout", ns, podName)
-			return false
+			klog.Errorf("pod [%s/%s] transfer leader reach time threshold, will be updated immediately", ns, podName)
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func (s *storagedUpdater) transLeaderIfNecessary(
 	nc *v1alpha1.NebulaCluster,
 	mc nebula.MetaInterface,
 	ordinal int32,
-	updatePod *corev1.Pod,
 ) error {
-	if updatePod.Annotations == nil {
-		updatePod.Annotations = map[string]string{}
-	}
-	now := time.Now().Format(time.RFC3339)
-	updatePod.Annotations[TransLeaderBeginTime] = now
-
-	if err := s.clientSet.Pod().UpdatePod(updatePod); err != nil {
-		return err
-	}
-	klog.Infof("set pod %s annotation %v successfully", updatePod.Name, TransLeaderBeginTime)
-
-	options, err := nebula.ClientOptions(nc, nebula.SetIsStorage(true))
-	if err != nil {
-		return err
-	}
-	podFQDN := nc.StoragedComponent().GetPodFQDN(ordinal)
-	endpoint := fmt.Sprintf("%s:%d", podFQDN, nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameAdmin))
-	sc, err := nebula.NewStorageClient([]string{endpoint}, options...)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err := sc.Disconnect(); err != nil {
-			klog.Errorf("storage client disconnect failed: %v", err)
-		}
-	}()
-
+	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
+	host := nc.StoragedComponent().GetPodFQDN(ordinal)
 	spaceItems, err := mc.GetSpaceParts()
 	if err != nil {
-		klog.Errorf("cluster [%s/%s] get space partition failed: %v", nc.Namespace, nc.Name, err)
+		klog.Errorf("storaged cluster [%s/%s] get space partition failed: %v", namespace, componentName, err)
 		return err
 	}
-	for spaceID, partItems := range spaceItems {
-		for _, partItem := range partItems {
-			if partItem.Leader == nil {
-				continue
-			}
-			if partItem.Leader.Host == podFQDN {
-				newLeader := getNewLeader(nc, *nc.Spec.Storaged.Replicas, ordinal)
-				if err := s.transLeader(sc, nc, spaceID, partItem.PartID, newLeader); err != nil {
-					return err
+
+	spaceGroup := async.NewGroup(context.TODO(), int32(len(spaceItems)))
+	for key := range spaceItems {
+		spaceID := key
+		spaceWorker := func() error {
+			partItems := spaceItems[spaceID]
+			group := async.NewGroup(context.TODO(), Concurrency)
+			for i := range partItems {
+				partItem := partItems[i]
+				worker := func() error {
+					if partItem.Leader == nil {
+						return nil
+					}
+					if partItem.Leader.Host == host {
+						options, err := nebula.ClientOptions(nc, nebula.SetIsStorage(true), nebula.SetTimeout(time.Second*30))
+						if err != nil {
+							return err
+						}
+						endpoint := fmt.Sprintf("%s:%d", host, nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameAdmin))
+						sc, err := nebula.NewStorageClient([]string{endpoint}, options...)
+						if err != nil {
+							return err
+						}
+
+						defer func() {
+							if err := sc.Disconnect(); err != nil {
+								klog.Errorf("storage client disconnect failed: %v", err)
+							}
+						}()
+
+						newLeader := getNewLeader(nc, *nc.Spec.Storaged.Replicas, ordinal)
+						if err := s.transLeader(sc, nc, spaceID, partItem.PartID, newLeader); err != nil {
+							return err
+						}
+					}
+					return nil
 				}
+
+				group.Add(func(stopCh chan interface{}) {
+					stopCh <- worker()
+				})
 			}
+			return group.Wait()
 		}
+
+		spaceGroup.Add(func(stopCh chan interface{}) {
+			stopCh <- spaceWorker()
+		})
 	}
-	return nil
+
+	return spaceGroup.Wait()
 }
 
 func (s *storagedUpdater) transLeader(
@@ -242,11 +271,18 @@ func (s *storagedUpdater) transLeader(
 	partID nebulago.PartitionID,
 	newLeader *nebulago.HostAddr,
 ) error {
-	if err := storageClient.TransLeader(spaceID, partID, newLeader); err != nil {
+	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
+	leaderHost := newLeader.Host
+	err, host := storageClient.TransLeader(spaceID, partID, newLeader)
+	if err != nil {
 		return err
 	}
-	klog.Infof("cluster [%s/%s] transfer leader spaceID %d partitionID %d to host %s successfully",
-		nc.Namespace, nc.Name, spaceID, partID, newLeader.Host)
+	if host != "" {
+		leaderHost = host
+	}
+	klog.Infof("storaged cluster [%s/%s] transfer leader spaceID %d partitionID %d to host %s successfully",
+		namespace, componentName, spaceID, partID, leaderHost)
 	return nil
 }
 
@@ -267,17 +303,17 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 }
 
 func getNewLeader(nc *v1alpha1.NebulaCluster, replicas, ordinal int32) *nebulago.HostAddr {
-	var podFQDN string
+	var host string
 	newLeader := &nebulago.HostAddr{
 		Port: nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift),
 	}
 
 	if replicas == 3 || replicas > 3 && replicas&1 == 0 {
-		podFQDN = nc.StoragedComponent().GetPodFQDN((ordinal + 2) % replicas)
-		newLeader.Host = podFQDN
+		host = nc.StoragedComponent().GetPodFQDN((ordinal + 2) % replicas)
+		newLeader.Host = host
 	} else if replicas > 3 && replicas&1 == 1 {
-		podFQDN = nc.StoragedComponent().GetPodFQDN((ordinal + 3) % replicas)
-		newLeader.Host = podFQDN
+		host = nc.StoragedComponent().GetPodFQDN((ordinal + 3) % replicas)
+		newLeader.Host = host
 	}
 
 	return newLeader

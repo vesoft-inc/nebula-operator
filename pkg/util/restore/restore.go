@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/facebook/fbthrift/thrift/lib/go/thrift"
+	"github.com/vesoft-inc/fbthrift/thrift/lib/go/thrift"
 
 	pb "github.com/vesoft-inc/nebula-agent/v3/pkg/proto"
 	"github.com/vesoft-inc/nebula-go/v3/nebula"

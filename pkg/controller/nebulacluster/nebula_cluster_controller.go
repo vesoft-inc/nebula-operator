@@ -132,7 +132,7 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
 	var nebulaCluster v1alpha1.NebulaCluster
 	key := req.NamespacedName.String()
-	subCtx, cancel := context.WithTimeout(ctx, reconcileTimeOut)
+	subCtx, cancel := context.WithTimeout(ctx, time.Minute*1)
 	defer cancel()
 
 	startTime := time.Now()

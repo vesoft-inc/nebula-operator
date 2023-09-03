@@ -433,7 +433,10 @@ type ComponentSpec struct {
 	SidecarContainers []corev1.Container `json:"sidecarContainers,omitempty"`
 
 	// +optional
-	SidecarVolumes []corev1.Volume `json:"sidecarVolumes,omitempty"`
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 
 	// +optional
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`

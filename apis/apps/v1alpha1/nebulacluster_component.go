@@ -39,7 +39,8 @@ type ComponentAccessor interface {
 	Tolerations() []corev1.Toleration
 	InitContainers() []corev1.Container
 	SidecarContainers() []corev1.Container
-	SidecarVolumes() []corev1.Volume
+	Volumes() []corev1.Volume
+	VolumeMounts() []corev1.VolumeMount
 	ReadinessProbe() *corev1.Probe
 	LivenessProbe() *corev1.Probe
 }
@@ -113,8 +114,12 @@ func (a *componentAccessor) SidecarContainers() []corev1.Container {
 	return a.componentSpec.SidecarContainers
 }
 
-func (a *componentAccessor) SidecarVolumes() []corev1.Volume {
-	return a.componentSpec.SidecarVolumes
+func (a *componentAccessor) Volumes() []corev1.Volume {
+	return a.componentSpec.Volumes
+}
+
+func (a *componentAccessor) VolumeMounts() []corev1.VolumeMount {
+	return a.componentSpec.VolumeMounts
 }
 
 func (a *componentAccessor) ReadinessProbe() *corev1.Probe {

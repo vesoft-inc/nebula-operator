@@ -265,7 +265,7 @@ func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.Nebu
 
 	jobID, err := mc.BalanceData(spaceID)
 	if err != nil {
-		klog.Errorf("storaged cluster [%s/%s] balance data cross zone error: %v", namespace, componentName, err)
+		klog.Errorf("storaged cluster [%s/%s] balance data across zone error: %v", namespace, componentName, err)
 		if jobID > 0 {
 			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
 				SpaceID: spaceID,
@@ -312,7 +312,7 @@ func (ss *storageScaler) removeHost(
 
 	jobID, err := mc.RemoveHost(spaceID, hosts)
 	if err != nil {
-		klog.Errorf("storaged cluster [%s/%s] remove host cross zone error: %v", namespace, componentName, err)
+		klog.Errorf("storaged cluster [%s/%s] remove host across zone error: %v", namespace, componentName, err)
 		if jobID > 0 {
 			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
 				SpaceID: spaceID,

@@ -482,6 +482,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 			MountPath: fmt.Sprintf("/usr/local/nebula/etc/%s", subPath),
 			SubPath:   subPath,
 		})
+		mounts = append(mounts, c.ComponentSpec().VolumeMounts()...)
 	}
 	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
 		mounts = append(mounts, corev1.VolumeMount{
@@ -586,7 +587,7 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		})
 	}
 
-	volumes = mergeVolumes(volumes, c.ComponentSpec().SidecarVolumes())
+	volumes = mergeVolumes(volumes, c.ComponentSpec().Volumes())
 
 	podSpec := corev1.PodSpec{
 		SchedulerName:      nc.Spec.SchedulerName,

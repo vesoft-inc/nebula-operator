@@ -124,6 +124,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 				ContainerPort: defaultMetricsPort,
 			},
 		},
+		VolumeMounts: nc.ExporterComponent().ComponentSpec().VolumeMounts(),
 	}
 
 	if livenessProbe != nil {
@@ -182,7 +183,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 					ImagePullSecrets:   nc.Spec.ImagePullSecrets,
 					Affinity:           nc.ExporterComponent().ComponentSpec().Affinity(),
 					Tolerations:        nc.ExporterComponent().ComponentSpec().Tolerations(),
-					Volumes:            nc.ExporterComponent().ComponentSpec().SidecarVolumes(),
+					Volumes:            nc.ExporterComponent().ComponentSpec().Volumes(),
 					ServiceAccountName: v1alpha1.NebulaServiceAccountName,
 				},
 			},

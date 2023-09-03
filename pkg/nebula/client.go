@@ -19,7 +19,7 @@ package nebula
 import (
 	"math"
 
-	"github.com/facebook/fbthrift/thrift/lib/go/thrift"
+	"github.com/vesoft-inc/fbthrift/thrift/lib/go/thrift"
 )
 
 const (

@@ -29,7 +29,7 @@ var ErrNoAvailableStoragedEndpoints = errors.New("storagedclient: no available e
 var _ StorageInterface = (*storageClient)(nil)
 
 type StorageInterface interface {
-	TransLeader(spaceID nebula.GraphSpaceID, partID nebula.PartitionID, newLeader *nebula.HostAddr) error
+	TransLeader(spaceID nebula.GraphSpaceID, partID nebula.PartitionID, newLeader *nebula.HostAddr) (error, string)
 	RemovePart(spaceID nebula.GraphSpaceID, partID nebula.PartitionID) error
 	GetLeaderParts() (map[nebula.GraphSpaceID][]nebula.PartitionID, error)
 	Disconnect() error
@@ -77,7 +77,7 @@ func (s *storageClient) Disconnect() error {
 	return s.client.Close()
 }
 
-func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.PartitionID, newLeader *nebula.HostAddr) error {
+func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.PartitionID, newLeader *nebula.HostAddr) (error, string) {
 	req := &storage.TransLeaderReq{
 		SpaceID:    spaceID,
 		PartID:     partID,
@@ -87,22 +87,27 @@ func (s *storageClient) TransLeader(spaceID nebula.GraphSpaceID, partID nebula.P
 	resp, err := s.client.TransLeader(req)
 	if err != nil {
 		klog.Errorf("TransLeader failed: %v", err)
-		return err
+		return err, ""
 	}
 
 	if len(resp.Result_.FailedParts) > 0 {
 		if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_PART_NOT_FOUND {
-			return errors.Errorf("partition %d not found", partID)
+			return errors.Errorf("partition %d not found", partID), ""
 		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_SPACE_NOT_FOUND {
-			return errors.Errorf("space %d not found", partID)
+			return errors.Errorf("space %d not found", partID), ""
 		} else if resp.Result_.FailedParts[0].Code == nebula.ErrorCode_E_LEADER_CHANGED {
-			klog.Infof("request leader changed, result: %v", resp.Result_.FailedParts[0].String())
-			return nil
+			p := resp.Result_.FailedParts[0]
+			klog.Infof("request leader changed, result: %v", p.String())
+			var leader string
+			if p.Leader != nil {
+				leader = p.Leader.Host
+			}
+			return nil, leader
 		} else {
-			return errors.Errorf("TransLeader space %d partition %d code %d", spaceID, partID, resp.Result_.FailedParts[0].Code)
+			return errors.Errorf("TransLeader space %d partition %d code %d", spaceID, partID, resp.Result_.FailedParts[0].Code), ""
 		}
 	}
-	return nil
+	return nil, ""
 }
 
 func (s *storageClient) RemovePart(spaceID nebula.GraphSpaceID, partID nebula.PartitionID) error {

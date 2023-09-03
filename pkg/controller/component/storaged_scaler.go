@@ -67,12 +67,12 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if !nc.StoragedComponent().IsReady() {
-		klog.Infof("cluster [%s/%s] status not ready", ns, componentName)
+		klog.Infof("storaged cluster [%s/%s] status not ready", ns, componentName)
 		return nil
 	}
 
 	if !pointer.BoolDeref(nc.Spec.Storaged.EnableAutoBalance, false) {
-		klog.Infof("cluster [%s/%s] auto balance is disabled", ns, componentName)
+		klog.Infof("storaged cluster [%s/%s] auto balance is disabled", ns, componentName)
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}
@@ -121,7 +121,6 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 // nolint: revive
 func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
 	ns := nc.GetNamespace()
-	ncName := nc.GetName()
 	componentName := nc.StoragedComponent().GetName()
 	nc.Status.Storaged.Phase = v1alpha1.ScaleInPhase
 	if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
@@ -175,14 +174,14 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 					klog.Errorf("remove hosts %v failed: %v", hosts, err)
 					return err
 				}
-				klog.Infof("cluster [%s/%s] remove hosts from space %s successfully", ns, ncName, space.Name)
+				klog.Infof("storaged cluster [%s/%s] remove hosts in the space %s successfully", ns, componentName, space.Name)
 			}
 		}
 		if err := metaClient.DropHosts(hosts); err != nil {
 			klog.Errorf("drop hosts %v failed: %v", hosts, err)
 			return err
 		}
-		klog.Infof("cluster [%s/%s] drop hosts %v successfully", ns, ncName, hosts)
+		klog.Infof("storaged cluster [%s/%s] drop hosts %v successfully", ns, componentName, hosts)
 	}
 
 	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
@@ -224,7 +223,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	}
 
 	if nc.StoragedComponent().IsReady() {
-		klog.Infof("cluster [%s/%s] all used pvcs were reclaimed", ns, componentName)
+		klog.Infof("storaged cluster [%s/%s] all used pvcs were reclaimed", ns, componentName)
 		nc.Status.Storaged.BalancedSpaces = nil
 		nc.Status.Storaged.LastBalanceJob = nil
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase

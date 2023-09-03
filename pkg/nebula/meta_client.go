@@ -314,7 +314,7 @@ func (m *metaClient) GetLeaderCount(leaderHost string) (int, error) {
 				continue
 			}
 			if partItem.Leader.Host == leaderHost {
-				klog.Infof("space %d partition %d still distribute this node", spaceID, partItem.PartID)
+				klog.Infof("space %d partition %d leader still on this node", spaceID, partItem.PartID)
 				count++
 			}
 		}

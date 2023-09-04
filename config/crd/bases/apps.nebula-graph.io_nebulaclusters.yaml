@@ -2322,7 +2322,46 @@ spec:
                       - name
                       type: object
                     type: array
-                  sidecarVolumes:
+                  tolerations:
+                    items:
+                      properties:
+                        effect:
+                          type: string
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        tolerationSeconds:
+                          format: int64
+                          type: integer
+                        value:
+                          type: string
+                      type: object
+                    type: array
+                  version:
+                    default: latest
+                    type: string
+                  volumeMounts:
+                    items:
+                      properties:
+                        mountPath:
+                          type: string
+                        mountPropagation:
+                          type: string
+                        name:
+                          type: string
+                        readOnly:
+                          type: boolean
+                        subPath:
+                          type: string
+                        subPathExpr:
+                          type: string
+                      required:
+                      - mountPath
+                      - name
+                      type: object
+                    type: array
+                  volumes:
                     items:
                       properties:
                         awsElasticBlockStore:
@@ -3033,25 +3072,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  tolerations:
-                    items:
-                      properties:
-                        effect:
-                          type: string
-                        key:
-                          type: string
-                        operator:
-                          type: string
-                        tolerationSeconds:
-                          format: int64
-                          type: integer
-                        value:
-                          type: string
-                      type: object
-                    type: array
-                  version:
-                    default: latest
-                    type: string
                 required:
                 - image
                 type: object
@@ -4962,7 +4982,46 @@ spec:
                       - name
                       type: object
                     type: array
-                  sidecarVolumes:
+                  tolerations:
+                    items:
+                      properties:
+                        effect:
+                          type: string
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        tolerationSeconds:
+                          format: int64
+                          type: integer
+                        value:
+                          type: string
+                      type: object
+                    type: array
+                  version:
+                    default: latest
+                    type: string
+                  volumeMounts:
+                    items:
+                      properties:
+                        mountPath:
+                          type: string
+                        mountPropagation:
+                          type: string
+                        name:
+                          type: string
+                        readOnly:
+                          type: boolean
+                        subPath:
+                          type: string
+                        subPathExpr:
+                          type: string
+                      required:
+                      - mountPath
+                      - name
+                      type: object
+                    type: array
+                  volumes:
                     items:
                       properties:
                         awsElasticBlockStore:
@@ -5673,25 +5732,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  tolerations:
-                    items:
-                      properties:
-                        effect:
-                          type: string
-                        key:
-                          type: string
-                        operator:
-                          type: string
-                        tolerationSeconds:
-                          format: int64
-                          type: integer
-                        value:
-                          type: string
-                      type: object
-                    type: array
-                  version:
-                    default: latest
-                    type: string
                 required:
                 - image
                 type: object
@@ -7664,7 +7704,46 @@ spec:
                       - name
                       type: object
                     type: array
-                  sidecarVolumes:
+                  tolerations:
+                    items:
+                      properties:
+                        effect:
+                          type: string
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        tolerationSeconds:
+                          format: int64
+                          type: integer
+                        value:
+                          type: string
+                      type: object
+                    type: array
+                  version:
+                    default: latest
+                    type: string
+                  volumeMounts:
+                    items:
+                      properties:
+                        mountPath:
+                          type: string
+                        mountPropagation:
+                          type: string
+                        name:
+                          type: string
+                        readOnly:
+                          type: boolean
+                        subPath:
+                          type: string
+                        subPathExpr:
+                          type: string
+                      required:
+                      - mountPath
+                      - name
+                      type: object
+                    type: array
+                  volumes:
                     items:
                       properties:
                         awsElasticBlockStore:
@@ -8375,25 +8454,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  tolerations:
-                    items:
-                      properties:
-                        effect:
-                          type: string
-                        key:
-                          type: string
-                        operator:
-                          type: string
-                        tolerationSeconds:
-                          format: int64
-                          type: integer
-                        value:
-                          type: string
-                      type: object
-                    type: array
-                  version:
-                    default: latest
-                    type: string
                 required:
                 - image
                 type: object
@@ -10391,7 +10451,46 @@ spec:
                       - name
                       type: object
                     type: array
-                  sidecarVolumes:
+                  tolerations:
+                    items:
+                      properties:
+                        effect:
+                          type: string
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        tolerationSeconds:
+                          format: int64
+                          type: integer
+                        value:
+                          type: string
+                      type: object
+                    type: array
+                  version:
+                    default: latest
+                    type: string
+                  volumeMounts:
+                    items:
+                      properties:
+                        mountPath:
+                          type: string
+                        mountPropagation:
+                          type: string
+                        name:
+                          type: string
+                        readOnly:
+                          type: boolean
+                        subPath:
+                          type: string
+                        subPathExpr:
+                          type: string
+                      required:
+                      - mountPath
+                      - name
+                      type: object
+                    type: array
+                  volumes:
                     items:
                       properties:
                         awsElasticBlockStore:
@@ -11102,25 +11201,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  tolerations:
-                    items:
-                      properties:
-                        effect:
-                          type: string
-                        key:
-                          type: string
-                        operator:
-                          type: string
-                        tolerationSeconds:
-                          format: int64
-                          type: integer
-                        value:
-                          type: string
-                      type: object
-                    type: array
-                  version:
-                    default: latest
-                    type: string
                 required:
                 - image
                 type: object

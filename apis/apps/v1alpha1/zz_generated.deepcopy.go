@@ -146,9 +146,16 @@ func (in *ComponentSpec) DeepCopyInto(out *ComponentSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.SidecarVolumes != nil {
-		in, out := &in.SidecarVolumes, &out.SidecarVolumes
+	if in.Volumes != nil {
+		in, out := &in.Volumes, &out.Volumes
 		*out = make([]v1.Volume, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.VolumeMounts != nil {
+		in, out := &in.VolumeMounts, &out.VolumeMounts
+		*out = make([]v1.VolumeMount, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

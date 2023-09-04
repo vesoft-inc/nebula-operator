@@ -102,8 +102,10 @@ type NebulaClusterSpec struct {
 	Exporter *ExporterSpec `json:"exporter,omitempty"`
 
 	// SSLCerts defines SSL certs load into secret
+	// +optional
 	SSLCerts *SSLCertsSpec `json:"sslCerts,omitempty"`
 
+	// +optional
 	Agent *AgentContainerSpec `json:"agent,omitempty"`
 
 	// +optional
@@ -425,6 +427,9 @@ type ComponentSpec struct {
 
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 
 	// +optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`

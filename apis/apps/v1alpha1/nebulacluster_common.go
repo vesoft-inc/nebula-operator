@@ -494,12 +494,13 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 	ports := c.GenerateContainerPorts()
 
 	baseContainer := corev1.Container{
-		Name:         componentType,
-		Image:        c.ComponentSpec().PodImage(),
-		Command:      cmd,
-		Env:          c.ComponentSpec().PodEnvVars(),
-		Ports:        ports,
-		VolumeMounts: mounts,
+		Name:            componentType,
+		Image:           c.ComponentSpec().PodImage(),
+		Command:         cmd,
+		Env:             c.ComponentSpec().PodEnvVars(),
+		SecurityContext: c.ComponentSpec().SecurityContext(),
+		Ports:           ports,
+		VolumeMounts:    mounts,
 	}
 
 	baseContainer.LivenessProbe = c.ComponentSpec().LivenessProbe()

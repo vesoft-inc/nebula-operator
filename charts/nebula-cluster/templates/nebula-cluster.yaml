@@ -41,6 +41,10 @@ spec:
     readinessProbe:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.graphd.livenessProbe }}
+    livenessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.graphd.initContainers }}
     initContainers:
     {{- toYaml . | nindent 6 }}
@@ -49,8 +53,12 @@ spec:
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
     {{- end }}
-    {{- with .Values.nebula.graphd.sidecarVolumes }}
-    sidecarVolumes:
+    {{- with .Values.nebula.graphd.volumes }}
+    volumes:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.volumeMounts }}
+    volumeMounts:
     {{- toYaml . | nindent 6 }}
     {{- end }}
   metad:
@@ -97,6 +105,10 @@ spec:
     readinessProbe:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.metad.livenessProbe }}
+    livenessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.metad.initContainers }}
     initContainers:
     {{- toYaml . | nindent 6 }}
@@ -105,8 +117,12 @@ spec:
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
     {{- end }}
-    {{- with .Values.nebula.metad.sidecarVolumes }}
-    sidecarVolumes:
+    {{- with .Values.nebula.metad.volumes }}
+    volumes:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.volumeMounts }}
+    volumeMounts:
     {{- toYaml . | nindent 6 }}
     {{- end }}
   storaged:
@@ -150,6 +166,10 @@ spec:
     readinessProbe:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.storaged.livenessProbe }}
+    livenessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.storaged.initContainers }}
     initContainers:
     {{- toYaml . | nindent 6 }}
@@ -158,8 +178,12 @@ spec:
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
     {{- end }}
-    {{- with .Values.nebula.storaged.sidecarVolumes }}
-    sidecarVolumes:
+    {{- with .Values.nebula.storaged.volumes }}
+    volumes:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.volumeMounts }}
+    volumeMounts:
     {{- toYaml . | nindent 6 }}
     {{- end }}
   exporter:
@@ -184,6 +208,26 @@ spec:
     {{- end }}
     {{- with .Values.nebula.exporter.livenessProbe }}
     livenessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.readinessProbe }}
+    readinessProbe:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.initContainers }}
+    initContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.sidecarContainers }}
+    sidecarContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.volumes }}
+    volumes:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.volumeMounts }}
+    volumeMounts:
     {{- toYaml . | nindent 6 }}
     {{- end }}
     maxRequests: {{ .Values.nebula.exporter.maxRequests }}

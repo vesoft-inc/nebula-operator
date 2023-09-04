@@ -36,7 +36,8 @@ nebula:
     livenessProbe: {}
     initContainers: []
     sidecarContainers: []
-    sidecarVolumes: []
+    volumes: []
+    volumeMounts: []
 
   metad:
     image: vesoft/nebula-metad
@@ -63,7 +64,8 @@ nebula:
     livenessProbe: {}
     initContainers: []
     sidecarContainers: []
-    sidecarVolumes: []
+    volumes: []
+    volumeMounts: []
 
   storaged:
     image: vesoft/nebula-storaged
@@ -89,7 +91,8 @@ nebula:
     livenessProbe: {}
     initContainers: []
     sidecarContainers: []
-    sidecarVolumes: []
+    volumes: []
+    volumeMounts: []
 
   exporter:
     image: vesoft/nebula-stats-exporter
@@ -112,7 +115,8 @@ nebula:
     livenessProbe: {}
     initContainers: []
     sidecarContainers: []
-    sidecarVolumes: []
+    volumes: []
+    volumeMounts: []
     maxRequests: 20
 
   agent:

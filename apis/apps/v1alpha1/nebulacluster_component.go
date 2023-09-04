@@ -37,6 +37,7 @@ type ComponentAccessor interface {
 	NodeSelector() map[string]string
 	Affinity() *corev1.Affinity
 	Tolerations() []corev1.Toleration
+	SecurityContext() *corev1.SecurityContext
 	InitContainers() []corev1.Container
 	SidecarContainers() []corev1.Container
 	Volumes() []corev1.Volume
@@ -56,26 +57,44 @@ type componentAccessor struct {
 }
 
 func (a *componentAccessor) Replicas() int32 {
+	if a.componentSpec == nil {
+		return 0
+	}
 	return pointer.Int32Deref(a.componentSpec.Replicas, 0)
 }
 
 func (a *componentAccessor) PodImage() string {
+	if a.componentSpec == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s:%s", a.componentSpec.Image, a.componentSpec.Version)
 }
 
 func (a *componentAccessor) Resources() *corev1.ResourceRequirements {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return getResources(a.componentSpec.Resources)
 }
 
 func (a *componentAccessor) PodLabels() map[string]string {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.Labels
 }
 
 func (a *componentAccessor) PodAnnotations() map[string]string {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.Annotations
 }
 
 func (a *componentAccessor) PodEnvVars() []corev1.EnvVar {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.EnvVars
 }
 
@@ -106,27 +125,52 @@ func (a *componentAccessor) Tolerations() []corev1.Toleration {
 	return a.componentSpec.Tolerations
 }
 
+func (a *componentAccessor) SecurityContext() *corev1.SecurityContext {
+	if a.componentSpec == nil {
+		return nil
+	}
+	return a.componentSpec.SecurityContext
+}
+
 func (a *componentAccessor) InitContainers() []corev1.Container {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.InitContainers
 }
 
 func (a *componentAccessor) SidecarContainers() []corev1.Container {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.SidecarContainers
 }
 
 func (a *componentAccessor) Volumes() []corev1.Volume {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.Volumes
 }
 
 func (a *componentAccessor) VolumeMounts() []corev1.VolumeMount {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.VolumeMounts
 }
 
 func (a *componentAccessor) ReadinessProbe() *corev1.Probe {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.ReadinessProbe
 }
 
 func (a *componentAccessor) LivenessProbe() *corev1.Probe {
+	if a.componentSpec == nil {
+		return nil
+	}
 	return a.componentSpec.LivenessProbe
 }
 

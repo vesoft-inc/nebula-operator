@@ -2,9 +2,9 @@ package kube
 
 import (
 	"context"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,6 +27,7 @@ func (s *secretClient) GetSecret(namespace, secretName string) (*corev1.Secret, 
 		Namespace: namespace,
 	}, secret)
 	if err != nil {
+		klog.Errorf("get secret [%s/%s] failed: %v", namespace, secretName, err)
 		return nil, err
 	}
 	return secret, nil

@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,6 +41,7 @@ func (pd *nodeClient) GetNode(nodeName string) (*corev1.Node, error) {
 	node := &corev1.Node{}
 	err := pd.kubecli.Get(context.TODO(), types.NamespacedName{Name: nodeName}, node)
 	if err != nil {
+		klog.Errorf("get node %s failed: %v", nodeName, err)
 		return nil, err
 	}
 	return node, nil

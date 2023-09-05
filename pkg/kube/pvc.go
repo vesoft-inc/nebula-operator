@@ -61,6 +61,7 @@ func (p *pvcClient) GetPVC(namespace, name string) (*corev1.PersistentVolumeClai
 		Name:      name,
 	}, pvc)
 	if err != nil {
+		klog.Errorf("get PVC [%s/%s] failed: %v", namespace, name, err)
 		return nil, err
 	}
 	return pvc, nil

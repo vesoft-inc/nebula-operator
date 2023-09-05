@@ -29,7 +29,6 @@ type ClientSet interface {
 	PV() PersistentVolume
 	PVC() PersistentVolumeClaim
 	Pod() Pod
-	Endpoint() Endpoint
 	Service() Service
 	Ingress() Ingress
 	Workload() Workload
@@ -45,7 +44,6 @@ type clientSet struct {
 	pvClient       PersistentVolume
 	pvcClient      PersistentVolumeClaim
 	podClient      Pod
-	epClient       Endpoint
 	svcClient      Service
 	ingressClient  Ingress
 	workloadClient Workload
@@ -66,7 +64,6 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		pvClient:       NewPV(cli),
 		pvcClient:      NewPVC(cli),
 		podClient:      NewPod(cli),
-		epClient:       NewEndpointClient(cli),
 		svcClient:      NewService(cli),
 		ingressClient:  NewIngress(cli),
 		workloadClient: NewWorkload(cli),
@@ -98,10 +95,6 @@ func (c *clientSet) PVC() PersistentVolumeClaim {
 
 func (c *clientSet) Pod() Pod {
 	return c.podClient
-}
-
-func (c *clientSet) Endpoint() Endpoint {
-	return c.epClient
 }
 
 func (c *clientSet) Service() Service {

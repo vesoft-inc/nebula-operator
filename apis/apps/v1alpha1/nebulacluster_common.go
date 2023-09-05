@@ -47,7 +47,7 @@ const (
 	AgentInitContainerName    = "ng-init-agent"
 	DefaultAgentPortGRPC      = 8888
 	agentPortNameGRPC         = "grpc"
-	defaultAgentImage         = "vesoft/nebula-agent:latest"
+	defaultAgentImage         = "vesoft/nebula-agent"
 	defaultAlpineImage        = "vesoft/nebula-alpine:latest"
 )
 
@@ -123,6 +123,10 @@ func getTopologySpreadConstraints(constraints []TopologySpreadConstraint, labels
 		tscs = append(tscs, tsc)
 	}
 	return tscs
+}
+
+func GetClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {
+	return getClientCertsVolume(sslCerts)
 }
 
 func getClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {

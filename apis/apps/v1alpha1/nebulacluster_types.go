@@ -101,6 +101,9 @@ type NebulaClusterSpec struct {
 	// +optional
 	Exporter *ExporterSpec `json:"exporter,omitempty"`
 
+	// +optional
+	Console *ConsoleSpec `json:"console,omitempty"`
+
 	// SSLCerts defines SSL certs load into secret
 	// +optional
 	SSLCerts *SSLCertsSpec `json:"sslCerts,omitempty"`
@@ -234,6 +237,28 @@ type ExporterSpec struct {
 	// IgnoreRegex means the regex to ignore metrics
 	// +optional
 	IgnoreRegex string `json:"ignoreRegex,omitempty"`
+}
+
+type ConsoleSpec struct {
+	// The Graph login username
+	// +optional
+	Username string `json:"username,omitempty"`
+
+	// The Graph login password
+	// +optional
+	Password string `json:"password,omitempty"`
+
+	// url for docker image
+	// +optional
+	Image string `json:"image,omitempty"`
+
+	// Version tag for docker images
+	// +optional
+	Version string `json:"version,omitempty"`
+
+	// K8S nodeSelector.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
 // AgentContainerSpec defines the desired state of Agent

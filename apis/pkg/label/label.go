@@ -49,6 +49,8 @@ const (
 	StoragedLabelVal string = "storaged"
 	// ExporterLabelVal is exporter label value
 	ExporterLabelVal string = "exporter"
+	// ConsoleLabelVal is exporter label value
+	ConsoleLabelVal string = "console"
 )
 
 type Label labels.Set
@@ -68,6 +70,10 @@ func (l Label) Cluster(name string) Label {
 func (l Label) Component(name string) Label {
 	l[ComponentLabelKey] = name
 	return l
+}
+
+func (l Label) Console() Label {
+	return l.Component(ConsoleLabelVal)
 }
 
 func (l Label) Exporter() Label {

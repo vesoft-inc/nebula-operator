@@ -52,7 +52,7 @@ spec:
         cpu: "1"
         memory: "1Gi"
     replicas: 1
-    image: reg.vesoft-inc.com/rc/nebula-metad-ent
+    image: reg.vesoft-inc.com/nebula-metad-ent
     version: v3.5.0
     dataVolumeClaim:
       resources:

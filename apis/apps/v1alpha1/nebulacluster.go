@@ -106,11 +106,11 @@ func (nc *NebulaCluster) IsLogRotateEnabled() bool {
 }
 
 func (nc *NebulaCluster) InsecureSkipVerify() bool {
-	return pointer.BoolDeref(nc.Spec.SSLCerts.InsecureSkipVerify, false)
+	return nc.Spec.SSLCerts != nil && pointer.BoolDeref(nc.Spec.SSLCerts.InsecureSkipVerify, false)
 }
 
 func (nc *NebulaCluster) AutoMountServerCerts() bool {
-	return pointer.BoolDeref(nc.Spec.SSLCerts.AutoMountServerCerts, false)
+	return nc.Spec.SSLCerts != nil && pointer.BoolDeref(nc.Spec.SSLCerts.AutoMountServerCerts, false)
 }
 
 func (nc *NebulaCluster) IsIntraZoneRoutingEnabled() bool {

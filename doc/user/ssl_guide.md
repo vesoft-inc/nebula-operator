@@ -98,4 +98,6 @@ sslCerts:
   caCert: ""
   # InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name
   insecureSkipVerify: false
+  # AutoMountServerCerts controls whether operator mounts server's certificate from secret.
+  autoMountServerCerts: false
 ```

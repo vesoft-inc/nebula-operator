@@ -19,8 +19,11 @@ package kube
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -31,6 +34,7 @@ import (
 
 type Pod interface {
 	GetPod(namespace string, name string) (*corev1.Pod, error)
+	CreatePod(pod *corev1.Pod) error
 	UpdatePod(pod *corev1.Pod) error
 	DeletePod(namespace string, name string) error
 	ListPods(namespace string, selector labels.Selector) ([]corev1.Pod, error)
@@ -54,6 +58,16 @@ func (pd *podClient) GetPod(namespace, name string) (*corev1.Pod, error) {
 		return nil, err
 	}
 	return pod, nil
+}
+
+func (pd *podClient) CreatePod(pod *corev1.Pod) error {
+	if err := pd.kubecli.Create(context.TODO(), pod); err != nil {
+		if apierrors.IsAlreadyExists(err) && !strings.Contains(err.Error(), "being deleted") {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (pd *podClient) UpdatePod(pod *corev1.Pod) error {
@@ -89,7 +103,12 @@ func (pd *podClient) DeletePod(namespace, name string) error {
 	}, pod); err != nil {
 		return err
 	}
-	return pd.kubecli.Delete(context.TODO(), pod)
+
+	policy := metav1.DeletePropagationBackground
+	options := &client.DeleteOptions{
+		PropagationPolicy: &policy,
+	}
+	return pd.kubecli.Delete(context.TODO(), pod, options)
 }
 
 func (pd *podClient) ListPods(namespace string, selector labels.Selector) ([]corev1.Pod, error) {

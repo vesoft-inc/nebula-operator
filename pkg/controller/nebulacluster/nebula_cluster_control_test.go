@@ -132,20 +132,23 @@ func newFakeNebulaClusterControl() ( // nolint: gocritic
 	*reclaimer.FakeMetaReconciler,
 	*reclaimer.FakePVCReclaimer,
 ) {
-	cli := fake.NewClientBuilder().Build()
-	fakeNebulaClient := kube.NewFakeNebulaCluster(cli)
+	clientset := fake.NewClientBuilder().Build()
+	fakeNebulaClient := kube.NewFakeNebulaCluster(clientset)
 	graphdCluster := component.NewFakeGraphdCluster()
 	metadCluster := component.NewFakeMetadCluster()
 	storagedCluster := component.NewFakeStoragedCluster()
 	exporter := component.NewFakeNebulaExporter()
+	console := component.NewFakeNebulaConsole()
 	metaReconciler := reclaimer.NewFakeMetaReconciler()
 	pvcReclaimer := reclaimer.NewFakePVCReclaimer()
 	control := NewDefaultNebulaClusterControl(
+		clientset,
 		fakeNebulaClient,
 		graphdCluster,
 		metadCluster,
 		storagedCluster,
 		exporter,
+		console,
 		metaReconciler,
 		pvcReclaimer,
 		&nebulaClusterConditionUpdater{})

@@ -45,6 +45,7 @@ func NewDefaultNebulaClusterControl(
 	metadCluster component.ReconcileManager,
 	storagedCluster component.ReconcileManager,
 	exporter component.ReconcileManager,
+	console component.ReconcileManager,
 	metaReconciler component.ReconcileManager,
 	pvcReclaimer reclaimer.PVCReclaimer,
 	conditionUpdater ClusterConditionUpdater,
@@ -56,6 +57,7 @@ func NewDefaultNebulaClusterControl(
 		metadCluster:     metadCluster,
 		storagedCluster:  storagedCluster,
 		exporter:         exporter,
+		console:          console,
 		metaReconciler:   metaReconciler,
 		pvcReclaimer:     pvcReclaimer,
 		conditionUpdater: conditionUpdater,
@@ -69,6 +71,7 @@ type defaultNebulaClusterControl struct {
 	metadCluster     component.ReconcileManager
 	storagedCluster  component.ReconcileManager
 	exporter         component.ReconcileManager
+	console          component.ReconcileManager
 	metaReconciler   component.ReconcileManager
 	pvcReclaimer     reclaimer.PVCReclaimer
 	conditionUpdater ClusterConditionUpdater
@@ -130,6 +133,11 @@ func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaClu
 
 	if err := c.exporter.Reconcile(nc); err != nil {
 		klog.Errorf("reconcile exporter failed: %v", err)
+		return err
+	}
+
+	if err := c.console.Reconcile(nc); err != nil {
+		klog.Errorf("reconcile console failed: %v", err)
 		return err
 	}
 

@@ -104,6 +104,7 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 				sm,
 				storagedUpdater),
 			component.NewNebulaExporter(clientSet),
+			component.NewNebulaConsole(clientSet),
 			reclaimer.NewMetaReconciler(clientSet),
 			reclaimer.NewPVCReclaimer(clientSet),
 			NewClusterConditionUpdater(),

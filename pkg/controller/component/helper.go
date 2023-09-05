@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -342,6 +343,7 @@ func setDeploymentLastAppliedConfigAnnotation(deploy *appsv1.Deployment) error {
 		deploy.Annotations = map[string]string{}
 	}
 	deploy.Annotations[annotation.AnnLastAppliedConfigKey] = string(b)
+	deploy.Annotations[annotation.AnnLastSyncTimestampKey] = time.Now().Format(time.RFC3339)
 	return nil
 }
 
@@ -417,4 +419,56 @@ func deploymentEqual(newDeploy, oldDeploy *appsv1.Deployment) bool {
 			apiequality.Semantic.DeepEqual(oldConfig.Strategy, newDeploy.Spec.Strategy)
 	}
 	return false
+}
+
+func setPodLastAppliedConfigAnnotation(pod *corev1.Pod) error {
+	b, err := json.Marshal(pod.Spec)
+	if err != nil {
+		return err
+	}
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	pod.Annotations[annotation.AnnLastAppliedConfigKey] = string(b)
+	pod.Annotations[annotation.AnnLastSyncTimestampKey] = time.Now().Format(time.RFC3339)
+	return nil
+}
+
+func podEqual(newPod, oldPod *corev1.Pod) bool {
+	tmpAnno := map[string]string{}
+	for k, v := range oldPod.Annotations {
+		if k != annotation.AnnLastAppliedConfigKey && k != annotation.AnnLastSyncTimestampKey {
+			tmpAnno[k] = v
+		}
+	}
+
+	if !apiequality.Semantic.DeepEqual(newPod.Annotations, tmpAnno) {
+		return false
+	}
+	oldConfig := corev1.Pod{}
+	if lastAppliedConfig, ok := oldPod.Annotations[annotation.AnnLastAppliedConfigKey]; ok {
+		err := json.Unmarshal([]byte(lastAppliedConfig), &oldConfig)
+		if err != nil {
+			return false
+		}
+		return apiequality.Semantic.DeepEqual(*oldConfig.Spec.DeepCopy(), newPod.Spec)
+	}
+	return false
+}
+
+func updatePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error {
+	isOrphan := metav1.GetControllerOf(oldPod) == nil
+	if podEqual(newPod, oldPod) && !isOrphan {
+		return nil
+	}
+
+	if err := setPodLastAppliedConfigAnnotation(newPod); err != nil {
+		return err
+	}
+
+	if err := clientSet.Pod().DeletePod(oldPod.Namespace, oldPod.Name); err != nil {
+		return err
+	}
+
+	return clientSet.Pod().CreatePod(newPod)
 }

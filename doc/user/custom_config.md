@@ -40,13 +40,13 @@ spec:
 ...
 ```
 
-Afterwards, the custom flags  _enable_authorize_, _auth_type_ and _foo_ will be configured and overwritten by configmap.
+Afterward, the custom flags  _enable_authorize_, _auth_type_ and _foo_ will be configured and overwritten by configmap.
 
 ### Dynamic runtime flags
 
-This a dynamic runtime flags table, if all the flags in the filed `config` are in this table, 
-the pod rolling update will not be triggered after you apply updates, and it will take effect in time.
-
+This a dynamic runtime flags table, the pod rolling update will not be triggered after you apply updates in the scenarios below:
+- All the flags in the filed `config` are in this table
+- The flag last updated is in this table
 
 | Flag                                          | Description                                                                                                                               | Default                                                                                                 |
 |:----------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|

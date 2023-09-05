@@ -29,7 +29,11 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 )
 
-const defaultConsoleImage = "vesoft/nebula-console"
+const (
+	defaultConsoleImage = "vesoft/nebula-console"
+	defaultUsername     = "root"
+	defaultPassword     = "nebula"
+)
 
 type nebulaConsole struct {
 	clientSet kube.ClientSet
@@ -97,11 +101,11 @@ func (c *nebulaConsole) generatePod(nc *v1alpha1.NebulaCluster) *corev1.Pod {
 		strconv.Itoa(int(nc.GraphdComponent().GetPort(v1alpha1.GraphdPortNameThrift))),
 	}
 
-	username := "root"
+	username := defaultUsername
 	if nc.Spec.Console.Username != "" {
 		username = nc.Spec.Console.Username
 	}
-	password := "nebula"
+	password := defaultPassword
 	if nc.Spec.Console.Password != "" {
 		password = nc.Spec.Console.Password
 	}

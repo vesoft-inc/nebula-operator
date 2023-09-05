@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
@@ -71,7 +70,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
-	if !pointer.BoolDeref(nc.Spec.Storaged.EnableAutoBalance, false) {
+	if !nc.IsAutoBalanceEnabled() {
 		klog.Infof("storaged cluster [%s/%s] auto balance is disabled", ns, componentName)
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil

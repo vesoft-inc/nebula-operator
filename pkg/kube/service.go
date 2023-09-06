@@ -62,6 +62,7 @@ func (s *serviceClient) GetService(namespace, name string) (*corev1.Service, err
 		Namespace: namespace,
 	}, service)
 	if err != nil {
+		klog.Errorf("get service [%s/%s] failed: %v", namespace, name, err)
 		return nil, err
 	}
 	return service, nil

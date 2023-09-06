@@ -60,6 +60,7 @@ func (p *pvClient) GetPersistentVolume(name string) (*corev1.PersistentVolume, e
 		Name: name,
 	}, pv)
 	if err != nil {
+		klog.Errorf("get PV %s failed: %v", name, err)
 		return nil, err
 	}
 	return pv, nil

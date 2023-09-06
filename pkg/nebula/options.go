@@ -18,6 +18,8 @@ package nebula
 
 import (
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -40,8 +42,11 @@ type Options struct {
 
 func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error) {
 	options := []Option{SetTimeout(DefaultTimeout)}
-	if nc.Spec.SSLCerts == nil || (nc.IsGraphdSSLEnabled() && !nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled()) {
+	if !nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled() {
 		return options, nil
+	}
+	if nc.Spec.SSLCerts == nil {
+		return nil, errors.New("ssl certs is nil")
 	}
 
 	if nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled() {
@@ -52,13 +57,14 @@ func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error)
 		options = append(options, SetClusterTLS(true))
 		klog.Infof("cluster [%s/%s] SSL enabled", nc.Namespace, nc.Name)
 	}
+
 	caCert, clientCert, clientKey, err := getCerts(nc.Namespace, nc.Spec.SSLCerts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get cluster [%s/%s] certs failed: %v", nc.Namespace, nc.Name, err)
 	}
 	tlsConfig, err := cert.LoadTLSConfig(caCert, clientCert, clientKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load tls config failed: %v", err)
 	}
 	tlsConfig.InsecureSkipVerify = nc.InsecureSkipVerify()
 	tlsConfig.MaxVersion = tls.VersionTLS12

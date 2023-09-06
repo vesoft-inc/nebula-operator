@@ -54,7 +54,8 @@ func (g *graphUpdater) Update(
 		return nil
 	}
 
-	if nc.Status.Graphd.Workload.UpdateRevision == nc.Status.Graphd.Workload.CurrentRevision {
+	if nc.Status.Graphd.Workload.UpdateRevision == nc.Status.Graphd.Workload.CurrentRevision &&
+		nc.Status.Graphd.Phase == v1alpha1.RunningPhase {
 		return nil
 	}
 

@@ -150,8 +150,10 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
 	} else if *newReplicas < *oldReplicas {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleInPhase
-		if err := PVCMark(c.clientSet.PVC(), nc.GraphdComponent(), *oldReplicas, *newReplicas); err != nil {
-			return err
+		if nc.Spec.Graphd.LogVolumeClaim != nil {
+			if err := PVCMark(c.clientSet.PVC(), nc.GraphdComponent(), *oldReplicas, *newReplicas); err != nil {
+				return err
+			}
 		}
 	} else if *newReplicas > *oldReplicas {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleOutPhase

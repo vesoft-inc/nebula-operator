@@ -412,6 +412,11 @@ type StoragedSpec struct {
 	// Flag to enable/disable rolling update without leader state transition
 	// +optional
 	EnableForceUpdate *bool `json:"enableForceUpdate,omitempty"`
+
+	// Flag to enable/disable transferring leader state concurrently.
+	// Note: This feature is in alpha state.
+	// +optional
+	ConcurrentTransfer *bool `json:"concurrentTransfer,omitempty"`
 }
 
 // ComponentSpec is a common set of k8s resource configs for nebula components.

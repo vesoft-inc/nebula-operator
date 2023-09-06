@@ -77,7 +77,8 @@ func (s *storagedUpdater) Update(
 		return nil
 	}
 
-	if nc.Status.Storaged.Workload.UpdateRevision == nc.Status.Storaged.Workload.CurrentRevision {
+	if nc.Status.Storaged.Workload.UpdateRevision == nc.Status.Storaged.Workload.CurrentRevision &&
+		nc.Status.Storaged.Phase == v1alpha1.RunningPhase {
 		return nil
 	}
 
@@ -203,6 +204,52 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 	mc nebula.MetaInterface,
 	ordinal int32,
 ) error {
+	if nc.ConcurrentTransfer() {
+		return s.concurrentTransLeader(nc, mc, ordinal)
+	}
+
+	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
+	host := nc.StoragedComponent().GetPodFQDN(ordinal)
+	spaceItems, err := mc.GetSpaceParts()
+	if err != nil {
+		klog.Errorf("storaged cluster [%s/%s] get space partition failed: %v", namespace, componentName, err)
+		return err
+	}
+
+	options, err := nebula.ClientOptions(nc, nebula.SetIsStorage(true), nebula.SetTimeout(time.Second*30))
+	if err != nil {
+		return err
+	}
+	endpoint := fmt.Sprintf("%s:%d", host, nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameAdmin))
+	sc, err := nebula.NewStorageClient([]string{endpoint}, options...)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := sc.Disconnect(); err != nil {
+			klog.Errorf("storage client disconnect failed: %v", err)
+		}
+	}()
+
+	for spaceID, partItems := range spaceItems {
+		for _, partItem := range partItems {
+			if partItem.Leader == nil {
+				continue
+			}
+			if partItem.Leader.Host == host {
+				newLeader := getNewLeader(nc, *nc.Spec.Storaged.Replicas, ordinal)
+				if err := s.transLeader(sc, nc, spaceID, partItem.PartID, newLeader); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (s *storagedUpdater) concurrentTransLeader(nc *v1alpha1.NebulaCluster, mc nebula.MetaInterface, ordinal int32) error {
 	namespace := nc.GetNamespace()
 	componentName := nc.StoragedComponent().GetName()
 	host := nc.StoragedComponent().GetPodFQDN(ordinal)
@@ -260,7 +307,6 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 			stopCh <- spaceWorker()
 		})
 	}
-
 	return spaceGroup.Wait()
 }
 

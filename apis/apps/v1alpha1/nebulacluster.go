@@ -97,6 +97,10 @@ func (nc *NebulaCluster) IsForceUpdateEnabled() bool {
 	return pointer.BoolDeref(nc.Spec.Storaged.EnableForceUpdate, false)
 }
 
+func (nc *NebulaCluster) ConcurrentTransfer() bool {
+	return pointer.BoolDeref(nc.Spec.Storaged.ConcurrentTransfer, false)
+}
+
 func (nc *NebulaCluster) IsBREnabled() bool {
 	return pointer.BoolDeref(nc.Spec.EnableBR, false)
 }

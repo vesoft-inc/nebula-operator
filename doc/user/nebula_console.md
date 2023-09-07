@@ -18,7 +18,7 @@ spec:
     password: "test"
 ```
 
-If you enable `enable_ssl` or `enable_graph_ssl` to true in the config field, nebula-console will enable SSL when connecting to Graphd.
+If you enable `enable_ssl` or `enable_graph_ssl` to true in the `config` field, nebula-console will enable SSL when connecting to Graphd.
 At the same time, you need to configure CA and Client certificates within sslCerts.
 
 ```yaml

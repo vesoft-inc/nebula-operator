@@ -44,9 +44,8 @@ Afterward, the custom flags  _enable_authorize_, _auth_type_ and _foo_ will be c
 
 ### Dynamic runtime flags
 
-This a dynamic runtime flags table, the pod rolling update will not be triggered after you apply updates in the scenarios below:
-- All the flags in the filed `config` are in this table
-- The flag last updated is in this table
+This a dynamic runtime flags table, the pod rolling update will not be triggered after you apply updates in the scenario:
+- All flags updated are in this table
 
 | Flag                                          | Description                                                                                                                               | Default                                                                                                 |
 |:----------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|

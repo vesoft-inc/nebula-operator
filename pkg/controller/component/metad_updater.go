@@ -49,7 +49,8 @@ func (m *metadUpdater) Update(
 		return nil
 	}
 
-	if nc.Status.Metad.Workload.UpdateRevision == nc.Status.Metad.Workload.CurrentRevision {
+	if nc.Status.Metad.Workload.UpdateRevision == nc.Status.Metad.Workload.CurrentRevision &&
+		nc.Status.Metad.Phase == v1alpha1.RunningPhase {
 		return nil
 	}
 

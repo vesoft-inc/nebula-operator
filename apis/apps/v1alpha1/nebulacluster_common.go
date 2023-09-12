@@ -49,6 +49,8 @@ const (
 	agentPortNameGRPC         = "grpc"
 	defaultAgentImage         = "vesoft/nebula-agent"
 	defaultAlpineImage        = "vesoft/nebula-alpine:latest"
+
+	ZoneSuffix = "zone"
 )
 
 func getComponentName(clusterName string, typ ComponentType) string {
@@ -606,9 +608,7 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		ServiceAccountName: NebulaServiceAccountName,
 	}
 
-	if nc.Spec.SchedulerName == corev1.DefaultSchedulerName {
-		podSpec.TopologySpreadConstraints = getTopologySpreadConstraints(nc.Spec.TopologySpreadConstraints, componentLabel)
-	}
+	podSpec.TopologySpreadConstraints = getTopologySpreadConstraints(nc.Spec.TopologySpreadConstraints, componentLabel)
 
 	volumeClaim, err := c.GenerateVolumeClaim()
 	if err != nil {

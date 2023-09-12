@@ -102,6 +102,9 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if notExist {
+		if err := syncZoneConfigMap(nc.GraphdComponent(), c.clientSet.ConfigMap()); err != nil {
+			return err
+		}
 		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
 		}
@@ -110,6 +113,13 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 		nc.Status.Graphd.Workload = v1alpha1.WorkloadStatus{}
 		return utilerrors.ReconcileErrorf("waiting for graphd cluster %s running", newWorkload.GetName())
+	}
+
+	newReplicas := extender.GetReplicas(newWorkload)
+	if nc.IsZoneEnabled() && !nc.GraphdComponent().IsReady() {
+		if err := c.setTopologyZone(nc, *newReplicas); err != nil {
+			return err
+		}
 	}
 
 	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
@@ -179,6 +189,49 @@ func (c *graphdCluster) syncGraphdConfigMap(nc *v1alpha1.NebulaCluster) (*corev1
 		c.clientSet.ConfigMap(),
 		v1alpha1.GraphdConfigTemplate,
 		nc.GraphdComponent().GetConfigMapKey())
+}
+
+func (c *graphdCluster) setTopologyZone(nc *v1alpha1.NebulaCluster, newReplicas int32) error {
+	cmName := fmt.Sprintf("%s-%s", nc.GraphdComponent().GetName(), v1alpha1.ZoneSuffix)
+	cm, err := c.clientSet.ConfigMap().GetConfigMap(nc.Namespace, cmName)
+	if err != nil {
+		return err
+	}
+	newCM := generateZoneConfigMap(nc.GraphdComponent())
+	namespace := nc.GetNamespace()
+	for i := int32(0); i < newReplicas; i++ {
+		podName := nc.GraphdComponent().GetPodName(i)
+		value, ok := cm.Data[podName]
+		if ok {
+			newCM.Data[podName] = value
+			klog.V(3).Infof("graphd pod [%s/%s] zone had been set to %s", nc.Namespace, podName, value)
+			continue
+		}
+		pod, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		if pod.Spec.NodeName == "" {
+			continue
+		}
+		node, err := c.clientSet.Node().GetNode(pod.Spec.NodeName)
+		if err != nil {
+			return err
+		}
+		zone, ok := node.GetLabels()[corev1.LabelTopologyZone]
+		if !ok {
+			return fmt.Errorf("node %s topology zone not found", pod.Spec.NodeName)
+		}
+		klog.Infof("graphd pod [%s/%s] scheduled on node %s in zone %s", namespace, podName, pod.Spec.NodeName, zone)
+		newCM.Data[podName] = zone
+	}
+	if err := c.clientSet.ConfigMap().CreateOrUpdateConfigMap(newCM); err != nil {
+		return err
+	}
+	return nil
 }
 
 type FakeGraphdCluster struct {

@@ -124,8 +124,9 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage2, waiting for cluster ready", ns, restoredName)
 		}
 		nc.Annotations = nil
+		nc.Spec.Storaged.EnableForceUpdate = nil
 		if err := rm.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
-			klog.Errorf("remove cluster [%s/%s] annotations failed: %v", ns, restoredName, err)
+			return fmt.Errorf("remove cluster [%s/%s] annotations failed: %v", ns, restoredName, err)
 		}
 
 		return rm.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(rt,
@@ -685,7 +686,6 @@ func (rm *restoreManager) removeInitAgentContainer(namespace, ncName string) err
 	}
 
 	updated.SetAnnotations(map[string]string{annotation.AnnRestoreStageKey: annotation.AnnRestoreStage2Val})
-	updated.Spec.Storaged.EnableForceUpdate = nil
 
 	m := make([]corev1.Container, 0)
 	for _, c := range updated.Spec.Metad.InitContainers {

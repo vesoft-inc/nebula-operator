@@ -154,6 +154,28 @@ func serviceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
 	return false, nil
 }
 
+func generateZoneConfigMap(component v1alpha1.NebulaClusterComponent) *corev1.ConfigMap {
+	namespace := component.GetNamespace()
+	labels := component.GenerateLabels()
+	cmName := fmt.Sprintf("%s-%s", component.GetName(), v1alpha1.ZoneSuffix)
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            cmName,
+			Namespace:       namespace,
+			OwnerReferences: component.GenerateOwnerReferences(),
+			Labels:          labels,
+		},
+	}
+	cm.Data = map[string]string{component.GetName(): ""}
+	return cm
+}
+
+func syncZoneConfigMap(component v1alpha1.NebulaClusterComponent, cmClient kube.ConfigMap) error {
+	cm := generateZoneConfigMap(component)
+	return cmClient.CreateOrUpdateConfigMap(cm)
+}
+
 func syncConfigMap(
 	component v1alpha1.NebulaClusterComponent,
 	cmClient kube.ConfigMap,
@@ -167,7 +189,7 @@ func syncConfigMap(
 		namespace := component.GetNamespace()
 		clusterName := component.GetClusterName()
 		flags := staticFlags(cfg)
-		klog.Infof("cluster [%s/%s] sync %s configmap with custom static configs %v", namespace, clusterName,
+		klog.V(3).Infof("cluster [%s/%s] sync %s configmap with custom static configs %v", namespace, clusterName,
 			component.ComponentType().String(), flags)
 		customConf := config.AppendCustomConfig(template, flags)
 		cm.Data[cmKey] = customConf
@@ -445,13 +467,13 @@ func podEqual(newPod, oldPod *corev1.Pod) bool {
 	if !apiequality.Semantic.DeepEqual(newPod.Annotations, tmpAnno) {
 		return false
 	}
-	oldConfig := corev1.Pod{}
+	oldConfig := corev1.PodSpec{}
 	if lastAppliedConfig, ok := oldPod.Annotations[annotation.AnnLastAppliedConfigKey]; ok {
 		err := json.Unmarshal([]byte(lastAppliedConfig), &oldConfig)
 		if err != nil {
 			return false
 		}
-		return apiequality.Semantic.DeepEqual(*oldConfig.Spec.DeepCopy(), newPod.Spec)
+		return apiequality.Semantic.DeepEqual(oldConfig, newPod.Spec)
 	}
 	return false
 }

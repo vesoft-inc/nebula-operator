@@ -119,6 +119,9 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	}
 
 	if notExist {
+		if err := syncZoneConfigMap(nc.StoragedComponent(), c.clientSet.ConfigMap()); err != nil {
+			return err
+		}
 		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
 		}
@@ -260,8 +263,6 @@ func (c *storagedCluster) registeredHosts(mc nebula.MetaInterface) (sets.Set[str
 
 func (c *storagedCluster) addStorageHostsToZone(nc *v1alpha1.NebulaCluster, newReplicas int32) error {
 	namespace := nc.GetNamespace()
-	componentName := nc.StoragedComponent().GetName()
-
 	options, err := nebula.ClientOptions(nc)
 	if err != nil {
 		return err
@@ -275,24 +276,25 @@ func (c *storagedCluster) addStorageHostsToZone(nc *v1alpha1.NebulaCluster, newR
 		_ = metaClient.Disconnect()
 	}()
 
-	registered, err := c.registeredHosts(metaClient)
+	cmName := fmt.Sprintf("%s-%s", nc.StoragedComponent().GetName(), v1alpha1.ZoneSuffix)
+	cm, err := c.clientSet.ConfigMap().GetConfigMap(nc.Namespace, cmName)
 	if err != nil {
 		return err
 	}
-	klog.Infof("storaged cluster [%s/%s] registered hosts list: %v", namespace, componentName, registered.UnsortedList())
 
+	newCM := generateZoneConfigMap(nc.StoragedComponent())
 	port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 	for i := int32(0); i < newReplicas; i++ {
-		host := nc.StoragedComponent().GetPodFQDN(i)
-		if registered.Has(host) {
-			klog.Infof("host %s had been registered into metad, ignored!", host)
+		podName := nc.StoragedComponent().GetPodName(i)
+		value, ok := cm.Data[podName]
+		if ok {
+			newCM.Data[podName] = value
+			klog.V(3).Infof("storaged pod [%s/%s] zone had been set to %s", nc.Namespace, podName, value)
 			continue
 		}
-		podName := nc.StoragedComponent().GetPodName(i)
 		pod, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				klog.Errorf("pod %s not found, it will be registered as new storaged host", podName)
 				continue
 			}
 			return err
@@ -304,20 +306,25 @@ func (c *storagedCluster) addStorageHostsToZone(nc *v1alpha1.NebulaCluster, newR
 		if err != nil {
 			return err
 		}
-		dbZone, ok := node.GetLabels()[corev1.LabelTopologyZone]
+		zone, ok := node.GetLabels()[corev1.LabelTopologyZone]
 		if !ok {
 			return fmt.Errorf("node %s topology zone not found", pod.Spec.NodeName)
 		}
-		klog.Infof("pod [%s/%s] scheduled on node %s in zone %s", namespace, podName, pod.Spec.NodeName, dbZone)
+		klog.Infof("storaged pod [%s/%s] scheduled on node %s in zone %s", namespace, podName, pod.Spec.NodeName, zone)
+		host := nc.StoragedComponent().GetPodFQDN(i)
 		hosts := []*nebulago.HostAddr{
 			{
 				Host: host,
 				Port: port,
 			},
 		}
-		if err := metaClient.AddHostsIntoZone(hosts, dbZone); err != nil {
-			return fmt.Errorf("add host %s into zone %s error: %v", host, dbZone, err)
+		if err := metaClient.AddHostsIntoZone(hosts, zone); err != nil {
+			return fmt.Errorf("add host %s into zone %s error: %v", host, zone, err)
 		}
+		newCM.Data[podName] = zone
+	}
+	if err := c.clientSet.ConfigMap().CreateOrUpdateConfigMap(newCM); err != nil {
+		return err
 	}
 	return nil
 }

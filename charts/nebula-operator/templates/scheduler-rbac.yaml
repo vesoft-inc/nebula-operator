@@ -1,4 +1,3 @@
-{{- if .Values.controllerManager.create }}
 {{- if .Values.scheduler.create }}
 ---
 apiVersion: v1
@@ -19,36 +18,20 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - pods
-      - services
-      - nodes
       - configmaps
-      - replicationcontrollers
-      - persistentvolumeclaims
-      - persistentvolumes
-      - pods/status
-      - events
-      - endpoints
-      - pods/binding
     verbs:
       - get
       - list
       - watch
-      - patch
-      - delete
-      - update
-      - create
   - apiGroups:
       - ""
+      - events.k8s.io
     resources:
-      - endpoints
       - events
     verbs:
-      - delete
-      - get
+      - create
       - patch
       - update
-      - create
   - apiGroups:
       - coordination.k8s.io
     resources:
@@ -58,69 +41,156 @@ rules:
   - apiGroups:
       - coordination.k8s.io
     resourceNames:
-      - nebula-scheduler
+      - {{ .Values.scheduler.schedulerName }}
     resources:
       - leases
     verbs:
       - get
       - update
   - apiGroups:
-      - "apps.nebula-graph.io"
+      - ""
     resources:
-      - nebulaclusters
+      - endpoints
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resourceNames:
+      - {{ .Values.scheduler.schedulerName }}
+    resources:
+      - endpoints
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
     verbs:
       - get
       - list
-      - delete
-      - update
-      - create
       - watch
+      - patch
   - apiGroups:
-      - "storage.k8s.io"
+      - ""
     resources:
-      - csinodes
-      - storageclasses
+      - pods
+    verbs:
+      - delete
+      - get
+      - list
+      - watch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - bindings
+      - pods/binding
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - replicationcontrollers
+      - services
     verbs:
       - get
       - list
-      - delete
-      - update
-      - create
       - watch
   - apiGroups:
-      - "apps"
+      - apps
+      - extensions
     resources:
-      - statefulsets
-      - deployments
       - replicasets
     verbs:
       - get
       - list
-      - delete
-      - update
-      - create
       - watch
   - apiGroups:
-      - "policy"
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - policy
     resources:
       - poddisruptionbudgets
     verbs:
       - get
       - list
-      - delete
-      - update
-      - create
       - watch
   - apiGroups:
-      - "events.k8s.io"
+      - ""
     resources:
-      - events
+      - persistentvolumeclaims
+      - persistentvolumes
     verbs:
       - get
       - list
-      - delete
+      - watch
+      - patch
       - update
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
       - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csinodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csistoragecapacities
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - get
+      - list
       - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -137,5 +207,18 @@ subjects:
   - kind: ServiceAccount
     name: {{ template "scheduler.name" . }}-sa
     namespace: {{ template "nebula-operator.namespace" . }}
-{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.scheduler.schedulerName }}-extension-apiserver-authentication-reader
+  namespace: kube-system
+roleRef:
+  kind: Role
+  name: extension-apiserver-authentication-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "scheduler.name" . }}-sa
+    namespace: {{ template "nebula-operator.namespace" . }}
 {{- end }}

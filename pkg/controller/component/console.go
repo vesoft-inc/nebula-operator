@@ -27,6 +27,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 const (
@@ -46,6 +47,9 @@ func NewNebulaConsole(clientSet kube.ClientSet) ReconcileManager {
 func (c *nebulaConsole) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	if nc.Spec.Console == nil {
 		return nil
+	}
+	if !nc.GraphdComponent().IsReady() {
+		return utilerrors.ReconcileErrorf("waiting for graphd cluster [%s/%s] ready", nc.Namespace, nc.GraphdComponent().GetName())
 	}
 	return c.syncConsolePod(nc)
 }
@@ -114,9 +118,9 @@ func (c *nebulaConsole) generatePod(nc *v1alpha1.NebulaCluster) *corev1.Pod {
 	if nc.IsGraphdSSLEnabled() || nc.IsClusterSSLEnabled() {
 		cmd = append(cmd, "-enable_ssl", "-ssl_cert_path", "/tmp/client.crt", "-ssl_private_key_path",
 			"/tmp/client.key", "-ssl_root_ca_path", "/tmp/ca.crt")
-	}
-	if nc.InsecureSkipVerify() {
-		cmd = append(cmd, "-ssl_insecure_skip_verify")
+		if nc.InsecureSkipVerify() {
+			cmd = append(cmd, "-ssl_insecure_skip_verify")
+		}
 	}
 
 	container := corev1.Container{

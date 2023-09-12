@@ -5,9 +5,6 @@ image:
   kubeRBACProxy:
     image: bitnami/kube-rbac-proxy:0.14.2
     imagePullPolicy: Always
-  kubeScheduler:
-    image: registry.k8s.io/kube-scheduler:v1.24.11
-    imagePullPolicy: Always
 
 imagePullSecrets: [ ]
 kubernetesClusterDomain: ""
@@ -28,7 +25,7 @@ admissionWebhook:
   create: false
 
 scheduler:
-  create: false
+  create: true
   schedulerName: nebula-scheduler
   replicas: 2
   env: [ ]
@@ -39,6 +36,10 @@ scheduler:
     requests:
       cpu: 100m
       memory: 100Mi
+  verbosity: 5
+  plugins:
+    enabled: ["NodeZone"]
+    disabled: [] # only in-tree plugins need to be defined here
 
 # Enable openkruise scheme for controller manager. (default false)
 enableKruise: false

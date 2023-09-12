@@ -8,9 +8,7 @@ metadata:
   labels:
   {{- include "scheduler.labels" . | nindent 4 }}
 spec:
-  progressDeadlineSeconds: 600
   replicas: {{ .Values.scheduler.replicas }}
-  revisionHistoryLimit: 10
   selector:
     matchLabels:
     {{- include "scheduler.matchLabels" . | nindent 6 }}
@@ -27,6 +25,8 @@ spec:
           imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
           command:
             - /usr/local/bin/scheduler
+            - --config=/etc/kubernetes/scheduler-config.yaml
+            - --v={{ .Values.scheduler.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.scheduler.env }}
           env:
             {{- if .Values.kubernetesClusterDomain }}
@@ -37,29 +37,29 @@ spec:
           {{- end }}
           resources:
           {{- toYaml .Values.scheduler.resources | nindent 12 }}
-        - name: kube-scheduler
-          image: {{ .Values.image.kubeScheduler.image }}
-          imagePullPolicy: {{ .Values.image.kubeScheduler.imagePullPolicy }}
-          command:
-            - kube-scheduler
-            - --secure-port=10261
-            - --leader-elect=true
-            - --scheduler-name={{ .Values.scheduler.schedulerName }}
-            - --leader-elect-resource-lock=endpoints
-            - --leader-elect-resource-name={{ template "scheduler.name" . }}-elect-lock
-            - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
-            - --policy-configmap={{ template "scheduler.name" . }}-policy
-            - --policy-configmap-namespace={{ template "nebula-operator.namespace" . }}
-            - --v=2
-          resources:
-            limits:
-              cpu: 100m
-              memory: 60Mi
-            requests:
-              cpu: 100m
-              memory: 40Mi
-      dnsPolicy: ClusterFirst
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10259
+              scheme: HTTPS
+            initialDelaySeconds: 15
+          readinessProbe:
+              httpGet:
+                path: /healthz
+                port: 10259
+                scheme: HTTPS
+          securityContext:
+              privileged: false
+          volumeMounts:
+            - name: scheduler-config
+              mountPath: /etc/kubernetes
+              readOnly: true
+      hostNetwork: false
+      hostPID: false
+      volumes:
+        - name: scheduler-config
+          configMap:
+            name: scheduler-config
       restartPolicy: Always
-      terminationGracePeriodSeconds: 30
 {{- end }}
 

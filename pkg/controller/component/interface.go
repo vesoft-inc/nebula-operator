@@ -38,6 +38,6 @@ type ScaleManager interface {
 }
 
 type UpdateManager interface {
-	// Update updates the cluster, as NebulaGraph doesn't support hot upgrade, the image tag remain unchanged
+	// Update updates the cluster
 	Update(nc *v1alpha1.NebulaCluster, old, new *unstructured.Unstructured, gvk schema.GroupVersionKind) error
 }

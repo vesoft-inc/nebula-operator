@@ -112,10 +112,6 @@ func (c *metadComponent) IsSSLEnabled() bool {
 		c.nc.Spec.SSLCerts != nil
 }
 
-func (c *metadComponent) IsHeadlessService() bool {
-	return true
-}
-
 func (c *metadComponent) GetServiceSpec() *ServiceSpec {
 	if c.nc.Spec.Metad.Service == nil {
 		return nil
@@ -123,16 +119,16 @@ func (c *metadComponent) GetServiceSpec() *ServiceSpec {
 	return c.nc.Spec.Metad.Service.DeepCopy()
 }
 
-func (c *metadComponent) GetServiceName() string {
-	return getServiceName(c.GetName(), c.IsHeadlessService())
+func (c *metadComponent) GetHeadlessServiceName() string {
+	return getServiceName(c.GetName(), true)
 }
 
 func (c *metadComponent) GetServiceFQDN() string {
-	return getServiceFQDN(c.GetServiceName(), c.GetNamespace())
+	return getServiceFQDN(c.GetHeadlessServiceName(), c.GetNamespace())
 }
 
 func (c *metadComponent) GetPodFQDN(ordinal int32) string {
-	return getPodFQDN(c.GetPodName(ordinal), c.GetServiceFQDN(), c.IsHeadlessService())
+	return getPodFQDN(c.GetPodName(ordinal), c.GetServiceFQDN(), true)
 }
 
 func (c *metadComponent) GetPort(portName string) int32 {
@@ -373,7 +369,11 @@ func (c *metadComponent) GenerateWorkload(gvk schema.GroupVersionKind, cm *corev
 }
 
 func (c *metadComponent) GenerateService() *corev1.Service {
-	return generateService(c)
+	return nil
+}
+
+func (c *metadComponent) GenerateHeadlessService() *corev1.Service {
+	return generateService(c, true)
 }
 
 func (c *metadComponent) GenerateConfigMap() *corev1.ConfigMap {

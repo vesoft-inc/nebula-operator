@@ -68,6 +68,10 @@ func (nc *NebulaCluster) GetGraphdEndpoints(portName string) []string {
 	return nc.GraphdComponent().GetEndpoints(portName)
 }
 
+func (nc *NebulaCluster) GetGraphdServiceName() string {
+	return getServiceName(nc.GraphdComponent().GetName(), false)
+}
+
 func (nc *NebulaCluster) GetClusterName() string {
 	return nc.Name
 }

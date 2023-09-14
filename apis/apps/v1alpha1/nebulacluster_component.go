@@ -185,9 +185,8 @@ type NebulaClusterComponent interface {
 	GetConfigMapKey() string
 
 	IsSSLEnabled() bool
-	IsHeadlessService() bool
 	GetServiceSpec() *ServiceSpec
-	GetServiceName() string
+	GetHeadlessServiceName() string
 	GetServiceFQDN() string
 	GetPodFQDN(ordinal int32) string
 	GetPort(portName string) int32
@@ -201,6 +200,7 @@ type NebulaClusterComponent interface {
 	GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim, error)
 	GenerateWorkload(gvk schema.GroupVersionKind, cm *corev1.ConfigMap) (*unstructured.Unstructured, error)
 	GenerateService() *corev1.Service
+	GenerateHeadlessService() *corev1.Service
 	GenerateConfigMap() *corev1.ConfigMap
 
 	IsReady() bool

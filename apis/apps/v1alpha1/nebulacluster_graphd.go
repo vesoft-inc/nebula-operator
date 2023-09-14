@@ -95,10 +95,6 @@ func (c *graphdComponent) IsSSLEnabled() bool {
 		c.nc.Spec.SSLCerts != nil
 }
 
-func (c *graphdComponent) IsHeadlessService() bool {
-	return false
-}
-
 func (c *graphdComponent) GetServiceSpec() *ServiceSpec {
 	if c.nc.Spec.Graphd.Service == nil {
 		return nil
@@ -106,16 +102,16 @@ func (c *graphdComponent) GetServiceSpec() *ServiceSpec {
 	return c.nc.Spec.Graphd.Service.ServiceSpec.DeepCopy()
 }
 
-func (c *graphdComponent) GetServiceName() string {
-	return getServiceName(c.GetName(), c.IsHeadlessService())
+func (c *graphdComponent) GetHeadlessServiceName() string {
+	return getServiceName(c.GetName(), true)
 }
 
 func (c *graphdComponent) GetServiceFQDN() string {
-	return getServiceFQDN(c.GetServiceName(), c.GetNamespace())
+	return getServiceFQDN(c.GetHeadlessServiceName(), c.GetNamespace())
 }
 
 func (c *graphdComponent) GetPodFQDN(ordinal int32) string {
-	return getPodFQDN(c.GetPodName(ordinal), c.GetServiceFQDN(), c.IsHeadlessService())
+	return getPodFQDN(c.GetPodName(ordinal), c.GetServiceFQDN(), true)
 }
 
 func (c *graphdComponent) GetPort(portName string) int32 {
@@ -295,7 +291,11 @@ func (c *graphdComponent) GenerateWorkload(gvk schema.GroupVersionKind, cm *core
 }
 
 func (c *graphdComponent) GenerateService() *corev1.Service {
-	return generateService(c)
+	return generateService(c, false)
+}
+
+func (c *graphdComponent) GenerateHeadlessService() *corev1.Service {
+	return generateService(c, true)
 }
 
 func (c *graphdComponent) GenerateConfigMap() *corev1.ConfigMap {

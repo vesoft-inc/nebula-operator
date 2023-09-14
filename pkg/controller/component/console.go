@@ -100,7 +100,7 @@ func (c *nebulaConsole) generatePod(nc *v1alpha1.NebulaCluster) *corev1.Pod {
 	cmd := []string{
 		"nebula-console",
 		"-addr",
-		nc.GraphdComponent().GetServiceName(),
+		nc.GetGraphdServiceName(),
 		"-port",
 		strconv.Itoa(int(nc.GraphdComponent().GetPort(v1alpha1.GraphdPortNameThrift))),
 	}

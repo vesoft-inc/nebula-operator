@@ -552,7 +552,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 
 func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv1.StatefulSet, error) {
 	namespace := c.GetNamespace()
-	svcName := c.GetServiceName()
+	svcName := c.GetHeadlessServiceName()
 	componentType := c.ComponentType().String()
 	componentLabel := c.GenerateLabels()
 
@@ -709,9 +709,9 @@ func generateWorkload(
 	return u, err
 }
 
-func generateService(c NebulaClusterComponent) *corev1.Service {
+func generateService(c NebulaClusterComponent, isHeadless bool) *corev1.Service {
 	namespace := c.GetNamespace()
-	svcName := c.GetServiceName()
+	svcName := getServiceName(c.GetName(), isHeadless)
 
 	var ports []corev1.ServicePort
 	for _, port := range c.GenerateContainerPorts() {
@@ -744,7 +744,7 @@ func generateService(c NebulaClusterComponent) *corev1.Service {
 		service.Annotations = serviceSpec.Annotations
 	}
 
-	if c.IsHeadlessService() {
+	if isHeadless {
 		service.Spec.ClusterIP = corev1.ClusterIPNone
 		service.Spec.PublishNotReadyAddresses = true
 	} else if serviceSpec != nil {

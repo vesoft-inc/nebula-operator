@@ -184,7 +184,7 @@ func (o *Options) generateConsolePod() (*corev1.Pod, error) {
 			"nebula-console",
 			"-u", o.User,
 			"-p", o.Password,
-			"--addr", nc.GraphdComponent().GetServiceName(),
+			"--addr", nc.GetGraphdServiceName(),
 			"--port", strconv.Itoa(int(nc.GraphdComponent().GetPort(appsv1alpha1.GraphdPortNameThrift))),
 		},
 		Stdin:     true,

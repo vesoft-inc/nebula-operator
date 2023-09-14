@@ -61,6 +61,8 @@ const (
 --default_charset=utf8
 # The default collate when a space is created
 --default_collate=utf8_bin
+# Heartbeat interval of communication between meta client and graphd service
+--heartbeat_interval_secs=10
 # Whether to use the configuration obtained from the configuration file
 --local_config=true
 
@@ -114,6 +116,9 @@ const (
 --num_accept_threads=1
 # The number of networking IO threads, 0 for # of CPU cores
 --num_netio_threads=0
+# Max active connections for all networking threads. 0 means no limit.
+# Max connections for each networking thread = num_max_connections / num_netio_threads
+--num_max_connections=0
 # The number of threads to execute user queries, 0 for # of CPU cores
 --num_worker_threads=0
 # HTTP service ip
@@ -223,6 +228,17 @@ const (
 # memory background purge interval in seconds
 --memory_purge_interval_seconds=10
 
+########## performance optimization ##########
+# The max job size in multi job mode
+--max_job_size=1
+# The min batch size for handling dataset in multi job mode, only enabled when max_job_size is greater than 1
+--min_batch_size=8192
+# if true, return directly without go through RPC
+--optimize_appendvertices=false
+# number of paths constructed by each thread
+--path_batch_size=10000
+
+########## HTTP2 ##########
 # Enable HTTP2 handler for RPC
 --enable_http2_routing=false
 # HTTP stream timeout in milliseconds
@@ -255,7 +271,6 @@ const (
 --daemonize=true
 # The file to host the process id
 --pid_file=pids/nebula-metad.pid
---license_path=nebula.license
 
 ########## logging ##########
 # The directory to host logging files
@@ -298,6 +313,7 @@ const (
 
 # !!! Minimum reserved bytes of data path
 --minimum_reserved_bytes=268435456
+
 ########## Misc #########
 # The default number of parts when a space is created
 --default_parts_num=10
@@ -306,6 +322,9 @@ const (
 
 --heartbeat_interval_secs=10
 --agent_heartbeat_interval_secs=60
+
+############## rocksdb Options ##############
+--rocksdb_wal_sync=true
 
 ########## Black box ########
 # Enable black box
@@ -402,7 +421,7 @@ const (
 --rocksdb_batch_size=4096
 # The default block cache size used in BlockBasedTable.
 # The unit is MB.
---rocksdb_block_cache=4
+--rocksdb_block_cache=4096
 # Disable page cache to better control memory used by rocksdb.
 # Caution: Make sure to allocate enough block cache if disabling page cache!
 --disable_page_cache=false
@@ -452,7 +471,7 @@ const (
 --enable_storage_cache=false
 # Total capacity reserved for storage in memory cache in MB
 --storage_cache_capacity=0
-# Estimated number of cache entries on this storage node in base 2 logarithm. E.g., in case of 20, the estimated number of entries will be 2^20.
+# Estimated number of cache entries on this storage node in base 2 logarithm. E.g., in case of 20, the estimated number of entries will be 2^20. 
 # A good estimate can be log2(#vertices on this storage node). The maximum allowed is 31.
 --storage_cache_entries_power=20
 
@@ -477,6 +496,9 @@ const (
 --auto_remove_invalid_space=true
 # Network IO threads number
 --num_io_threads=16
+# Max active connections for all networking threads. 0 means no limit.
+# Max connections for each networking thread = num_max_connections / num_netio_threads
+--num_max_connections=0
 # Worker threads number to handle request
 --num_worker_threads=32
 # Maximum subtasks to run admin jobs concurrently

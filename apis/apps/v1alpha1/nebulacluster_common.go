@@ -437,7 +437,7 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 	containers := c.ComponentSpec().InitContainers()
 	nc := c.GetNebulaCluster()
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
 		nodeLabelsContainer := genNodeLabelsContainer(nc)
 		containers = append(containers, nodeLabelsContainer)
 	}
@@ -467,12 +467,12 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 	if c.ComponentType() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
 		flags += " --license_manager_url=" + pointer.StringDeref(nc.Spec.Metad.LicenseManagerURL, "")
 	}
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
 		flags += " --assigned_zone=$NODE_ZONE"
 	}
 
 	cmd := []string{"/bin/sh", "-ecx"}
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
 		cmd = append(cmd, fmt.Sprintf("source /node/zone; echo $NODE_ZONE; exec /usr/local/nebula/bin/nebula-%s", componentType)+
 			fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+flags)
 	} else {
@@ -490,7 +490,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 		})
 		mounts = append(mounts, c.ComponentSpec().VolumeMounts()...)
 	}
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      "node-info",
 			MountPath: "/node",
@@ -583,7 +583,7 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		volumes = append(volumes, certVolumes...)
 	}
 
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneRoutingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
 		volumes = append(volumes, corev1.Volume{
 			Name: "node-info",
 			VolumeSource: corev1.VolumeSource{

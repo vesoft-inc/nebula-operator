@@ -117,8 +117,8 @@ func (nc *NebulaCluster) AutoMountServerCerts() bool {
 	return nc.Spec.SSLCerts != nil && pointer.BoolDeref(nc.Spec.SSLCerts.AutoMountServerCerts, false)
 }
 
-func (nc *NebulaCluster) IsIntraZoneRoutingEnabled() bool {
-	return nc.Spec.Graphd.Config["enable_intra_zone_routing"] == "true"
+func (nc *NebulaCluster) IsIntraZoneReadingEnabled() bool {
+	return nc.Spec.Graphd.Config["prioritize_intra_zone_reading"] == "true"
 }
 
 func (nc *NebulaCluster) IsGraphdSSLEnabled() bool {

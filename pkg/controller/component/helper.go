@@ -154,6 +154,12 @@ func serviceEqual(newSvc, oldSvc *corev1.Service) (bool, error) {
 	return false, nil
 }
 
+func copyZoneData(component v1alpha1.NebulaClusterComponent, cm *corev1.ConfigMap) *corev1.ConfigMap {
+	updated := generateZoneConfigMap(component)
+	updated.Data = cm.Data
+	return updated
+}
+
 func generateZoneConfigMap(component v1alpha1.NebulaClusterComponent) *corev1.ConfigMap {
 	namespace := component.GetNamespace()
 	labels := component.GenerateLabels()
@@ -493,4 +499,8 @@ func updatePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error {
 	}
 
 	return clientSet.Pod().CreatePod(newPod)
+}
+
+func isPending(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodPending
 }

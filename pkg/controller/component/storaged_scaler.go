@@ -152,6 +152,18 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		hosts := make([]*nebulago.HostAddr, 0, oldReplicas-newReplicas)
 		port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 		for i := oldReplicas - 1; i >= newReplicas; i-- {
+			podName := nc.StoragedComponent().GetPodName(i)
+			pod, err := ss.clientSet.Pod().GetPod(nc.Namespace, podName)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
+				return err
+			}
+			if isPending(pod) {
+				klog.Infof("skip  host for pod [%s/%s] status is Pending", pod.Namespace, pod.Name)
+				continue
+			}
 			host := nc.StoragedComponent().GetPodFQDN(i)
 			hosts = append(hosts, &nebulago.HostAddr{
 				Host: host,

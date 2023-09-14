@@ -180,6 +180,10 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update storaged cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
+
+		if err := c.updateZoneMappings(nc, *newReplicas); err != nil {
+			return fmt.Errorf("update zone mappings failed: %v", err)
+		}
 	}
 
 	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)
@@ -277,18 +281,17 @@ func (c *storagedCluster) addStorageHostsToZone(nc *v1alpha1.NebulaCluster, newR
 	}()
 
 	cmName := fmt.Sprintf("%s-%s", nc.StoragedComponent().GetName(), v1alpha1.ZoneSuffix)
-	cm, err := c.clientSet.ConfigMap().GetConfigMap(nc.Namespace, cmName)
+	cmTemp, err := c.clientSet.ConfigMap().GetConfigMap(nc.Namespace, cmName)
 	if err != nil {
 		return err
 	}
+	cm := copyZoneData(nc.StoragedComponent(), cmTemp)
 
-	newCM := generateZoneConfigMap(nc.StoragedComponent())
 	port := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 	for i := int32(0); i < newReplicas; i++ {
 		podName := nc.StoragedComponent().GetPodName(i)
 		value, ok := cm.Data[podName]
 		if ok {
-			newCM.Data[podName] = value
 			klog.V(3).Infof("storaged pod [%s/%s] zone had been set to %s", nc.Namespace, podName, value)
 			continue
 		}
@@ -320,6 +323,40 @@ func (c *storagedCluster) addStorageHostsToZone(nc *v1alpha1.NebulaCluster, newR
 		}
 		if err := metaClient.AddHostsIntoZone(hosts, zone); err != nil {
 			return fmt.Errorf("add host %s into zone %s error: %v", host, zone, err)
+		}
+		cm.Data[podName] = zone
+	}
+	if err := c.clientSet.ConfigMap().CreateOrUpdateConfigMap(cm); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *storagedCluster) updateZoneMappings(nc *v1alpha1.NebulaCluster, newReplicas int32) error {
+	cmName := fmt.Sprintf("%s-%s", nc.StoragedComponent().GetName(), v1alpha1.ZoneSuffix)
+	cm, err := c.clientSet.ConfigMap().GetConfigMap(nc.Namespace, cmName)
+	if err != nil {
+		return err
+	}
+	newCM := generateZoneConfigMap(nc.StoragedComponent())
+	for i := int32(0); i < newReplicas; i++ {
+		podName := nc.StoragedComponent().GetPodName(i)
+		value, ok := cm.Data[podName]
+		if ok {
+			newCM.Data[podName] = value
+			continue
+		}
+		pod, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
+		if err != nil {
+			return err
+		}
+		node, err := c.clientSet.Node().GetNode(pod.Spec.NodeName)
+		if err != nil {
+			return err
+		}
+		zone, ok := node.GetLabels()[corev1.LabelTopologyZone]
+		if !ok {
+			return fmt.Errorf("node %s topology zone not found", pod.Spec.NodeName)
 		}
 		newCM.Data[podName] = zone
 	}

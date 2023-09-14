@@ -84,7 +84,7 @@ func (s *storagedUpdater) Update(
 
 	spec := extender.GetSpec(oldUnstruct)
 	oldStrategy := spec["updateStrategy"].(map[string]interface{})
-	advanced := gvk.Kind == resource.AdvancedStatefulSetKind.Kind
+	advanced := gvk.GroupKind() == resource.AdvancedStatefulSetKind.GroupKind()
 	partition := oldStrategy["rollingUpdate"].(map[string]interface{})
 	if err := setPartition(newUnstruct, partition["partition"].(int64), advanced); err != nil {
 		return err

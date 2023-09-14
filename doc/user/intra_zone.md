@@ -20,7 +20,7 @@ spec:
   graphd:
     config:
       # Prioritize to send queries to storaged in the same zone
-      prioritize_intra_zone_routing: "true"
+      prioritize_intra_zone_reading: "true"
       # Stick to intra zone routing if unable to
       # find the storaged hosting the requested part in the same zone
       stick_to_intra_zone_on_failure: "true"

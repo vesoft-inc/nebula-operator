@@ -62,7 +62,7 @@ func (g *graphUpdater) Update(
 	spec := extender.GetSpec(oldUnstruct)
 	actualStrategy := spec["updateStrategy"].(map[string]interface{})
 	partition := actualStrategy["rollingUpdate"].(map[string]interface{})
-	advanced := gvk.Kind == resource.AdvancedStatefulSetKind.Kind
+	advanced := gvk.GroupKind() == resource.AdvancedStatefulSetKind.GroupKind()
 	if err := setPartition(newUnstruct, partition["partition"].(int64), advanced); err != nil {
 		return err
 	}

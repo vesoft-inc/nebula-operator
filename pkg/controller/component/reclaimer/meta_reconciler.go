@@ -48,7 +48,7 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	if err != nil {
 		return fmt.Errorf("list pods for cluster %s/%s failed: %v", namespace, clusterName, err)
 	}
-
+	// TODO: concurrent updating to reduce reconcile time
 	for i := range pods {
 		pod := pods[i]
 		if !label.Label(pod.Labels).IsNebulaComponent() {

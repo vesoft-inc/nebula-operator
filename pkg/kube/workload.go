@@ -81,18 +81,29 @@ func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
 	labels := obj.GetLabels()
 	annotations := obj.GetAnnotations()
 
+	if obj.GroupVersionKind().GroupKind() == resource.AdvancedStatefulSetKind.GroupKind() {
+		return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+			updated, err := w.GetWorkload(ns, objName, resource.AdvancedStatefulSetKind)
+			if err == nil {
+				obj = updated.DeepCopy()
+				setSpec(obj, spec)
+				obj.SetLabels(labels)
+				obj.SetAnnotations(annotations)
+			} else {
+				utilruntime.HandleError(fmt.Errorf("get workload %s/%s failed: %v", ns, objName, err))
+			}
+
+			updateErr := w.kubecli.Update(context.TODO(), obj)
+			if updateErr == nil {
+				klog.Infof("workload %s %s/%s updated successfully", kind, ns, objName)
+				return nil
+			}
+			return updateErr
+		})
+	}
+
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		updated, err := w.GetWorkload(ns, objName, resource.StatefulSetKind)
-		if err == nil {
-			obj = updated.DeepCopy()
-			setSpec(obj, spec)
-			obj.SetLabels(labels)
-			obj.SetAnnotations(annotations)
-		} else {
-			utilruntime.HandleError(fmt.Errorf("get workload %s/%s failed: %v", ns, objName, err))
-		}
-
-		updated, err = w.GetWorkload(ns, objName, resource.AdvancedStatefulSetKind)
 		if err == nil {
 			obj = updated.DeepCopy()
 			setSpec(obj, spec)

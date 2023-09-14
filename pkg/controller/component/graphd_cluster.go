@@ -56,6 +56,9 @@ func (c *graphdCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
+	if err := c.syncGraphdHeadlessService(nc); err != nil {
+		return err
+	}
 	if err := c.syncGraphdService(nc); err != nil {
 		return err
 	}
@@ -176,6 +179,15 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 
 func (c *graphdCluster) syncGraphdService(nc *v1alpha1.NebulaCluster) error {
 	newSvc := nc.GraphdComponent().GenerateService()
+	if newSvc == nil {
+		return nil
+	}
+
+	return syncService(newSvc, c.clientSet.Service())
+}
+
+func (c *graphdCluster) syncGraphdHeadlessService(nc *v1alpha1.NebulaCluster) error {
+	newSvc := nc.GraphdComponent().GenerateHeadlessService()
 	if newSvc == nil {
 		return nil
 	}

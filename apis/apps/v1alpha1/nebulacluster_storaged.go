@@ -113,10 +113,6 @@ func (c *storagedComponent) IsSSLEnabled() bool {
 		c.nc.Spec.SSLCerts != nil
 }
 
-func (c *storagedComponent) IsHeadlessService() bool {
-	return true
-}
-
 func (c *storagedComponent) GetServiceSpec() *ServiceSpec {
 	if c.nc.Spec.Storaged.Service == nil {
 		return nil
@@ -124,16 +120,16 @@ func (c *storagedComponent) GetServiceSpec() *ServiceSpec {
 	return c.nc.Spec.Storaged.Service.DeepCopy()
 }
 
-func (c *storagedComponent) GetServiceName() string {
-	return getServiceName(c.GetName(), c.IsHeadlessService())
+func (c *storagedComponent) GetHeadlessServiceName() string {
+	return getServiceName(c.GetName(), true)
 }
 
 func (c *storagedComponent) GetServiceFQDN() string {
-	return getServiceFQDN(c.GetServiceName(), c.GetNamespace())
+	return getServiceFQDN(c.GetHeadlessServiceName(), c.GetNamespace())
 }
 
 func (c *storagedComponent) GetPodFQDN(ordinal int32) string {
-	return getPodFQDN(c.GetPodName(ordinal), c.GetServiceFQDN(), c.IsHeadlessService())
+	return getPodFQDN(c.GetPodName(ordinal), c.GetServiceFQDN(), true)
 }
 
 func (c *storagedComponent) GetPort(portName string) int32 {
@@ -353,7 +349,11 @@ func (c *storagedComponent) GenerateWorkload(gvk schema.GroupVersionKind, cm *co
 }
 
 func (c *storagedComponent) GenerateService() *corev1.Service {
-	return generateService(c)
+	return nil
+}
+
+func (c *storagedComponent) GenerateHeadlessService() *corev1.Service {
+	return generateService(c, true)
 }
 
 func (c *storagedComponent) GenerateConfigMap() *corev1.ConfigMap {

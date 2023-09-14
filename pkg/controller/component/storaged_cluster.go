@@ -71,7 +71,7 @@ func (c *storagedCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (c *storagedCluster) syncStoragedHeadlessService(nc *v1alpha1.NebulaCluster) error {
-	newSvc := nc.StoragedComponent().GenerateService()
+	newSvc := nc.StoragedComponent().GenerateHeadlessService()
 	if newSvc == nil {
 		return nil
 	}
@@ -167,6 +167,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
 		oldVolumeClaims := extender.GetDataVolumeClaims(oldWorkload)
 		newVolumeClaims := extender.GetDataVolumeClaims(newWorkload)
+		// TODO: webhook validating
 		if len(oldVolumeClaims) != len(newVolumeClaims) {
 			return fmt.Errorf("update storage data volume claims is not supported")
 		}

@@ -78,7 +78,7 @@ Modify the file and change `replicas` from 3 to 5.
         memory: "1Gi"
     replicas: 5
     image: vesoft/nebula-storaged
-    version: v3.5.0
+    version: v3.6.0
     storageClaim:
       resources:
         requests:
@@ -120,7 +120,7 @@ the change.
         memory: "1Gi"
     replicas: 3
     image: vesoft/nebula-storaged
-    version: v3.5.0
+    version: v3.6.0
     storageClaim:
       resources:
         requests:
@@ -144,7 +144,7 @@ In addition, you can [Install Nebula Cluster with helm](doc/user/nebula_cluster_
 
 ### Upgrade a nebula cluster
 
-Create a nebula cluster with the version specified (v3.5.0):
+Create a nebula cluster with the version specified (v3.6.0):
 
 ```bash
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
@@ -157,16 +157,16 @@ nebula-storaged-1   1/1     Running   0          24m
 nebula-storaged-2   1/1     Running   0          25m
 ```
 
-The container image version should be v3.5.0:
+The container image version should be v3.6.0:
 
 ```bash
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
-      1 vesoft/nebula-graphd:v3.5.0
-      1 vesoft/nebula-metad:v3.5.0
-      3 vesoft/nebula-storaged:v3.5.0
+      1 vesoft/nebula-graphd:v3.6.0
+      1 vesoft/nebula-metad:v3.6.0
+      3 vesoft/nebula-storaged:v3.6.0
 ```
 
-Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v3.5.0 to v3.5.x:
+Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v3.6.0 to v3.6.x:
 
 Apply the version change to the cluster CR:
 

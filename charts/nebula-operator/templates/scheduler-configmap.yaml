@@ -10,11 +10,6 @@ metadata:
 data:
   scheduler-config.yaml: |
     apiVersion: kubescheduler.config.k8s.io/v1
-    kind: KubeSchedulerConfiguration
-    leaderElection:
-      leaderElect: true
-      resourceNamespace: {{ template "nebula-operator.namespace" . }}
-      resourceName: {{ .Values.scheduler.schedulerName }}
     profiles:
       # Compose all plugins in one profile
       - schedulerName: {{ .Values.scheduler.schedulerName }}

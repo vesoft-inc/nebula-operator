@@ -2,6 +2,30 @@ apiVersion: v1
 entries:
   nebula-cluster:
   - apiVersion: v2
+    appVersion: 1.6.0
+    created: "2023-09-15T15:49:14.391789423+08:00"
+    description: Nebula Cluster Helm chart for Kubernetes
+    digest: e6af9ab5c9859c18f91c748266c3712d7c41dcd3f816f78073ef0ccbb92ac15d
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-cluster
+    sources:
+      - https://github.com/vesoft-inc/nebula
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.6.0/nebula-cluster-1.6.0.tgz
+    version: 1.6.0
+  - apiVersion: v2
     appVersion: 1.5.0
     created: "2023-08-09T13:32:13.843588041+08:00"
     description: Nebula Cluster Helm chart for Kubernetes
@@ -218,6 +242,29 @@ entries:
     - https://github.com/vesoft-inc/nebula-operator/releases/download/v0.9.0/nebula-cluster-0.9.0.tgz
     version: 0.9.0
   nebula-operator:
+  - apiVersion: v2
+    appVersion: 1.6.0
+    created: "2023-09-15T15:49:14.395600009+08:00"
+    description: Nebula Operator Helm chart for Kubernetes
+    digest: 35f5b709a77650ab2de6e691bca0aeaa38990aff3678d6a48d4e35ddd7bdec2b
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-operator
+    sources:
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.6.0/nebula-operator-1.6.0.tgz
+    version: 1.6.0
   - apiVersion: v2
     appVersion: 1.5.0
     created: "2023-08-09T13:32:13.848166288+08:00"

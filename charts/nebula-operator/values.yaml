@@ -1,6 +1,6 @@
 image:
   nebulaOperator:
-    image: vesoft/nebula-operator:v1.5.0
+    image: vesoft/nebula-operator:v1.6.0
     imagePullPolicy: Always
   kubeRBACProxy:
     image: bitnami/kube-rbac-proxy:0.14.2
@@ -36,7 +36,7 @@ scheduler:
     requests:
       cpu: 100m
       memory: 100Mi
-  verbosity: 5
+  verbosity: 0
   plugins:
     enabled: ["NodeZone"]
     disabled: [] # only in-tree plugins need to be defined here

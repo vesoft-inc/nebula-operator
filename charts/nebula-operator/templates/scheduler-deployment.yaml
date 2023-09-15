@@ -26,6 +26,9 @@ spec:
           command:
             - /usr/local/bin/scheduler
             - --config=/etc/kubernetes/scheduler-config.yaml
+            - --leader-elect
+            - --leader-elect-resource-name={{ .Values.scheduler.schedulerName }}
+            - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
             - --v={{ .Values.scheduler.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.scheduler.env }}
           env:

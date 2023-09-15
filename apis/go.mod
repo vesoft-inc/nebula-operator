@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/openkruise/kruise-api v1.3.0
-	github.com/vesoft-inc/nebula-go/v3 v3.5.0
+	github.com/vesoft-inc/nebula-go/v3 v3.6.0
 	k8s.io/api v0.26.5
 	k8s.io/apimachinery v0.26.5
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
@@ -12,13 +12,13 @@ require (
 )
 
 require (
-	github.com/facebook/fbthrift v0.31.1-0.20211129061412-801ed7f9f295 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/vesoft-inc/fbthrift v0.0.0-20230214024353-fa2f34755b28 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

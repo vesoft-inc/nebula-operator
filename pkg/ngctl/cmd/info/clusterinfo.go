@@ -72,7 +72,7 @@ func NewNebulaClusterInfo(clusterName, namespace string, runtimeCli client.Clien
 	}
 
 	var svc corev1.Service
-	key = client.ObjectKey{Namespace: namespace, Name: nc.GraphdComponent().GetServiceName()}
+	key = client.ObjectKey{Namespace: namespace, Name: nc.GraphdComponent().GetHeadlessServiceName()}
 	if err := runtimeCli.Get(context.TODO(), key, &svc); err != nil {
 		return nil, err
 	}

@@ -178,7 +178,7 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 						},
 					},
 					Image:   "vesoft/graphd",
-					Version: "v3.5.0",
+					Version: "v3.6.0",
 				},
 			},
 			Metad: &v1alpha1.MetadSpec{
@@ -191,7 +191,7 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 						},
 					},
 					Image:   "vesoft/metad",
-					Version: "v3.5.0",
+					Version: "v3.6.0",
 				},
 			},
 			Storaged: &v1alpha1.StoragedSpec{
@@ -204,7 +204,7 @@ func newNebulaCluster() *v1alpha1.NebulaCluster {
 						},
 					},
 					Image:   "vesoft/storaged",
-					Version: "v3.5.0",
+					Version: "v3.6.0",
 				},
 			},
 		},

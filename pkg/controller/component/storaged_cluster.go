@@ -119,8 +119,10 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	}
 
 	if notExist {
-		if err := syncZoneConfigMap(nc.StoragedComponent(), c.clientSet.ConfigMap()); err != nil {
-			return err
+		if nc.IsZoneEnabled() {
+			if err := syncZoneConfigMap(nc.StoragedComponent(), c.clientSet.ConfigMap()); err != nil {
+				return err
+			}
 		}
 		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
@@ -182,8 +184,10 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 			return fmt.Errorf("update storaged cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 
-		if err := c.updateZoneMappings(nc, *newReplicas); err != nil {
-			return fmt.Errorf("update zone mappings failed: %v", err)
+		if nc.IsZoneEnabled() {
+			if err := c.updateZoneMappings(nc, *newReplicas); err != nil {
+				return fmt.Errorf("update zone mappings failed: %v", err)
+			}
 		}
 	}
 

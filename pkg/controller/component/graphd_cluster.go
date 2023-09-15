@@ -105,8 +105,10 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if notExist {
-		if err := syncZoneConfigMap(nc.GraphdComponent(), c.clientSet.ConfigMap()); err != nil {
-			return err
+		if nc.IsZoneEnabled() {
+			if err := syncZoneConfigMap(nc.GraphdComponent(), c.clientSet.ConfigMap()); err != nil {
+				return err
+			}
 		}
 		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err

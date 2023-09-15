@@ -19,6 +19,7 @@ package nebulacluster
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/klog/v2"
@@ -87,13 +88,17 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 
 	c.conditionUpdater.Update(nc)
 
-	if apiequality.Semantic.DeepEqual(&nc.Status, oldStatus) {
+	if apiequality.Semantic.DeepEqual(&nc.Status, oldStatus) && isNebulaClusterReady(nc) {
 		return errorutils.NewAggregate(errs)
 	}
 
 	nc.Status.ObservedGeneration = nc.Generation
 	if err := c.nebulaClient.UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
 		errs = append(errs, err)
+	}
+
+	if !isNebulaClusterReady(nc) {
+		errs = append(errs, utilerrors.ReconcileErrorf("waiting for nebulacluster ready"))
 	}
 
 	return errorutils.NewAggregate(errs)
@@ -152,6 +157,15 @@ func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaClu
 	}
 
 	return nil
+}
+
+func isNebulaClusterReady(nc *v1alpha1.NebulaCluster) bool {
+	for _, condition := range nc.Status.Conditions {
+		if condition.Type == v1alpha1.NebulaClusterReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 type FakeClusterControl struct {

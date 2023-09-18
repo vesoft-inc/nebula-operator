@@ -3594,10 +3594,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  http2Port:
-                    default: 19670
-                    format: int32
-                    type: integer
                   httpPort:
                     default: 19669
                     format: int32
@@ -6384,10 +6380,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  http2Port:
-                    default: 19560
-                    format: int32
-                    type: integer
                   httpPort:
                     default: 19559
                     format: int32
@@ -8734,10 +8726,6 @@ spec:
                 type: object
               storaged:
                 properties:
-                  adminPort:
-                    default: 9778
-                    format: int32
-                    type: integer
                   affinity:
                     properties:
                       nodeAffinity:
@@ -9219,10 +9207,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  http2Port:
-                    default: 19780
-                    format: int32
-                    type: integer
                   httpPort:
                     default: 19779
                     format: int32

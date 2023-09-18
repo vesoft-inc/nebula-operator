@@ -28,12 +28,16 @@ import (
 )
 
 const (
-	StoragedComponentType  = ComponentType("storaged")
-	StoragedPortNameThrift = "thrift"
-	StoragedPortNameHTTP   = "http"
-	StoragedPortNameHTTP2  = "http2"
-	StoragedPortNameAdmin  = "admin"
-	defaultStoragedImage   = "vesoft/nebula-storaged"
+	StoragedComponentType     = ComponentType("storaged")
+	StoragedPortNameThrift    = "thrift"
+	defaultStoragedPortThrift = 9779
+	StoragedPortNameHTTP      = "http"
+	defaultStoragedPortHTTP   = 19779
+	StoragedPortNameHTTP2     = "http2"
+	defaultStoragedPortHTTP2  = 19780
+	StoragedPortNameAdmin     = "admin"
+	defaultStoragedPortAdmin  = 9778
+	defaultStoragedImage      = "vesoft/nebula-storaged"
 )
 
 var _ NebulaClusterComponent = &storagedComponent{}
@@ -160,14 +164,6 @@ func (c *storagedComponent) GenerateContainerPorts() []corev1.ContainerPort {
 		{
 			Name:          StoragedPortNameHTTP,
 			ContainerPort: c.nc.Spec.Storaged.HTTPPort,
-		},
-		{
-			Name:          StoragedPortNameHTTP2,
-			ContainerPort: c.nc.Spec.Storaged.HTTP2Port,
-		},
-		{
-			Name:          StoragedPortNameAdmin,
-			ContainerPort: c.nc.Spec.Storaged.AdminPort,
 		},
 	}
 }
@@ -383,4 +379,20 @@ func storageDataVolumeClaims(storageClaims []StorageClaim, componentType string)
 		})
 	}
 	return pvcs, nil
+}
+
+func (c *storagedComponent) IsDefaultThriftPort() bool {
+	return c.nc.Spec.Storaged.Port == defaultStoragedPortThrift
+}
+
+func (c *storagedComponent) GetThriftPort() int32 {
+	return c.nc.Spec.Storaged.Port
+}
+
+func (c *storagedComponent) IsDefaultHTTPPort() bool {
+	return c.nc.Spec.Storaged.HTTPPort == defaultStoragedPortHTTP
+}
+
+func (c *storagedComponent) GetHTTPPort() int32 {
+	return c.nc.Spec.Storaged.HTTPPort
 }

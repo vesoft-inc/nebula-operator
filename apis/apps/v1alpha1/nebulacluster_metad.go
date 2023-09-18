@@ -28,11 +28,14 @@ import (
 )
 
 const (
-	MetadComponentType  = ComponentType("metad")
-	MetadPortNameThrift = "thrift"
-	MetadPortNameHTTP   = "http"
-	MetadPortNameHTTP2  = "http2"
-	defaultMetadImage   = "vesoft/nebula-metad"
+	MetadComponentType     = ComponentType("metad")
+	MetadPortNameThrift    = "thrift"
+	defaultMetadPortThrift = 9559
+	MetadPortNameHTTP      = "http"
+	defaultMetadPortHTTP   = 19559
+	MetadPortNameHTTP2     = "http2"
+	defaultMetadPortHTTP2  = 19560
+	defaultMetadImage      = "vesoft/nebula-metad"
 )
 
 var _ NebulaClusterComponent = &metadComponent{}
@@ -160,10 +163,6 @@ func (c *metadComponent) GenerateContainerPorts() []corev1.ContainerPort {
 		{
 			Name:          MetadPortNameHTTP,
 			ContainerPort: c.nc.Spec.Metad.HTTPPort,
-		},
-		{
-			Name:          MetadPortNameHTTP2,
-			ContainerPort: c.nc.Spec.Metad.HTTP2Port,
 		},
 	}
 }
@@ -382,4 +381,20 @@ func (c *metadComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *metadComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Metad = *status
+}
+
+func (c *metadComponent) IsDefaultThriftPort() bool {
+	return c.nc.Spec.Metad.Port == defaultMetadPortThrift
+}
+
+func (c *metadComponent) GetThriftPort() int32 {
+	return c.nc.Spec.Metad.Port
+}
+
+func (c *metadComponent) IsDefaultHTTPPort() bool {
+	return c.nc.Spec.Metad.HTTPPort == defaultMetadPortHTTP
+}
+
+func (c *metadComponent) GetHTTPPort() int32 {
+	return c.nc.Spec.Metad.HTTPPort
 }

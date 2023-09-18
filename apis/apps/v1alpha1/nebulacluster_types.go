@@ -370,10 +370,6 @@ type GraphdSpec struct {
 	// +optional
 	// +kubebuilder:default=19669
 	HTTPPort int32 `json:"httpPort,omitempty"`
-
-	// +optional
-	// +kubebuilder:default=19670
-	HTTP2Port int32 `json:"http2Port,omitempty"`
 }
 
 // MetadSpec defines the desired state of Metad
@@ -408,10 +404,6 @@ type MetadSpec struct {
 	// +optional
 	// +kubebuilder:default=19559
 	HTTPPort int32 `json:"httpPort,omitempty"`
-
-	// +optional
-	// +kubebuilder:default=19560
-	HTTP2Port int32 `json:"http2Port,omitempty"`
 }
 
 // StoragedSpec defines the desired state of Storaged
@@ -453,14 +445,6 @@ type StoragedSpec struct {
 	// +optional
 	// +kubebuilder:default=19779
 	HTTPPort int32 `json:"httpPort,omitempty"`
-
-	// +optional
-	// +kubebuilder:default=19780
-	HTTP2Port int32 `json:"http2Port,omitempty"`
-
-	// +optional
-	// +kubebuilder:default=9778
-	AdminPort int32 `json:"adminPort,omitempty"`
 }
 
 // ComponentSpec is a common set of k8s resource configs for nebula components.

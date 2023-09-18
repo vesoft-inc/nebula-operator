@@ -28,11 +28,14 @@ import (
 )
 
 const (
-	GraphdComponentType  = ComponentType("graphd")
-	GraphdPortNameThrift = "thrift"
-	GraphdPortNameHTTP   = "http"
-	GraphdPortNameHTTP2  = "http2"
-	defaultGraphdImage   = "vesoft/nebula-graphd"
+	GraphdComponentType     = ComponentType("graphd")
+	GraphdPortNameThrift    = "thrift"
+	defaultGraphdPortThrift = 9669
+	GraphdPortNameHTTP      = "http"
+	defaultGraphdPortHTTP   = 19669
+	GraphdPortNameHTTP2     = "http2"
+	defaultGraphdPortHTTP2  = 19670
+	defaultGraphdImage      = "vesoft/nebula-graphd"
 )
 
 var _ NebulaClusterComponent = &graphdComponent{}
@@ -143,10 +146,6 @@ func (c *graphdComponent) GenerateContainerPorts() []corev1.ContainerPort {
 		{
 			Name:          GraphdPortNameHTTP,
 			ContainerPort: c.nc.Spec.Graphd.HTTPPort,
-		},
-		{
-			Name:          GraphdPortNameHTTP2,
-			ContainerPort: c.nc.Spec.Graphd.HTTP2Port,
 		},
 	}
 }
@@ -304,4 +303,20 @@ func (c *graphdComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *graphdComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Graphd = *status
+}
+
+func (c *graphdComponent) IsDefaultThriftPort() bool {
+	return c.nc.Spec.Graphd.Port == defaultGraphdPortThrift
+}
+
+func (c *graphdComponent) GetThriftPort() int32 {
+	return c.nc.Spec.Graphd.Port
+}
+
+func (c *graphdComponent) IsDefaultHTTPPort() bool {
+	return c.nc.Spec.Graphd.HTTPPort == defaultGraphdPortHTTP
+}
+
+func (c *graphdComponent) GetHTTPPort() int32 {
+	return c.nc.Spec.Graphd.HTTPPort
 }

@@ -471,6 +471,15 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 		flags += " --assigned_zone=$NODE_ZONE"
 	}
 
+	c.GenerateContainerPorts()
+
+	if !c.IsDefaultThriftPort() {
+		flags += " --port=" + strconv.Itoa(int(c.GetHTTPPort()))
+	}
+	if !c.IsDefaultHTTPPort() {
+		flags += " --ws_http_port=" + strconv.Itoa(int(c.GetHTTPPort()))
+	}
+
 	cmd := []string{"/bin/sh", "-ecx"}
 	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
 		cmd = append(cmd, fmt.Sprintf("source /node/zone; echo $NODE_ZONE; exec /usr/local/nebula/bin/nebula-%s", componentType)+

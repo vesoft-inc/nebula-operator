@@ -33,8 +33,6 @@ const (
 	defaultMetadPortThrift = 9559
 	MetadPortNameHTTP      = "http"
 	defaultMetadPortHTTP   = 19559
-	MetadPortNameHTTP2     = "http2"
-	defaultMetadPortHTTP2  = 19560
 	defaultMetadImage      = "vesoft/nebula-metad"
 )
 

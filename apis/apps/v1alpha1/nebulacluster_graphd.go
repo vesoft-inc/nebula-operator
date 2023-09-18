@@ -33,8 +33,6 @@ const (
 	defaultGraphdPortThrift = 9669
 	GraphdPortNameHTTP      = "http"
 	defaultGraphdPortHTTP   = 19669
-	GraphdPortNameHTTP2     = "http2"
-	defaultGraphdPortHTTP2  = 19670
 	defaultGraphdImage      = "vesoft/nebula-graphd"
 )
 

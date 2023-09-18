@@ -471,7 +471,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 		flags += " --assigned_zone=$NODE_ZONE"
 	}
 	if !c.IsDefaultThriftPort() {
-		flags += " --port=" + strconv.Itoa(int(c.GetHTTPPort()))
+		flags += " --port=" + strconv.Itoa(int(c.GetThriftPort()))
 	}
 	if !c.IsDefaultHTTPPort() {
 		flags += " --ws_http_port=" + strconv.Itoa(int(c.GetHTTPPort()))

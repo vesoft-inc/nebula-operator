@@ -33,8 +33,6 @@ const (
 	defaultStoragedPortThrift = 9779
 	StoragedPortNameHTTP      = "http"
 	defaultStoragedPortHTTP   = 19779
-	StoragedPortNameHTTP2     = "http2"
-	defaultStoragedPortHTTP2  = 19780
 	StoragedPortNameAdmin     = "admin"
 	defaultStoragedPortAdmin  = 9778
 	defaultStoragedImage      = "vesoft/nebula-storaged"
@@ -164,6 +162,10 @@ func (c *storagedComponent) GenerateContainerPorts() []corev1.ContainerPort {
 		{
 			Name:          StoragedPortNameHTTP,
 			ContainerPort: c.nc.Spec.Storaged.HTTPPort,
+		},
+		{
+			Name:          StoragedPortNameAdmin,
+			ContainerPort: c.nc.Spec.Storaged.Port - 1,
 		},
 	}
 }

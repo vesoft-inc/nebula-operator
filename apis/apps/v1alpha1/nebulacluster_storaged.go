@@ -28,16 +28,12 @@ import (
 )
 
 const (
-	StoragedComponentType     = ComponentType("storaged")
-	StoragedPortNameThrift    = "thrift"
-	defaultStoragedPortThrift = 9779
-	StoragedPortNameHTTP      = "http"
-	defaultStoragedPortHTTP   = 19779
-	StoragedPortNameHTTP2     = "http2"
-	defaultStoragedPortHTTP2  = 19780
-	StoragedPortNameAdmin     = "admin"
-	defaultStoragedPortAdmin  = 9778
-	defaultStoragedImage      = "vesoft/nebula-storaged"
+	StoragedComponentType  = ComponentType("storaged")
+	StoragedPortNameThrift = "thrift"
+	StoragedPortNameHTTP   = "http"
+	StoragedPortNameHTTP2  = "http2"
+	StoragedPortNameAdmin  = "admin"
+	defaultStoragedImage   = "vesoft/nebula-storaged"
 )
 
 var _ NebulaClusterComponent = &storagedComponent{}
@@ -159,19 +155,19 @@ func (c *storagedComponent) GenerateContainerPorts() []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{
 			Name:          StoragedPortNameThrift,
-			ContainerPort: defaultStoragedPortThrift,
+			ContainerPort: c.nc.Spec.Storaged.Port,
 		},
 		{
 			Name:          StoragedPortNameHTTP,
-			ContainerPort: defaultStoragedPortHTTP,
+			ContainerPort: c.nc.Spec.Storaged.HTTPPort,
 		},
 		{
 			Name:          StoragedPortNameHTTP2,
-			ContainerPort: defaultStoragedPortHTTP2,
+			ContainerPort: c.nc.Spec.Storaged.HTTP2Port,
 		},
 		{
 			Name:          StoragedPortNameAdmin,
-			ContainerPort: defaultStoragedPortAdmin,
+			ContainerPort: c.nc.Spec.Storaged.AdminPort,
 		},
 	}
 }

@@ -28,14 +28,11 @@ import (
 )
 
 const (
-	GraphdComponentType     = ComponentType("graphd")
-	GraphdPortNameThrift    = "thrift"
-	defaultGraphdPortThrift = 9669
-	GraphdPortNameHTTP      = "http"
-	defaultGraphdPortHTTP   = 19669
-	GraphdPortNameHTTP2     = "http2"
-	defaultGraphdPortHTTP2  = 19670
-	defaultGraphdImage      = "vesoft/nebula-graphd"
+	GraphdComponentType  = ComponentType("graphd")
+	GraphdPortNameThrift = "thrift"
+	GraphdPortNameHTTP   = "http"
+	GraphdPortNameHTTP2  = "http2"
+	defaultGraphdImage   = "vesoft/nebula-graphd"
 )
 
 var _ NebulaClusterComponent = &graphdComponent{}
@@ -141,15 +138,15 @@ func (c *graphdComponent) GenerateContainerPorts() []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{
 			Name:          GraphdPortNameThrift,
-			ContainerPort: defaultGraphdPortThrift,
+			ContainerPort: c.nc.Spec.Graphd.Port,
 		},
 		{
 			Name:          GraphdPortNameHTTP,
-			ContainerPort: defaultGraphdPortHTTP,
+			ContainerPort: c.nc.Spec.Graphd.HTTPPort,
 		},
 		{
 			Name:          GraphdPortNameHTTP2,
-			ContainerPort: defaultGraphdPortHTTP2,
+			ContainerPort: c.nc.Spec.Graphd.HTTP2Port,
 		},
 	}
 }

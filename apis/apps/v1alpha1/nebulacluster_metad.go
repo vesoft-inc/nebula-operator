@@ -28,14 +28,11 @@ import (
 )
 
 const (
-	MetadComponentType     = ComponentType("metad")
-	MetadPortNameThrift    = "thrift"
-	defaultMetadPortThrift = 9559
-	MetadPortNameHTTP      = "http"
-	defaultMetadPortHTTP   = 19559
-	MetadPortNameHTTP2     = "http2"
-	defaultMetadPortHTTP2  = 19560
-	defaultMetadImage      = "vesoft/nebula-metad"
+	MetadComponentType  = ComponentType("metad")
+	MetadPortNameThrift = "thrift"
+	MetadPortNameHTTP   = "http"
+	MetadPortNameHTTP2  = "http2"
+	defaultMetadImage   = "vesoft/nebula-metad"
 )
 
 var _ NebulaClusterComponent = &metadComponent{}
@@ -158,15 +155,15 @@ func (c *metadComponent) GenerateContainerPorts() []corev1.ContainerPort {
 	return []corev1.ContainerPort{
 		{
 			Name:          MetadPortNameThrift,
-			ContainerPort: defaultMetadPortThrift,
+			ContainerPort: c.nc.Spec.Metad.Port,
 		},
 		{
 			Name:          MetadPortNameHTTP,
-			ContainerPort: defaultMetadPortHTTP,
+			ContainerPort: c.nc.Spec.Metad.HTTPPort,
 		},
 		{
 			Name:          MetadPortNameHTTP2,
-			ContainerPort: defaultMetadPortHTTP2,
+			ContainerPort: c.nc.Spec.Metad.HTTP2Port,
 		},
 	}
 }

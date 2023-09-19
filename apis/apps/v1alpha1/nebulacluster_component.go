@@ -206,6 +206,11 @@ type NebulaClusterComponent interface {
 	IsReady() bool
 	GetUpdateRevision() string
 	UpdateComponentStatus(status *ComponentStatus)
+
+	IsDefaultThriftPort() bool
+	GetThriftPort() int32
+	IsDefaultHTTPPort() bool
+	GetHTTPPort() int32
 }
 
 // +k8s:deepcopy-gen=false

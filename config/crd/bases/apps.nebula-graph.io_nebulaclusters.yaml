@@ -920,6 +920,10 @@ spec:
                       - name
                       type: object
                     type: array
+                  httpPort:
+                    default: 9100
+                    format: int32
+                    type: integer
                   ignoreRegex:
                     type: string
                   image:
@@ -3590,6 +3594,10 @@ spec:
                       - name
                       type: object
                     type: array
+                  httpPort:
+                    default: 19669
+                    format: int32
+                    type: integer
                   image:
                     type: string
                   initContainers:
@@ -4319,6 +4327,10 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  port:
+                    default: 9669
+                    format: int32
+                    type: integer
                   readinessProbe:
                     properties:
                       exec:
@@ -6368,6 +6380,10 @@ spec:
                       - name
                       type: object
                     type: array
+                  httpPort:
+                    default: 19559
+                    format: int32
+                    type: integer
                   image:
                     type: string
                   initContainers:
@@ -7106,6 +7122,10 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  port:
+                    default: 9559
+                    format: int32
+                    type: integer
                   readinessProbe:
                     properties:
                       exec:
@@ -9187,6 +9207,10 @@ spec:
                       - name
                       type: object
                     type: array
+                  httpPort:
+                    default: 19779
+                    format: int32
+                    type: integer
                   image:
                     type: string
                   initContainers:
@@ -9916,6 +9940,10 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  port:
+                    default: 9779
+                    format: int32
+                    type: integer
                   readinessProbe:
                     properties:
                       exec:

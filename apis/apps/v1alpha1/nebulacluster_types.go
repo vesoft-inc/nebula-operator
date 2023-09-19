@@ -237,6 +237,10 @@ type ExporterSpec struct {
 	// IgnoreRegex means the regex to ignore metrics
 	// +optional
 	IgnoreRegex string `json:"ignoreRegex,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=9100
+	HTTPPort int32 `json:"httpPort,omitempty"`
 }
 
 type ConsoleSpec struct {
@@ -358,6 +362,14 @@ type GraphdSpec struct {
 	// K8S persistent volume claim for Graphd log volume.
 	// +optional
 	LogVolumeClaim *StorageClaim `json:"logVolumeClaim,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=9669
+	Port int32 `json:"port,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=19669
+	HTTPPort int32 `json:"httpPort,omitempty"`
 }
 
 // MetadSpec defines the desired state of Metad
@@ -384,6 +396,14 @@ type MetadSpec struct {
 
 	// LicenseManagerURL defines a nebula license manager url
 	LicenseManagerURL *string `json:"licenseManagerURL,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=9559
+	Port int32 `json:"port,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=19559
+	HTTPPort int32 `json:"httpPort,omitempty"`
 }
 
 // StoragedSpec defines the desired state of Storaged
@@ -417,6 +437,14 @@ type StoragedSpec struct {
 	// Note: This feature is in alpha state.
 	// +optional
 	ConcurrentTransfer *bool `json:"concurrentTransfer,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=9779
+	Port int32 `json:"port,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=19779
+	HTTPPort int32 `json:"httpPort,omitempty"`
 }
 
 // ComponentSpec is a common set of k8s resource configs for nebula components.

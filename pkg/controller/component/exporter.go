@@ -32,8 +32,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/util/maputil"
 )
 
-const defaultMetricsPort = 9100
-
 type nebulaExporter struct {
 	clientSet kube.ClientSet
 }
@@ -97,8 +95,8 @@ func (e *nebulaExporter) generateService(nc *v1alpha1.NebulaCluster) *corev1.Ser
 				{
 					Name:       "metrics",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       defaultMetricsPort,
-					TargetPort: intstr.FromInt(defaultMetricsPort),
+					Port:       nc.Spec.Exporter.HTTPPort,
+					TargetPort: intstr.FromInt(int(nc.Spec.Exporter.HTTPPort)),
 				},
 			},
 		},
@@ -137,7 +135,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 			{
 				Name:          "metrics",
 				Protocol:      corev1.ProtocolTCP,
-				ContainerPort: defaultMetricsPort,
+				ContainerPort: nc.Spec.Exporter.HTTPPort,
 			},
 		},
 		VolumeMounts: nc.ExporterComponent().ComponentSpec().VolumeMounts(),
@@ -149,7 +147,7 @@ func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.
 		container.LivenessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Port:   intstr.FromInt(defaultMetricsPort),
+					Port:   intstr.FromInt(int(nc.Spec.Exporter.HTTPPort)),
 					Path:   "/health",
 					Scheme: corev1.URISchemeHTTP,
 				},

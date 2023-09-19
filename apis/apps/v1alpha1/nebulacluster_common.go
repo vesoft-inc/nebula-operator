@@ -473,7 +473,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 
 	cmd := []string{"/bin/sh", "-ecx"}
 	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
-		cmd = append(cmd, fmt.Sprintf("source /node/zone; echo $NODE_ZONE; exec /usr/local/nebula/bin/nebula-%s", componentType)+
+		cmd = append(cmd, fmt.Sprintf(". /node/zone; echo $NODE_ZONE; exec /usr/local/nebula/bin/nebula-%s", componentType)+
 			fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+flags)
 	} else {
 		cmd = append(cmd, fmt.Sprintf("exec /usr/local/nebula/bin/nebula-%s", componentType)+

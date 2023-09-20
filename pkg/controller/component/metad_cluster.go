@@ -174,7 +174,7 @@ func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.C
 }
 
 func (c *metadCluster) setVersion(nc *v1alpha1.NebulaCluster) error {
-	options, err := nebula.ClientOptions(nc)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}

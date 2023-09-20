@@ -146,7 +146,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		return err
 	}
 
-	options, err := nebula.ClientOptions(original)
+	options, err := nebula.ClientOptions(original, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}

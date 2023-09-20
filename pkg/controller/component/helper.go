@@ -509,25 +509,29 @@ func isPending(pod *corev1.Pod) bool {
 func syncPVC(
 	component v1alpha1.NebulaClusterComponent,
 	pvcClient kube.PersistentVolumeClaim) error {
+	replicas := int(component.ComponentSpec().Replicas())
 	volumeClaims, err := component.GenerateVolumeClaim()
 	if err != nil {
 		return err
 	}
 	for _, volumeClaim := range volumeClaims {
-		oldPVC, err := pvcClient.GetPVC(volumeClaim.Namespace, volumeClaim.Name)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
+		for i := 0; i < replicas; i++ {
+			pvcName := fmt.Sprintf("%s-%s-%d", volumeClaim.Name, component.GetName(), i)
+			oldPVC, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
+			if err != nil {
+				if !apierrors.IsNotFound(err) {
+					return err
+				}
 			}
-		}
-		if oldPVC == nil {
-			return nil
-		}
-		if volumeClaim.Spec.Resources.Requests.Storage() != oldPVC.Spec.Resources.Requests.Storage() {
-			// only update storage
-			oldPVC.Spec.Resources.Requests = volumeClaim.Spec.Resources.Requests
-			if err = pvcClient.UpdatePVC(oldPVC); err != nil {
-				return err
+			if oldPVC == nil {
+				return nil
+			}
+			if volumeClaim.Spec.Resources.Requests.Storage().Cmp(*oldPVC.Spec.Resources.Requests.Storage()) != 0 {
+				// only update storage
+				oldPVC.Spec.Resources.Requests = volumeClaim.Spec.Resources.Requests
+				if err = pvcClient.UpdatePVC(oldPVC); err != nil {
+					return err
+				}
 			}
 		}
 	}

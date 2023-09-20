@@ -90,7 +90,7 @@ func (s *storagedUpdater) Update(
 		return err
 	}
 
-	options, err := nebula.ClientOptions(nc)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}

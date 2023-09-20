@@ -91,6 +91,7 @@ func (c *graphdComponent) GetDataStorageResources() (*corev1.ResourceRequirement
 func (c *graphdComponent) IsSSLEnabled() bool {
 	return (c.nc.Spec.Graphd.Config["enable_graph_ssl"] == "true" ||
 		c.nc.Spec.Graphd.Config["enable_meta_ssl"] == "true" ||
+		c.nc.Spec.Graphd.Config["enable_storage_ssl"] == "true" ||
 		c.nc.Spec.Graphd.Config["enable_ssl"] == "true") &&
 		c.nc.Spec.SSLCerts != nil
 }

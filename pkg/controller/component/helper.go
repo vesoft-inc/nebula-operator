@@ -505,7 +505,7 @@ func isPending(pod *corev1.Pod) bool {
 	return pod.Status.Phase == corev1.PodPending
 }
 
-// 1. new pvc is not nil, old pvc is not nil, update new pvc
+// 1. new pvc is not nil, old pvc is not nil, update storage
 func syncPVC(
 	component v1alpha1.NebulaClusterComponent,
 	pvcClient kube.PersistentVolumeClaim) error {

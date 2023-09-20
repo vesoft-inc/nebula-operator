@@ -1,18 +1,17 @@
 image:
   nebulaOperator:
-    image: reg.vesoft-inc.com/cloud-dev/nebula-operator:phase2-0.1
+    image: vesoft/nebula-operator:latest
     imagePullPolicy: Always
   kubeRBACProxy:
     image: bitnami/kube-rbac-proxy:0.14.2
     imagePullPolicy: Always
 
-imagePullSecrets:
-  - name: nebula-image
+imagePullSecrets: [ ]
 kubernetesClusterDomain: ""
 
 controllerManager:
   create: true
-  replicas: 1
+  replicas: 2
   env: [ ]
   resources:
     limits:
@@ -23,14 +22,14 @@ controllerManager:
       memory: 100Mi
 
 admissionWebhook:
-  create: true
+  create: false
   # The TCP port the Webhook server binds to. (default 9443)
   webhookBindPort: 9443
 
 scheduler:
   create: true
   schedulerName: nebula-scheduler
-  replicas: 1
+  replicas: 2
   env: [ ]
   resources:
     limits:

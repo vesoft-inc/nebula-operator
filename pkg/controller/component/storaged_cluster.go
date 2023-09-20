@@ -178,6 +178,10 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		}
 	}
 
+	if err := c.syncStoragedPVC(nc); err != nil {
+		return err
+	}
+
 	if nc.StoragedComponent().IsReady() {
 		endpoints := nc.GetStoragedEndpoints(v1alpha1.StoragedPortNameHTTP)
 		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations()); err != nil {
@@ -225,6 +229,10 @@ func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*co
 		c.clientSet.ConfigMap(),
 		v1alpha1.StoragedConfigTemplate,
 		nc.StoragedComponent().GetConfigMapKey())
+}
+
+func (c *storagedCluster) syncStoragedPVC(nc *v1alpha1.NebulaCluster) error {
+	return syncPVC(nc.StoragedComponent(), c.clientSet.PVC())
 }
 
 func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {

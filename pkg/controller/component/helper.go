@@ -504,3 +504,32 @@ func updatePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error {
 func isPending(pod *corev1.Pod) bool {
 	return pod.Status.Phase == corev1.PodPending
 }
+
+// 1. new pvc is not nil, old pvc is not nil, update new pvc
+func syncPVC(
+	component v1alpha1.NebulaClusterComponent,
+	pvcClient kube.PersistentVolumeClaim) error {
+	volumeClaims, err := component.GenerateVolumeClaim()
+	if err != nil {
+		return err
+	}
+	for _, volumeClaim := range volumeClaims {
+		oldPVC, err := pvcClient.GetPVC(volumeClaim.Namespace, volumeClaim.Name)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+		}
+		if oldPVC == nil {
+			return nil
+		}
+		if volumeClaim.Spec.Resources.Requests.Storage() != oldPVC.Spec.Resources.Requests.Storage() {
+			// only update storage
+			oldPVC.Spec.Resources.Requests = volumeClaim.Spec.Resources.Requests
+			if err = pvcClient.UpdatePVC(oldPVC); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

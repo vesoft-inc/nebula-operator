@@ -26,25 +26,18 @@ spec:
           command:
             - /usr/local/bin/controller-manager
           args:
-            {{- if .Values.healthProbeBindAddr }}
-            - --health-probe-bind-address={{ .Values.healthProbeBindAddr }}
-            {{- end }}
-            {{- if .Values.metricsBindAddr }}
-            - --metrics-bind-address={{ .Values.metricsBindAddr }}
-            {{- end }}
-            {{- if .Values.watchNamespace }}
-            - --watch-namespace={{ .Values.watchNamespace }}
-            {{- end }}
-            - --enable-kruise={{ .Values.enableKruise | default false }}
             {{- if .Values.syncPeriod }}
             - --sync-period={{ .Values.syncPeriod }}
             {{- end }}
-            {{- if .Values.maxConcurrentReconciles }}
-            - --max-concurrent-reconciles={{ .Values.maxConcurrentReconciles }}
+            {{- if .Values.concurrentNebulaClusterSyncs }}
+            - --concurrent-nebulacluster-syncs={{ .Values.concurrentNebulaClusterSyncs }}
             {{- end }}
-            - --enable-leader-election
-            - --leader-election-namespace={{ template "nebula-operator.namespace" . }}
-            - --admission-webhook={{ .Values.admissionWebhook.create | default false }}
+            {{- if .Values.concurrentNebulaRestoreSyncs }}
+            - --concurrent-nebularestore-syncs={{ .Values.concurrentNebulaRestoreSyncs }}
+            {{- end }}
+            - --leader-elect
+            - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
+            - --enable-admission-webhook={{ .Values.admissionWebhook.create | default false }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
             {{- if .Values.kubernetesClusterDomain }}
@@ -55,7 +48,7 @@ spec:
           {{- end }}
           {{- if .Values.admissionWebhook.create }}
           ports:
-            - containerPort: {{ .Values.webhookBindPort | default 9443 }}
+            - containerPort: {{ .Values.admissionWebhook.webhookBindPort | default 9443 }}
               name: webhook-server
               protocol: TCP
           {{- end }}
@@ -64,13 +57,13 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: {{ (split ":" .Values.healthProbeBindAddr)._1 | default 8081 }}
+              port: 8081
             initialDelaySeconds: 15
             periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /readyz
-              port: {{ (split ":" .Values.healthProbeBindAddr)._1 | default 8081 }}
+              port: 8081
             initialDelaySeconds: 5
             periodSeconds: 10
           securityContext:

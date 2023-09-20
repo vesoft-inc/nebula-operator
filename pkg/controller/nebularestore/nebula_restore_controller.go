@@ -114,7 +114,7 @@ func (r *Reconciler) syncNebulaRestore(restore *v1alpha1.NebulaRestore) error {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, opts controller.Options) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.NebulaRestore{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).

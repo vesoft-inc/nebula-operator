@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Vesoft Inc.
+Copyright 2023 Vesoft Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,13 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package webhook
+package klogflag
 
 import (
-	"github.com/vesoft-inc/nebula-operator/pkg/webhook/nebulacluster/validating"
+	"flag"
+	"os"
+
+	"github.com/spf13/pflag"
+	"k8s.io/klog/v2"
 )
 
-// nolint: gochecknoinits
-func init() {
-	registerHandlers(validating.HandlerMap)
+func Add(fs *pflag.FlagSet) {
+	flagSet := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	klog.InitFlags(flagSet)
+	fs.AddGoFlagSet(flagSet)
 }

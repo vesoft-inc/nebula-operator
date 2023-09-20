@@ -1,4 +1,3 @@
-{{- if .Values.controllerManager.create }}
 {{- if .Values.admissionWebhook.create }}
 ---
 apiVersion: cert-manager.io/v1
@@ -27,4 +26,4 @@ metadata:
 spec:
   selfSigned: {}
 {{- end }}
-{{- end }}
+

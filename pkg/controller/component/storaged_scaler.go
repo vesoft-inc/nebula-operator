@@ -76,7 +76,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		return nil
 	}
 
-	options, err := nebula.ClientOptions(nc)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		return err
 	}
 
-	options, err := nebula.ClientOptions(nc)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}

@@ -109,7 +109,12 @@ func validateNebulaClusterCreate(nc *v1alpha1.NebulaCluster) (allErrs field.Erro
 
 // validateNebulaClusterGraphd validates a NebulaCluster for Graphd on update.
 func validateNebulaClusterUpdateGraphd(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
-	_ = oldNC // unused
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
+		nc.Spec.Graphd.Port,
+		oldNC.Spec.Graphd.Port,
+		field.NewPath("spec").Child("graphd").Child("port"),
+	)...)
+
 	allErrs = append(allErrs, validateNebulaClusterGraphd(nc)...)
 
 	return allErrs
@@ -117,6 +122,11 @@ func validateNebulaClusterUpdateGraphd(nc, oldNC *v1alpha1.NebulaCluster) (allEr
 
 // validateNebulaClusterMetad validates a NebulaCluster for Metad on Update.
 func validateNebulaClusterUpdateMetad(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
+		nc.Spec.Metad.Port,
+		oldNC.Spec.Metad.Port,
+		field.NewPath("spec").Child("metad").Child("port"),
+	)...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
 		nc.Spec.Metad.Replicas,
 		oldNC.Spec.Metad.Replicas,
@@ -129,6 +139,13 @@ func validateNebulaClusterUpdateMetad(nc, oldNC *v1alpha1.NebulaCluster) (allErr
 
 // validateNebulaClusterStoraged validates a NebulaCluster for Storaged on Update.
 func validateNebulaClusterUpdateStoraged(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
+	if oldNC.Status.Storaged.Phase == v1alpha1.ScaleInPhase || oldNC.Status.Storaged.Phase == v1alpha1.ScaleOutPhase {
+		allErrs = append(allErrs, field.Forbidden(
+			field.NewPath("spec", "storaged"),
+			fmt.Sprintf("field is immutable while in %s phase", oldNC.Status.Storaged.Phase),
+		))
+	}
+
 	if nc.Status.Storaged.Phase != v1alpha1.RunningPhase {
 		if *nc.Spec.Storaged.Replicas != *oldNC.Spec.Storaged.Replicas {
 			allErrs = append(allErrs, field.Invalid(
@@ -139,7 +156,35 @@ func validateNebulaClusterUpdateStoraged(nc, oldNC *v1alpha1.NebulaCluster) (all
 		}
 	}
 
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
+		nc.Spec.Storaged.Port,
+		oldNC.Spec.Storaged.Port,
+		field.NewPath("spec").Child("storaged").Child("port"),
+	)...)
+
+	allErrs = append(allErrs, validateNebulaClusterUpdateStoragedDataVolume(nc, oldNC)...)
 	allErrs = append(allErrs, validateNebulaClusterStoraged(nc)...)
+
+	return allErrs
+}
+
+// validateNebulaClusterUpdateStoragedDataVolume validates a NebulaCluster for Storaged data volume on Update.
+func validateNebulaClusterUpdateStoragedDataVolume(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
+	if len(nc.Spec.Storaged.DataVolumeClaims) != len(oldNC.Spec.Storaged.DataVolumeClaims) {
+		allErrs = append(allErrs, field.Forbidden(
+			field.NewPath("spec", "storaged", "dataVolumeClaims"),
+			"storaged dataVolumeClaims len is immutable",
+		))
+	}
+	for i, pvc := range nc.Spec.Storaged.DataVolumeClaims {
+		if pvc.Resources.Requests.Storage().Cmp(*oldNC.Spec.Storaged.DataVolumeClaims[i].Resources.Requests.Storage()) == -1 {
+			allErrs = append(allErrs, field.Invalid(
+				field.NewPath("spec", "storaged", "dataVolumeClaims"),
+				pvc.Resources.Requests.Storage(),
+				"data volume size can only be increased",
+			))
+		}
+	}
 
 	return allErrs
 }

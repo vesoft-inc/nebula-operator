@@ -34,15 +34,17 @@ type Option func(ops *Options)
 
 type Options struct {
 	EnableMetaTLS    bool
+	EnableStorageTLS bool
 	EnableClusterTLS bool
 	IsStorage        bool
+	IsMeta           bool
 	Timeout          time.Duration
 	TLSConfig        *tls.Config
 }
 
 func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error) {
 	options := []Option{SetTimeout(DefaultTimeout)}
-	if !nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled() {
+	if !nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled() && !nc.IsStoragedSSLEnabled() {
 		return options, nil
 	}
 	if nc.Spec.SSLCerts == nil {
@@ -52,6 +54,10 @@ func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error)
 	if nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled() {
 		options = append(options, SetMetaTLS(true))
 		klog.Infof("cluster [%s/%s] metad SSL enabled", nc.Namespace, nc.Name)
+	}
+	if nc.IsStoragedSSLEnabled() && !nc.IsClusterSSLEnabled() {
+		options = append(options, SetStorageTLS(true))
+		klog.Infof("cluster [%s/%s] storaged SSL enabled", nc.Namespace, nc.Name)
 	}
 	if nc.IsClusterSSLEnabled() {
 		options = append(options, SetClusterTLS(true))
@@ -105,9 +111,21 @@ func SetMetaTLS(e bool) Option {
 	}
 }
 
+func SetStorageTLS(e bool) Option {
+	return func(options *Options) {
+		options.EnableStorageTLS = e
+	}
+}
+
 func SetClusterTLS(e bool) Option {
 	return func(options *Options) {
 		options.EnableClusterTLS = e
+	}
+}
+
+func SetIsMeta(e bool) Option {
+	return func(options *Options) {
+		options.IsMeta = e
 	}
 }
 

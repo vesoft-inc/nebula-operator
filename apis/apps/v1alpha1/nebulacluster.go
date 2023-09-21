@@ -141,6 +141,12 @@ func (nc *NebulaCluster) IsClusterSSLEnabled() bool {
 		nc.Spec.Storaged.Config["enable_ssl"] == "true"
 }
 
+func (nc *NebulaCluster) IsStoragedSSLEnabled() bool {
+	return nc.Spec.Graphd.Config["enable_storage_ssl"] == "true" &&
+		nc.Spec.Metad.Config["enable_storage_ssl"] == "true" &&
+		nc.Spec.Storaged.Config["enable_storage_ssl"] == "true"
+}
+
 func (nc *NebulaCluster) IsZoneEnabled() bool {
 	return nc.Spec.Metad.Config["zone_list"] != ""
 }

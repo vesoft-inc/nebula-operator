@@ -236,7 +236,7 @@ func (c *storagedCluster) syncStoragedPVC(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
-	options, err := nebula.ClientOptions(nc)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func (c *storagedCluster) registeredHosts(mc nebula.MetaInterface) (sets.Set[str
 
 func (c *storagedCluster) addStorageHostsToZone(nc *v1alpha1.NebulaCluster, newReplicas int32) error {
 	namespace := nc.GetNamespace()
-	options, err := nebula.ClientOptions(nc)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}

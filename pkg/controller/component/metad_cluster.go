@@ -182,7 +182,7 @@ func (c *metadCluster) syncMetadPVC(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (c *metadCluster) setVersion(nc *v1alpha1.NebulaCluster) error {
-	options, err := nebula.ClientOptions(nc)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
 	}

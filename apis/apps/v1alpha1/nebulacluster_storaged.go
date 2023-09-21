@@ -107,6 +107,7 @@ func (c *storagedComponent) GetDataStorageResources() (*corev1.ResourceRequireme
 
 func (c *storagedComponent) IsSSLEnabled() bool {
 	return (c.nc.Spec.Storaged.Config["enable_meta_ssl"] == "true" ||
+		c.nc.Spec.Storaged.Config["enable_storage_ssl"] == "true" ||
 		c.nc.Spec.Storaged.Config["enable_ssl"] == "true") &&
 		c.nc.Spec.SSLCerts != nil
 }

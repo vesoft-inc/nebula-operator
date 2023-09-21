@@ -1,6 +1,6 @@
 image:
   nebulaOperator:
-    image: vesoft/nebula-operator:v1.6.0
+    image: vesoft/nebula-operator:latest
     imagePullPolicy: Always
   kubeRBACProxy:
     image: bitnami/kube-rbac-proxy:0.14.2
@@ -23,6 +23,8 @@ controllerManager:
 
 admissionWebhook:
   create: false
+  # The TCP port the Webhook server binds to. (default 9443)
+  webhookBindPort: 9443
 
 scheduler:
   create: true
@@ -42,7 +44,7 @@ scheduler:
     disabled: [] # only in-tree plugins need to be defined here
 
 # Enable openkruise scheme for controller manager. (default false)
-enableKruise: false
+enableKruiseScheme: false
 
 # Period at which the controller forces the repopulation of its local object stores. (default 0h30m0s)
 syncPeriod: 0h30m0s
@@ -50,17 +52,11 @@ syncPeriod: 0h30m0s
 # Namespace the controller watches for updates to Kubernetes objects, If empty, all namespaces are watched.
 watchNamespace:
 
-# The address the metric endpoint binds to. (default ":8080")
-metricsBindAddr: ":8080"
+# The number of NebulaCluster objects that are allowed to sync concurrently. (default 5)
+concurrentNebulaClusterSyncs: 5
 
-# The address the probe endpoint binds to. (default: ":8081")
-healthProbeBindAddr: ":8081"
-
-# The TCP port the Webhook server binds to. (default 9443)
-webhookBindPort: 9443
-
-# Maximum number of concurrently running reconcile loops for nebula cluster (default 3)
-maxConcurrentReconciles: 3
+# The number of NebulaRestore objects that are allowed to sync concurrently. (default 5)
+concurrentNebulaRestoreSyncs: 5
 
 nodeSelector: { }
 

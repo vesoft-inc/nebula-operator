@@ -31,7 +31,6 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -193,7 +192,7 @@ func (r *ClusterReconciler) syncNebulaCluster(nc *v1alpha1.NebulaCluster) error 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager, opts controller.Options) error {
+func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.EnableKruise {
 		return ctrl.NewControllerManagedBy(mgr).
 			For(&v1alpha1.NebulaCluster{}).
@@ -202,7 +201,6 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager, opts controller.O
 			Owns(&appsv1.StatefulSet{}).
 			Owns(&kruisev1alpha1.StatefulSet{}).
 			Owns(&appsv1.Deployment{}).
-			WithOptions(opts).
 			Complete(r)
 	}
 
@@ -212,6 +210,5 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager, opts controller.O
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&appsv1.Deployment{}).
-		WithOptions(opts).
 		Complete(r)
 }

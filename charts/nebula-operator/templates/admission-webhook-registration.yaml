@@ -1,37 +1,4 @@
-{{- if .Values.controllerManager.create }}
 {{- if .Values.admissionWebhook.create }}
-{{- if false }}
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: {{ template "nebula-operator.namespace" . }}/{{ template "admission-webhook.name" . }}-cert
-  name: {{ template "admission-webhook.name" . }}-mutating
-  labels:
-  {{- include "admission-webhook.labels" . | nindent 4 }}
-webhooks:
-  - admissionReviewVersions:
-      - v1
-    clientConfig:
-      service:
-        name: {{ template "admission-webhook.name" . }}-service
-        namespace: {{ template "nebula-operator.namespace" . }}
-        path: /apis/admission.nebula-graph.io/v1alpha1/statefulsetmutating
-    failurePolicy: Fail
-    name: statefulsetmutating.nebula-graph.io
-    rules:
-      - apiGroups:
-          - apps
-        apiVersions:
-          - v1
-        operations:
-          - CREATE
-          - UPDATE
-        resources:
-          - statefulsets
-    sideEffects: None
-{{- end }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -49,7 +16,7 @@ webhooks:
       service:
         name: {{ template "admission-webhook.name" . }}-service
         namespace: {{ template "nebula-operator.namespace" . }}
-        path: /apis/admission.nebula-graph.io/v1alpha1/nebulaclustervalidating
+        path: /validate-nebulacluster
     failurePolicy: Fail
     rules:
       - apiGroups:
@@ -61,50 +28,8 @@ webhooks:
           - UPDATE
         resources:
           - nebulaclusters
+        scope: "*"
     sideEffects: None
-  - name: statefulsetvalidating.nebula-graph.io
-    {{- include "admission-webhook.objectSelector" . | nindent 4 }}
-    admissionReviewVersions:
-      - v1
-    clientConfig:
-      service:
-        name: {{ template "admission-webhook.name" .}}-service
-        namespace: {{ template "nebula-operator.namespace" . }}
-        path: /apis/admission.nebula-graph.io/v1alpha1/statefulsetvalidating
-    failurePolicy: Fail
-    rules:
-      - apiGroups:
-          - apps
-        apiVersions:
-          - v1
-        operations:
-          - CREATE
-          - UPDATE
-        resources:
-          - statefulsets
-          - statefulsets/scale
-    sideEffects: None
-  - name: kruisestatefulsetvalidating.nebula-graph.io
-    {{- include "admission-webhook.objectSelector" . | nindent 4 }}
-    admissionReviewVersions:
-      - v1
-    clientConfig:
-      service:
-        name: {{ template "admission-webhook.name" . }}-service
-        namespace: {{ template "nebula-operator.namespace" . }}
-        path: /apis/admission.nebula-graph.io/v1alpha1/statefulsetvalidating
-    failurePolicy: Fail
-    rules:
-      - apiGroups:
-          - apps.kruise.io
-        apiVersions:
-          - v1alpha1
-        operations:
-          - CREATE
-          - UPDATE
-        resources:
-          - statefulsets
-          - statefulsets/scale
-    sideEffects: None
+    timeoutSeconds: 3
 {{- end }}
-{{- end }}
+

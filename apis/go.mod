@@ -1,14 +1,14 @@
 module github.com/vesoft-inc/nebula-operator/apis
 
-go 1.19
+go 1.20
 
 require (
 	github.com/openkruise/kruise-api v1.3.0
 	github.com/vesoft-inc/nebula-go/v3 v3.6.0
-	k8s.io/api v0.26.5
-	k8s.io/apimachinery v0.26.5
+	k8s.io/api v0.27.4
+	k8s.io/apimachinery v0.27.4
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
-	sigs.k8s.io/controller-runtime v0.14.6
+	sigs.k8s.io/controller-runtime v0.15.2
 )
 
 require (

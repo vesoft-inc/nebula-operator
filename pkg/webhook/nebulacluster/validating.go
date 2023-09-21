@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package validating
+package nebulacluster
 
 import (
 	"context"
@@ -22,33 +22,25 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 )
 
-// NebulaClusterCreateUpdateHandler handles StatefulSet
-type NebulaClusterCreateUpdateHandler struct {
-	// To use the client, you need to do the following:
-	// - uncomment it
-	// - import sigs.k8s.io/controller-runtime/pkg/client
-	// - uncomment the InjectClient method at the bottom of this file.
-	Client client.Client
-
+// ValidatingAdmission handles StatefulSet
+type ValidatingAdmission struct {
 	// Decoder decodes objects
 	Decoder *admission.Decoder
 }
 
-var _ admission.Handler = &NebulaClusterCreateUpdateHandler{}
+var _ admission.Handler = &ValidatingAdmission{}
 
 // Handle handles admission requests.
-func (h *NebulaClusterCreateUpdateHandler) Handle(_ context.Context, req admission.Request) (resp admission.Response) {
+func (h *ValidatingAdmission) Handle(_ context.Context, req admission.Request) (resp admission.Response) {
 	klog.Infof("start validating resource %v [%s/%s] operation %s", req.Resource, req.Namespace, req.Name, req.Operation)
 
 	defer func() {
-		klog.Infof("end validating, allowed %v, reason %v, message %s", "allowed", resp.Allowed,
+		klog.Infof("end validating, allowed %v, reason %v, message %s", resp.Allowed,
 			resp.Result.Reason, resp.Result.Message)
 	}()
 
@@ -83,20 +75,4 @@ func (h *NebulaClusterCreateUpdateHandler) Handle(_ context.Context, req admissi
 	}
 
 	return admission.ValidationResponse(true, "")
-}
-
-var _ inject.Client = &NebulaClusterCreateUpdateHandler{}
-
-// InjectClient injects the client into the NebulaClusterCreateUpdateHandler
-func (h *NebulaClusterCreateUpdateHandler) InjectClient(c client.Client) error {
-	h.Client = c
-	return nil
-}
-
-var _ admission.DecoderInjector = &NebulaClusterCreateUpdateHandler{}
-
-// InjectDecoder injects the decoder into the NebulaClusterCreateUpdateHandler
-func (h *NebulaClusterCreateUpdateHandler) InjectDecoder(d *admission.Decoder) error {
-	h.Decoder = d
-	return nil
 }

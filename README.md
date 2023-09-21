@@ -174,13 +174,13 @@ Apply the version change to the cluster CR:
 $ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
 ```
 
-Wait few minutes. The container image version should be updated to v3.5.x:
+Wait few minutes. The container image version should be updated to v3.6.x:
 
 ```bash
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].spec.containers[*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c
-      1 vesoft/nebula-graphd:v3.5.x
-      1 vesoft/nebula-metad:v3.5.x
-      3 vesoft/nebula-storaged:v3.5.x
+      1 vesoft/nebula-graphd:v3.6.x
+      1 vesoft/nebula-metad:v3.6.x
+      3 vesoft/nebula-storaged:v3.6.x
 ```
 
 **Warning:**

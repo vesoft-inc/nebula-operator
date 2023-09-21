@@ -131,6 +131,10 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 
+	if err := c.syncMetadPVC(nc); err != nil {
+		return err
+	}
+
 	if nc.MetadComponent().IsReady() {
 		if err := c.setVersion(nc); err != nil {
 			return err
@@ -171,6 +175,10 @@ func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.C
 		c.clientSet.ConfigMap(),
 		v1alpha1.MetadhConfigTemplate,
 		nc.MetadComponent().GetConfigMapKey())
+}
+
+func (c *metadCluster) syncMetadPVC(nc *v1alpha1.NebulaCluster) error {
+	return syncPVC(nc.MetadComponent(), c.clientSet.PVC())
 }
 
 func (c *metadCluster) setVersion(nc *v1alpha1.NebulaCluster) error {

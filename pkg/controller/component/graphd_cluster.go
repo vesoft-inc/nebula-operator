@@ -134,6 +134,10 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 
+	if err := c.syncGraphdPVC(nc); err != nil {
+		return err
+	}
+
 	if nc.GraphdComponent().IsReady() {
 		endpoints := nc.GetGraphdEndpoints(v1alpha1.GraphdPortNameHTTP)
 		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations()); err != nil {
@@ -203,6 +207,10 @@ func (c *graphdCluster) syncGraphdConfigMap(nc *v1alpha1.NebulaCluster) (*corev1
 		c.clientSet.ConfigMap(),
 		v1alpha1.GraphdConfigTemplate,
 		nc.GraphdComponent().GetConfigMapKey())
+}
+
+func (c *graphdCluster) syncGraphdPVC(nc *v1alpha1.NebulaCluster) error {
+	return syncPVC(nc.GraphdComponent(), c.clientSet.PVC())
 }
 
 func (c *graphdCluster) setTopologyZone(nc *v1alpha1.NebulaCluster, newReplicas int32) error {

@@ -95,12 +95,14 @@ func (p *pvcClient) UpdatePVC(pvc *corev1.PersistentVolumeClaim) error {
 	pvcName := pvc.GetName()
 	pvcLabels := pvc.GetLabels()
 	annotations := pvc.GetAnnotations()
+	requests := pvc.Spec.Resources.Requests
 
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if updated, err := p.GetPVC(ns, pvcName); err == nil {
 			pvc = updated.DeepCopy()
 			pvc.SetLabels(pvcLabels)
 			pvc.SetAnnotations(annotations)
+			pvc.Spec.Resources.Requests = requests
 		} else {
 			utilruntime.HandleError(fmt.Errorf("get PV [%s/%s] failed: %v", ns, pvcName, err))
 			return err

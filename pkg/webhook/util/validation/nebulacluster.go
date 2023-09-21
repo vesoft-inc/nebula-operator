@@ -18,6 +18,8 @@ package validation
 
 import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 )
 
 const (
@@ -71,4 +73,17 @@ func ValidateMinReplicasStoraged(fldPath *field.Path, replicas int, bHaMode bool
 	}
 
 	return allErrs
+}
+
+func IsNebulaClusterHA(nc *v1alpha1.NebulaCluster) bool {
+	if int(*nc.Spec.Graphd.Replicas) < minReplicasGraphdInHaMode {
+		return false
+	}
+	if int(*nc.Spec.Metad.Replicas) < minReplicasMetadInHaMode {
+		return false
+	}
+	if int(*nc.Spec.Storaged.Replicas) < minReplicasStoragedInHaMode {
+		return false
+	}
+	return true
 }

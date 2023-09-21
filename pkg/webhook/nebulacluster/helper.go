@@ -203,12 +203,14 @@ func validateNebulaClusterUpdate(nc, oldNC *v1alpha1.NebulaCluster) (allErrs fie
 		field.NewPath("metadata"),
 	)...)
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableAnnotation(
-		nc.Annotations[annotation.AnnHaModeKey],
-		oldNC.Annotations[annotation.AnnHaModeKey],
-		annotation.AnnHaModeKey,
-		field.NewPath("metadata"),
-	)...)
+	if !validation.IsNebulaClusterHA(oldNC) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableAnnotation(
+			nc.Annotations[annotation.AnnHaModeKey],
+			oldNC.Annotations[annotation.AnnHaModeKey],
+			annotation.AnnHaModeKey,
+			field.NewPath("metadata"),
+		)...)
+	}
 
 	allErrs = append(allErrs, validateNebulaClusterUpdateGraphd(nc, oldNC)...)
 	allErrs = append(allErrs, validateNebulaClusterUpdateMetad(nc, oldNC)...)

@@ -524,7 +524,7 @@ func syncPVC(
 				}
 			}
 			if oldPVC == nil {
-				return nil
+				continue
 			}
 			if volumeClaim.Spec.Resources.Requests.Storage().Cmp(*oldPVC.Spec.Resources.Requests.Storage()) != 0 {
 				// only update storage

@@ -180,7 +180,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	if nc.StoragedComponent().IsReady() {
 		endpoints := nc.GetStoragedEndpoints(v1alpha1.StoragedPortNameHTTP)
-		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations()); err != nil {
+		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update storaged cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 

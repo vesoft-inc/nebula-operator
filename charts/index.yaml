@@ -2,6 +2,54 @@ apiVersion: v1
 entries:
   nebula-cluster:
   - apiVersion: v2
+    appVersion: 1.6.2
+    created: "2023-09-22T11:43:57.80991024+08:00"
+    description: Nebula Cluster Helm chart for Kubernetes
+    digest: add2d3dd3577e4e199868d8577d9edbf1a877225f27cfa4dd4197157e797ff74
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-cluster
+    sources:
+      - https://github.com/vesoft-inc/nebula
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.6.2/nebula-cluster-1.6.2.tgz
+    version: 1.6.2
+  - apiVersion: v2
+    appVersion: 1.6.1
+    created: "2023-09-22T11:27:42.03293674+08:00"
+    description: Nebula Cluster Helm chart for Kubernetes
+    digest: d0c32de81d02d1b78b9cf26109cbe7a58c6d0773a59e14b0a5932b080915dd96
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-cluster
+    sources:
+      - https://github.com/vesoft-inc/nebula
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.6.1/nebula-cluster-1.6.1.tgz
+    version: 1.6.1
+  - apiVersion: v2
     appVersion: 1.6.0
     created: "2023-09-15T15:49:14.391789423+08:00"
     description: Nebula Cluster Helm chart for Kubernetes
@@ -242,6 +290,52 @@ entries:
     - https://github.com/vesoft-inc/nebula-operator/releases/download/v0.9.0/nebula-cluster-0.9.0.tgz
     version: 0.9.0
   nebula-operator:
+  - apiVersion: v2
+    appVersion: 1.6.2
+    created: "2023-09-22T11:43:57.815339501+08:00"
+    description: Nebula Operator Helm chart for Kubernetes
+    digest: e6f6e65f3f889794e366df66dd96199775ccd41184b002ae9cc15ad74ca3af5a
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-operator
+    sources:
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.6.2/nebula-operator-1.6.2.tgz
+    version: 1.6.2
+  - apiVersion: v2
+    appVersion: 1.6.1
+    created: "2023-09-22T11:27:42.035828706+08:00"
+    description: Nebula Operator Helm chart for Kubernetes
+    digest: 68e5911c39850a80fe0bc0e82789cd449c23c8b1684f4386cf7370f71b8f2339
+    home: https://nebula-graph.io
+    keywords:
+      - kubernetes
+      - operator
+      - nebula-graph
+      - database
+      - graph database
+    maintainers:
+      - email: vee.zhang@vesoft.com
+        name: Vee Zhang
+      - email: kevin.qiao@vesoft.com
+        name: Kevin Qiao
+    name: nebula-operator
+    sources:
+      - https://github.com/vesoft-inc/nebula-operator
+    urls:
+      - https://github.com/vesoft-inc/nebula-operator/releases/download/v1.6.1/nebula-operator-1.6.1.tgz
+    version: 1.6.1
   - apiVersion: v2
     appVersion: 1.6.0
     created: "2023-09-15T15:49:14.395600009+08:00"

@@ -19,7 +19,6 @@ package component
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -218,7 +217,7 @@ func staticFlags(config map[string]string) map[string]string {
 	return static
 }
 
-func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[string]string) error {
+func updateDynamicFlags(endpoints []string, newAnnotations map[string]string) error {
 	newFlags := make(map[string]string)
 	newFlagsVal, ok := newAnnotations[annotation.AnnLastAppliedDynamicFlagsKey]
 	if ok {
@@ -226,23 +225,11 @@ func updateDynamicFlags(endpoints []string, newAnnotations, oldAnnotations map[s
 			return err
 		}
 	}
-	oldFlags := make(map[string]string)
-	oldFlagsVal, ok := oldAnnotations[annotation.AnnLastAppliedDynamicFlagsKey]
-	if ok {
-		if err := json.Unmarshal([]byte(oldFlagsVal), &oldFlags); err != nil {
-			return err
-		}
-	}
-	if reflect.DeepEqual(newFlags, oldFlags) {
+	if len(newFlags) == 0 {
 		return nil
 	}
-
-	updated, removed := maputil.IntersectionDifference(oldFlags, newFlags)
-	_, added := maputil.IntersectionDifference(newFlags, oldFlags)
-	maputil.ResetMap(removed, v1alpha1.DynamicFlags)
-	merged := maputil.MergeStringMaps(true, updated, added, removed)
-	klog.Infof("merged dynamic flags: %v", merged)
-	str, err := codec.Encode(merged)
+	klog.Infof("dynamic flags: %v", newFlags)
+	str, err := codec.Encode(newFlags)
 	if err != nil {
 		return err
 	}

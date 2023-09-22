@@ -137,7 +137,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 
 		endpoints := nc.GetMetadEndpoints(v1alpha1.MetadPortNameHTTP)
-		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations(), oldWorkload.GetAnnotations()); err != nil {
+		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update metad cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 	}

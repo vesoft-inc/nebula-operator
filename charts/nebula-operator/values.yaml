@@ -1,6 +1,6 @@
 image:
   nebulaOperator:
-    image: vesoft/nebula-operator:latest
+    image: vesoft/nebula-operator:v1.6.2
     imagePullPolicy: Always
   kubeRBACProxy:
     image: bitnami/kube-rbac-proxy:0.14.2

@@ -19,6 +19,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +29,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"

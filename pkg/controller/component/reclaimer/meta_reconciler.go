@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	Concurrency = 5
+	metaReconcileConcurrency = 5
 )
 
 type meta struct {
@@ -55,7 +55,7 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		return fmt.Errorf("list pods for cluster %s/%s failed: %v", namespace, clusterName, err)
 	}
 
-	group := async.NewGroup(context.TODO(), Concurrency)
+	group := async.NewGroup(context.TODO(), metaReconcileConcurrency)
 	for i := range pods {
 		pod := pods[i]
 		if !label.Label(pod.Labels).IsNebulaComponent() {

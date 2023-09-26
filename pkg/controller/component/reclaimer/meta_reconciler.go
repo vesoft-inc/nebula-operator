@@ -63,7 +63,6 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		}
 
 		worker := func() error {
-
 			var hasDataPV bool
 			if pod.Labels[label.ComponentLabelKey] == label.GraphdLabelVal {
 				hasDataPV = false

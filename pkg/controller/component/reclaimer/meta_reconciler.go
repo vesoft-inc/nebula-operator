@@ -19,7 +19,6 @@ package reclaimer
 import (
 	"context"
 	"fmt"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +28,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
 )
 
 const (

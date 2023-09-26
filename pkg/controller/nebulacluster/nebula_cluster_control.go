@@ -146,10 +146,12 @@ func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaClu
 		return err
 	}
 
+	klog.Infof("start reconcile pv and pvc metadata cluster")
 	if err := c.metaReconciler.Reconcile(nc); err != nil {
 		klog.Errorf("reconcile pv and pvc metadata cluster failed: %v", err)
 		return err
 	}
+	klog.Infof("finished reconcile pv and pvc metadata cluster successfully")
 
 	if err := c.pvcReclaimer.Reclaim(nc); err != nil {
 		klog.Errorf("reclaim pvc failed: %v", err)

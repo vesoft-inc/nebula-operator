@@ -19,7 +19,6 @@ package kube
 import (
 	"context"
 	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +27,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
@@ -128,6 +128,10 @@ func (p *pvClient) UpdatePersistentVolume(pv *corev1.PersistentVolume) error {
 
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if updated, err := p.GetPersistentVolume(pvName); err == nil {
+			if reflect.DeepEqual(labels, updated.GetLabels()) && reflect.DeepEqual(annotations, updated.GetAnnotations()) {
+				return nil
+			}
+
 			pv = updated.DeepCopy()
 			pv.SetLabels(labels)
 			pv.SetAnnotations(annotations)

@@ -19,6 +19,7 @@ package autoscaler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -29,6 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1"
+)
+
+var (
+	// errSpec is used to determine if the error comes from the spec of HPA object in reconcileAutoscaler.
+	// All such errors should have this error as a root error so that the upstream function can distinguish spec errors from internal errors.
+	// e.g., fmt.Errorf("invalid spec%w", errSpec)
+	errSpec = errors.New("")
 )
 
 // Computes the desired number of replicas for a specific hpa and metric specification,

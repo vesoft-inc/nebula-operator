@@ -58,6 +58,9 @@ concurrentNebulaClusterSyncs: 5
 # The number of NebulaRestore objects that are allowed to sync concurrently. (default 5)
 concurrentNebulaRestoreSyncs: 5
 
+# The number of nebula autoscaler objects that are allowed to sync concurrently. (default 5)
+concurrentAutoscalerSyncs: 5
+
 nodeSelector: { }
 
 tolerations: [ ]

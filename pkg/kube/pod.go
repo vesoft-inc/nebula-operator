@@ -55,7 +55,7 @@ func (pd *podClient) GetPod(namespace, name string) (*corev1.Pod, error) {
 		Namespace: namespace,
 	}, pod)
 	if err != nil {
-		klog.Errorf("get pod [%s/%s] failed: %v", namespace, name, err)
+		klog.V(4).ErrorS(err, "failed to get pod", "namespace", namespace, "name", name)
 		return nil, err
 	}
 	return pod, nil

@@ -201,3 +201,37 @@ rules:
     - get
     - patch
     - update
+- apiGroups:
+    - autoscaling.nebula-graph.io
+  resources:
+    - nebulaautoscalers
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - autoscaling.nebula-graph.io
+  resources:
+    - nebulaautoscalers/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - autoscaling.nebula-graph.io
+  resources:
+    - nebulaautoscalers/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - metrics.k8s.io
+  resources:
+    - pods
+  verbs:
+    - get
+    - list
+    - watch

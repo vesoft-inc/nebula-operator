@@ -73,6 +73,7 @@ e2e: ginkgo kind ## Run e2e test.
 ##@ Build
 build: ## Build binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/controller-manager cmd/controller-manager/main.go
+	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/autoscaler cmd/autoscaler/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/scheduler cmd/scheduler/main.go
 
 helm-charts: ## Build helm charts.
@@ -80,14 +81,6 @@ helm-charts: ## Build helm charts.
 	helm package charts/nebula-cluster --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
 	mv nebula-operator-*.tgz nebula-cluster-*.tgz charts/
 	helm repo index charts/ --url https://github.com/vesoft-inc/nebula-operator/releases/download/v$(CHARTS_VERSION)
-
-run: run-controller-manager
-
-run-controller-manager: manifests generate check
-	go run -ldflags '$(LDFLAGS)' cmd/controller-manager/main.go
-
-run-scheduler: manifests generate check
-	go run -ldflags '$(LDFLAGS)' cmd/scheduler/main.go
 
 docker-build: ## Build docker images.
 	docker build --build-arg TARGETDIR=$(TARGETDIR) -t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .

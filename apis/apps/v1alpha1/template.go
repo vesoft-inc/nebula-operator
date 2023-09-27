@@ -200,7 +200,7 @@ const (
 
 ########## Black box ########
 # Enable black box
---ng_black_box_switch=true
+--ng_black_box_switch=false
 # Black box log folder
 --ng_black_box_home=black_box
 # Black box dump metrics log period
@@ -328,7 +328,7 @@ const (
 
 ########## Black box ########
 # Enable black box
---ng_black_box_switch=true
+--ng_black_box_switch=false
 # Black box log folder
 --ng_black_box_home=black_box
 # Black box dump metrics log period
@@ -526,7 +526,7 @@ const (
 
 ########## Black box ########
 # Enable black box
---ng_black_box_switch=true
+--ng_black_box_switch=false
 # Black box log folder
 --ng_black_box_home=black_box
 # Black box dump metrics log period

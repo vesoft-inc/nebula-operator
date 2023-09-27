@@ -21,12 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,11 +48,9 @@ const (
 
 // ClusterReconciler reconciles a NebulaCluster object
 type ClusterReconciler struct {
-	Control ControlInterface
-	client.Client
-	Log          logr.Logger
-	Scheme       *runtime.Scheme
-	EnableKruise bool
+	control      ControlInterface
+	client       client.Client
+	enableKruise bool
 }
 
 func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconciler, error) {
@@ -86,7 +82,7 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 	}
 
 	return &ClusterReconciler{
-		Control: NewDefaultNebulaClusterControl(
+		control: NewDefaultNebulaClusterControl(
 			mgr.GetClient(),
 			clientSet.NebulaCluster(),
 			component.NewGraphdCluster(
@@ -108,10 +104,8 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 			reclaimer.NewPVCReclaimer(clientSet),
 			NewClusterConditionUpdater(),
 		),
-		Client:       mgr.GetClient(),
-		Log:          ctrl.Log.WithName("controllers").WithName("NebulaCluster"),
-		Scheme:       mgr.GetScheme(),
-		EnableKruise: enableKruise,
+		client:       mgr.GetClient(),
+		enableKruise: enableKruise,
 	}, nil
 }
 
@@ -130,7 +124,6 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 // +kubebuilder:rbac:groups=apps.kruise.io,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
-	var nebulaCluster v1alpha1.NebulaCluster
 	key := req.NamespacedName.String()
 	subCtx, cancel := context.WithTimeout(ctx, time.Minute*1)
 	defer cancel()
@@ -148,10 +141,11 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		}
 	}()
 
-	if err := r.Get(subCtx, req.NamespacedName, &nebulaCluster); err != nil {
+	var nebulaCluster v1alpha1.NebulaCluster
+	if err := r.client.Get(subCtx, req.NamespacedName, &nebulaCluster); err != nil {
 		if apierrors.IsNotFound(err) {
 			klog.Infof("Skipping because NebulaCluster [%s] has been deleted", key)
-			if err := component.PvcGc(r.Client, req.Namespace, req.Name); err != nil {
+			if err := component.PvcGc(r.client, req.Namespace, req.Name); err != nil {
 				return ctrl.Result{}, client.IgnoreNotFound(err)
 			}
 		}
@@ -160,7 +154,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	klog.Info("Start to reconcile NebulaCluster")
 
-	if !r.EnableKruise && nebulaCluster.Spec.Reference.Name == KruiseReferenceName {
+	if !r.enableKruise && nebulaCluster.Spec.Reference.Name == KruiseReferenceName {
 		return ctrl.Result{}, fmt.Errorf("openkruise scheme not registered")
 	}
 
@@ -188,12 +182,12 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 }
 
 func (r *ClusterReconciler) syncNebulaCluster(nc *v1alpha1.NebulaCluster) error {
-	return r.Control.UpdateNebulaCluster(nc)
+	return r.control.UpdateNebulaCluster(nc)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if r.EnableKruise {
+	if r.enableKruise {
 		return ctrl.NewControllerManagedBy(mgr).
 			For(&v1alpha1.NebulaCluster{}).
 			Owns(&corev1.ConfigMap{}).

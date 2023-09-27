@@ -64,7 +64,7 @@ func (c *nebulaClusterClient) GetNebulaCluster(namespace, name string) (*v1alpha
 		Namespace: namespace,
 	}, nebulaCluster)
 	if err != nil {
-		klog.Errorf("get nebulacluster [%s/%s] failed: %v", namespace, name, err)
+		klog.V(4).ErrorS(err, "failed to get NebulaCluster", "namespace", namespace, "name", name)
 		return nil, err
 	}
 	return nebulaCluster, nil

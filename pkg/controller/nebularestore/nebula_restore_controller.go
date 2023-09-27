@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -42,9 +41,8 @@ var _ reconcile.Reconciler = (*Reconciler)(nil)
 
 // Reconciler reconciles a NebulaRestore object
 type Reconciler struct {
-	Control ControlInterface
-	client.Client
-	Log logr.Logger
+	control ControlInterface
+	client  client.Client
 }
 
 func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
@@ -56,9 +54,8 @@ func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 	restoreMgr := NewRestoreManager(clientSet)
 
 	return &Reconciler{
-		Control: NewRestoreControl(clientSet, restoreMgr),
-		Client:  mgr.GetClient(),
-		Log:     ctrl.Log.WithName("controllers").WithName("NebulaRestore"),
+		control: NewRestoreControl(clientSet, restoreMgr),
+		client:  mgr.GetClient(),
 	}, nil
 }
 
@@ -70,7 +67,6 @@ func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=restores,verbs=get;list;watch;create;update;patch;delete
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
-	var restore v1alpha1.NebulaRestore
 	key := req.NamespacedName.String()
 	subCtx, cancel := context.WithTimeout(ctx, time.Minute*1)
 	defer cancel()
@@ -88,7 +84,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res recon
 		}
 	}()
 
-	if err := r.Get(subCtx, req.NamespacedName, &restore); err != nil {
+	var restore v1alpha1.NebulaRestore
+	if err := r.client.Get(subCtx, req.NamespacedName, &restore); err != nil {
 		if apierrors.IsNotFound(err) {
 			klog.Infof("Skipping because NebulaRestore [%s] has been deleted", key)
 		}
@@ -110,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res recon
 }
 
 func (r *Reconciler) syncNebulaRestore(restore *v1alpha1.NebulaRestore) error {
-	return r.Control.UpdateNebulaRestore(restore)
+	return r.control.UpdateNebulaRestore(restore)
 }
 
 // SetupWithManager sets up the controller with the Manager.

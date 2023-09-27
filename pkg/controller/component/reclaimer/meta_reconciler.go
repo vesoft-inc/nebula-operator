@@ -17,6 +17,7 @@ limitations under the License.
 package reclaimer
 
 import (
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +28,11 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
+)
+
+const (
+	metaReconcileConcurrency = 5
 )
 
 type meta struct {
@@ -49,45 +55,52 @@ func (m *meta) Reconcile(nc *v1alpha1.NebulaCluster) error {
 		return fmt.Errorf("list pods for cluster %s/%s failed: %v", namespace, clusterName, err)
 	}
 
-	// TODO: concurrent updating to reduce reconcile time
+	group := async.NewGroup(context.TODO(), metaReconcileConcurrency)
 	for i := range pods {
 		pod := pods[i]
 		if !label.Label(pod.Labels).IsNebulaComponent() {
 			continue
 		}
 
-		var hasDataPV bool
-		if pod.Labels[label.ComponentLabelKey] == label.GraphdLabelVal {
-			hasDataPV = false
+		worker := func() error {
+			var hasDataPV bool
+			if pod.Labels[label.ComponentLabelKey] == label.GraphdLabelVal {
+				hasDataPV = false
+			}
+
+			pvcs, err := m.resolvePVCFromPod(&pod)
+			if err != nil {
+				if errors.IsNotFound(err) && !hasDataPV {
+					return nil
+				}
+				return err
+			}
+			for i := range pvcs {
+				pvc := pvcs[i]
+				if err := m.clientSet.PVC().UpdateMetaInfo(pvc, &pod, nc.IsPVReclaimEnabled()); err != nil {
+					return err
+				}
+				if pvc.Spec.VolumeName == "" {
+					continue
+				}
+				pv, err := m.clientSet.PV().GetPersistentVolume(pvc.Spec.VolumeName)
+				if err != nil {
+					klog.Errorf("cluster [%s/%s] get PV %s failed: %v", namespace, clusterName, pvc.Spec.VolumeName, err)
+					return err
+				}
+				if err := m.clientSet.PV().UpdateMetaInfo(nc, pv); err != nil {
+					return err
+				}
+			}
+			return nil
 		}
 
-		pvcs, err := m.resolvePVCFromPod(&pod)
-		if err != nil {
-			if errors.IsNotFound(err) && !hasDataPV {
-				continue
-			}
-			return err
-		}
-		for i := range pvcs {
-			pvc := pvcs[i]
-			if err := m.clientSet.PVC().UpdateMetaInfo(pvc, &pod, nc.IsPVReclaimEnabled()); err != nil {
-				return err
-			}
-			if pvc.Spec.VolumeName == "" {
-				continue
-			}
-			pv, err := m.clientSet.PV().GetPersistentVolume(pvc.Spec.VolumeName)
-			if err != nil {
-				klog.Errorf("cluster [%s/%s] get PV %s failed: %v", namespace, clusterName, pvc.Spec.VolumeName, err)
-				return err
-			}
-			if err := m.clientSet.PV().UpdateMetaInfo(nc, pv); err != nil {
-				return err
-			}
-		}
+		group.Add(func(stopCh chan interface{}) {
+			stopCh <- worker()
+		})
 	}
 
-	return nil
+	return group.Wait()
 }
 
 func (m *meta) resolvePVCFromPod(pod *corev1.Pod) ([]*corev1.PersistentVolumeClaim, error) {

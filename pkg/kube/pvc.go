@@ -19,6 +19,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
@@ -99,6 +100,12 @@ func (p *pvcClient) UpdatePVC(pvc *corev1.PersistentVolumeClaim) error {
 
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if updated, err := p.GetPVC(ns, pvcName); err == nil {
+			if reflect.DeepEqual(pvcLabels, updated.GetLabels()) &&
+				reflect.DeepEqual(annotations, updated.GetAnnotations()) &&
+				reflect.DeepEqual(requests, updated.Spec.Resources.Requests) {
+				return nil
+			}
+
 			pvc = updated.DeepCopy()
 			pvc.SetLabels(pvcLabels)
 			pvc.SetAnnotations(annotations)

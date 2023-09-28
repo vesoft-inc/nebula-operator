@@ -13,7 +13,7 @@ spec:
     listKind: NebulaRestoreList
     plural: nebularestores
     shortNames:
-    - rt
+    - nr
     singular: nebularestore
   scope: Namespaced
   versions:

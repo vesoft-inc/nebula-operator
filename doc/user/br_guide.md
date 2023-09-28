@@ -95,7 +95,7 @@ spec:
 
 ```shell
 $ kubectl apply -f apps_v1alpha1_nebularestore.yaml
-$ kubectl get rt restore1 -w
+$ kubectl get nr restore1 -w
 ```
 
 **Note:**

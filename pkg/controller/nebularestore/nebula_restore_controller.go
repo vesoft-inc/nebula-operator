@@ -59,12 +59,14 @@ func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 	}, nil
 }
 
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;list
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=restores/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=restores/finalizers,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=restores,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebularestores,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebularestores/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebularestores/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
 	key := req.NamespacedName.String()

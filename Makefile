@@ -67,8 +67,8 @@ test: manifests generate check ## Run unit-tests.
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... -coverprofile cover.out
 
 ##@ e2e
-e2e: ginkgo kind ## Run e2e test.
-	PATH="${GOBIN}:${PATH}" ./hack/e2e.sh
+e2e: kind ## Run e2e test.
+	PATH="${GOBIN}:${PATH}" ./hack/e2e.sh $(E2EARGS)
 
 ##@ Build
 build: ## Build binary.
@@ -154,7 +154,7 @@ ginkgo:
 	$(call go-get-tool,$(GOBIN)/ginkgo,github.com/onsi/ginkgo/ginkgo@v1.16.5)
 
 kind:
-	$(call go-get-tool,$(GOBIN)/kind,sigs.k8s.io/kind@v0.19.0)
+	$(call go-get-tool,$(GOBIN)/kind,sigs.k8s.io/kind@v0.20.0)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool

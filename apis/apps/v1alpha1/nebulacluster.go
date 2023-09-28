@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -149,4 +150,17 @@ func (nc *NebulaCluster) IsStoragedSSLEnabled() bool {
 
 func (nc *NebulaCluster) IsZoneEnabled() bool {
 	return nc.Spec.Metad.Config["zone_list"] != ""
+}
+
+func (nc *NebulaCluster) IsReady() bool {
+	return nc.Status.ObservedGeneration == nc.Generation && nc.IsConditionReady()
+}
+
+func (nc *NebulaCluster) IsConditionReady() bool {
+	for _, condition := range nc.Status.Conditions {
+		if condition.Type == NebulaClusterReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }

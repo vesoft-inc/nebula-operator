@@ -50,6 +50,15 @@ func NewNebulaClusterCondition(
 	}
 }
 
+func IsNebulaClusterReady(nc *v1alpha1.NebulaCluster) bool {
+	for _, condition := range nc.Status.Conditions {
+		if condition.Type == v1alpha1.NebulaClusterReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
 func GetNebulaClusterCondition(
 	status *v1alpha1.NebulaClusterStatus,
 	condType v1alpha1.NebulaClusterConditionType,

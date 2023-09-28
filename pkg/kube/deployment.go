@@ -45,7 +45,7 @@ func (d *deployClient) GetDeployment(namespace string, name string) (*appsv1.Dep
 		Namespace: namespace,
 	}, deploy)
 	if err != nil {
-		klog.Errorf("get deployment [%s/%s] failed: %v", namespace, name, err)
+		klog.V(4).ErrorS(err, "failed to get deployment", "namespace", namespace, "name", name)
 		return nil, err
 	}
 	return deploy, nil

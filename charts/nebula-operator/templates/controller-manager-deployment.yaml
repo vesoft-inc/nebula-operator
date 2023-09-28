@@ -74,24 +74,43 @@ spec:
               name: cert
               readOnly: true
           {{- end }}
-        - name: kube-rbac-proxy
-          image: {{ .Values.image.kubeRBACProxy.image }}
-          imagePullPolicy: {{ .Values.image.kubeRBACProxy.imagePullPolicy }}
+        - name: autoscaler
+          image: {{ .Values.image.nebulaOperator.image }}
+          imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
+          command:
+            - /usr/local/bin/autoscaler
           args:
-            - --secure-listen-address=0.0.0.0:8443
-            - --upstream=http://127.0.0.1:8080/
-            - --logtostderr=true
-            - --v=2
-          ports:
-            - containerPort: 8443
-              name: https
+           {{- if .Values.concurrentAutoscalerSyncs }}
+            - --concurrent-autoscaler-syncs={{ .Values.concurrentAutoscalerSyncs }}
+           {{- end }}
+            - --health-probe-bind-address=:8091
+            - --metrics-bind-address=:8090
+            - --leader-elect
+            - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
+          {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
+          env:
+            {{- if .Values.kubernetesClusterDomain }}
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.kubernetesClusterDomain }}
+            {{- end }}
+          {{- if .Values.controllerManager.env }}{{ toYaml .Values.controllerManager.env | nindent 12 }}{{- end }}
+          {{- end }}
           resources:
-            limits:
-              cpu: 100m
-              memory: 30Mi
-            requests:
-              cpu: 100m
-              memory: 20Mi
+          {{- toYaml .Values.controllerManager.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8091
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8091
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       securityContext:

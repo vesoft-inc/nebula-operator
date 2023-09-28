@@ -13,3 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+package main
+
+import (
+	"os"
+
+	"k8s.io/component-base/cli"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/vesoft-inc/nebula-operator/cmd/autoscaler/app"
+)
+
+func main() {
+	ctx := ctrl.SetupSignalHandler()
+	cmd := app.NewAutoscalerCommand(ctx)
+	code := cli.Run(cmd)
+	os.Exit(code)
+}

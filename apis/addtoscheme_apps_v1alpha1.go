@@ -18,10 +18,11 @@ package apis
 
 import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	asv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1"
 )
 
 // nolint: gochecknoinits
 func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
-	AddToSchemes = append(AddToSchemes, v1alpha1.SchemeBuilder.AddToScheme)
+	AddToSchemes = append(AddToSchemes, v1alpha1.SchemeBuilder.AddToScheme, asv1alpha1.SchemeBuilder.AddToScheme)
 }

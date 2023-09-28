@@ -27,7 +27,7 @@ func (s *secretClient) GetSecret(namespace, secretName string) (*corev1.Secret, 
 		Namespace: namespace,
 	}, secret)
 	if err != nil {
-		klog.Errorf("get secret [%s/%s] failed: %v", namespace, secretName, err)
+		klog.V(4).ErrorS(err, "failed to get secret", "namespace", namespace, "name", secretName)
 		return nil, err
 	}
 	return secret, nil

@@ -106,7 +106,7 @@ func (c *cmClient) getConfigMap(objKey client.ObjectKey) (*corev1.ConfigMap, err
 	configMap := &corev1.ConfigMap{}
 	err := c.kubecli.Get(context.TODO(), objKey, configMap)
 	if err != nil {
-		klog.Errorf("get configmap %s failed: %v", objKey.String(), err)
+		klog.V(4).ErrorS(err, "failed to get configmap", "namespace", objKey.Namespace, "name", objKey.Name)
 		return nil, err
 	}
 	return configMap, err

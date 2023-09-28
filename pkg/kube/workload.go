@@ -55,7 +55,7 @@ func (w *workloadClient) GetWorkload(namespace, name string, gvk schema.GroupVer
 		Namespace: namespace,
 	}, workload)
 	if err != nil {
-		klog.Errorf("get workload [%s/%s] failed: %v", namespace, name, err)
+		klog.V(4).ErrorS(err, "failed to get workload", "namespace", namespace, "name", name)
 		return nil, err
 	}
 	return workload, nil

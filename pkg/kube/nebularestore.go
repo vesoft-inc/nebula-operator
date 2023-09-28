@@ -61,7 +61,7 @@ func (r *restoreClient) GetNebulaRestore(namespace, name string) (*v1alpha1.Nebu
 		Namespace: namespace,
 	}, restore)
 	if err != nil {
-		klog.Errorf("get nebularestore [%s/%s] failed: %v", namespace, name, err)
+		klog.V(4).ErrorS(err, "failed to get NebulaRestore", "namespace", namespace, "name", name)
 		return nil, err
 	}
 	return restore, nil

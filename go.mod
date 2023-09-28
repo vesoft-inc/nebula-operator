@@ -3,7 +3,6 @@ module github.com/vesoft-inc/nebula-operator
 go 1.20
 
 require (
-	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.7
@@ -23,8 +22,10 @@ require (
 	k8s.io/code-generator v0.27.4
 	k8s.io/component-base v0.27.4
 	k8s.io/klog/v2 v2.90.1
+	k8s.io/kube-controller-manager v0.27.4
 	k8s.io/kubectl v0.27.4
 	k8s.io/kubernetes v1.27.4
+	k8s.io/metrics v0.27.4
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/controller-runtime v0.15.2
 	sigs.k8s.io/yaml v1.3.0
@@ -55,6 +56,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fvbommel/sortorder v1.0.1 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
@@ -144,7 +146,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.27.2 // indirect
 	k8s.io/apiserver v0.27.4 // indirect
-	k8s.io/cloud-provider v0.0.0 // indirect
+	k8s.io/cloud-provider v0.27.4 // indirect
 	k8s.io/component-helpers v0.27.4 // indirect
 	k8s.io/controller-manager v0.27.4 // indirect
 	k8s.io/csi-translation-lib v0.0.0 // indirect

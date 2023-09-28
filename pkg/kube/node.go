@@ -41,7 +41,7 @@ func (pd *nodeClient) GetNode(nodeName string) (*corev1.Node, error) {
 	node := &corev1.Node{}
 	err := pd.kubecli.Get(context.TODO(), types.NamespacedName{Name: nodeName}, node)
 	if err != nil {
-		klog.Errorf("get node %s failed: %v", nodeName, err)
+		klog.V(4).ErrorS(err, "failed to get node", "node", nodeName)
 		return nil, err
 	}
 	return node, nil

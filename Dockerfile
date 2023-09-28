@@ -7,5 +7,6 @@ RUN addgroup -S -g 65532 ng-user && \
     -s /sbin/nologin -G ng-user -g ng-user ng-user
 
 ADD bin/${TARGETDIR}/controller-manager /usr/local/bin/controller-manager
+ADD bin/${BUILDPLATFORM}/autoscaler /usr/local/bin/autoscaler
 ADD bin/${TARGETDIR}/scheduler /usr/local/bin/scheduler
 USER 65532:65532

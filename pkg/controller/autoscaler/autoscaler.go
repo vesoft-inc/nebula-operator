@@ -186,10 +186,12 @@ func NewHorizontalController(
 	return hpaController, nil
 }
 
+// +kubebuilder:rbac:groups="metrics.k8s.io",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;list
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=autoscaling.nebula-graph.io,resources=nebulaautoscalers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=autoscaling.nebula-graph.io,resources=nebulaautoscalers/status,verbs=get;update;patch
 

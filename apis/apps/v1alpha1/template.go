@@ -45,6 +45,10 @@ var DynamicFlags = map[string]string{
 	"rocksdb_db_options":                          "{}",
 	"rocksdb_column_family_options":               `{"write_buffer_size":"67108864","max_write_buffer_number":"4","max_bytes_for_level_base":"268435456"}`,
 	"rocksdb_block_based_table_options":           `{"block_size":"8192"}`,
+	"prioritize_intra_zone_reading":               "false",
+	"stick_to_intra_zone_on_failure":              "false",
+	"sync_meta_when_use_space":                    "false",
+	"validate_session_timestamp":                  "true",
 }
 
 const (

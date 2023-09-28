@@ -29,7 +29,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/component/reclaimer"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
@@ -88,7 +87,7 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 
 	c.conditionUpdater.Update(nc)
 
-	if apiequality.Semantic.DeepEqual(&nc.Status, oldStatus) && condition.IsNebulaClusterReady(nc) {
+	if apiequality.Semantic.DeepEqual(&nc.Status, oldStatus) && nc.IsConditionReady() {
 		return errorutils.NewAggregate(errs)
 	}
 
@@ -97,7 +96,7 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 		errs = append(errs, err)
 	}
 
-	if !condition.IsNebulaClusterReady(nc) {
+	if !nc.IsConditionReady() {
 		errs = append(errs, utilerrors.ReconcileErrorf("waiting for nebulacluster ready"))
 	}
 

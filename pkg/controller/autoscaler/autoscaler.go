@@ -57,7 +57,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 )
 
 const (
@@ -369,7 +368,7 @@ func (a *HorizontalController) reconcileAutoscaler(ctx context.Context, hpaShare
 		desiredReplicas = currentReplicas
 	}
 
-	if !condition.IsNebulaClusterReady(nc) {
+	if !nc.IsConditionReady() {
 		setCondition(hpa, v1alpha1.AutoscalerReady, corev1.ConditionFalse, "NebulaClusterReady", "the HPA controller was waiting for target cluster ready")
 	} else {
 		setCondition(hpa, v1alpha1.AutoscalerReady, corev1.ConditionTrue, "NebulaClusterReady", "the target cluster status is ready")

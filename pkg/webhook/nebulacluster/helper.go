@@ -173,8 +173,9 @@ func validateNebulaClusterUpdateStoragedDataVolume(nc, oldNC *v1alpha1.NebulaClu
 	if len(nc.Spec.Storaged.DataVolumeClaims) != len(oldNC.Spec.Storaged.DataVolumeClaims) {
 		allErrs = append(allErrs, field.Forbidden(
 			field.NewPath("spec", "storaged", "dataVolumeClaims"),
-			"storaged dataVolumeClaims len is immutable",
+			"storaged dataVolumeClaims is immutable",
 		))
+		return allErrs
 	}
 	for i, pvc := range nc.Spec.Storaged.DataVolumeClaims {
 		if pvc.Resources.Requests.Storage().Cmp(*oldNC.Spec.Storaged.DataVolumeClaims[i].Resources.Requests.Storage()) == -1 {

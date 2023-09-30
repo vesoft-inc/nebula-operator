@@ -22,4 +22,13 @@ resources:
   kind: NebulaRestore
   path: github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: nebula-graph.io
+  group: autoscaling
+  kind: NebulaAutoscaler
+  path: github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1
+  version: v1alpha1
 version: "3"

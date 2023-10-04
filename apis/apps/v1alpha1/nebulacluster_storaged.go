@@ -147,7 +147,8 @@ func (c *storagedComponent) GetEndpoints(portName string) []string {
 }
 
 func (c *storagedComponent) IsReady() bool {
-	return *c.nc.Spec.Storaged.Replicas == c.nc.Status.Storaged.Workload.ReadyReplicas
+	return *c.nc.Spec.Storaged.Replicas == c.nc.Status.Storaged.Workload.ReadyReplicas &&
+		rollingUpdateDone(c.nc.Status.Storaged.Workload)
 }
 
 func (c *storagedComponent) GenerateLabels() map[string]string {

@@ -89,7 +89,7 @@ type NebulaClusterSpec struct {
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
 	// +optional
-	Tolerations []corev1.Toleration `json:"toleration,omitempty"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
 	// Flag to enable/disable sidecar container nebula-agent injection, default false.
 	// +optional
@@ -153,11 +153,11 @@ type WorkloadStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// The number of ready replicas.
+	// ReadyReplicas is the number of pods with a Ready Condition.
 	// +optional
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 
-	// Replicas is the most recently observed number of replicas.
+	// Replicas is the number of pods created by the Workload controller.
 	Replicas int32 `json:"replicas"`
 
 	// The number of pods in updatedRevision.
@@ -554,6 +554,7 @@ type ServiceSpec struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=nc
+// +kubebuilder:printcolumn:name="READY",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="GRAPHD-DESIRED",type="string",JSONPath=".spec.graphd.replicas",description="The desired number of graphd pods."
 // +kubebuilder:printcolumn:name="GRAPHD-READY",type="string",JSONPath=".status.graphd.workload.readyReplicas",description="The number of graphd pods ready."
 // +kubebuilder:printcolumn:name="METAD-DESIRED",type="string",JSONPath=".spec.metad.replicas",description="The desired number of metad pods."

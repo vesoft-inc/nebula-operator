@@ -592,6 +592,7 @@ type NormalizationArg struct {
 // 4. Apply the stabilization (i.e. add no more than 4 pods per minute, and pick the smallest recommendation during last 5 minutes)
 func (a *HorizontalController) normalizeDesiredReplicasWithBehaviors(hpa *v1alpha1.NebulaAutoscaler, key string, currentReplicas, prenormalizedDesiredReplicas, minReplicas int32) int32 {
 	a.maybeInitScaleDownStabilizationWindow(hpa)
+	a.maybeInitSelectPolicy(hpa)
 	normalizationArg := NormalizationArg{
 		Key:               key,
 		ScaleUpBehavior:   hpa.Spec.GraphdPolicy.Behavior.ScaleUp,
@@ -623,6 +624,20 @@ func (a *HorizontalController) maybeInitScaleDownStabilizationWindow(hpa *v1alph
 	if behavior != nil && behavior.ScaleDown != nil && behavior.ScaleDown.StabilizationWindowSeconds == nil {
 		stabilizationWindowSeconds := (int32)(a.downscaleStabilisationWindow.Seconds())
 		hpa.Spec.GraphdPolicy.Behavior.ScaleDown.StabilizationWindowSeconds = &stabilizationWindowSeconds
+	}
+}
+
+func (a *HorizontalController) maybeInitSelectPolicy(hpa *v1alpha1.NebulaAutoscaler) {
+	behavior := hpa.Spec.GraphdPolicy.Behavior
+	if behavior != nil {
+		if behavior.ScaleUp != nil && behavior.ScaleUp.SelectPolicy == nil {
+			selectPolicy := autoscalingv2.MaxChangePolicySelect
+			hpa.Spec.GraphdPolicy.Behavior.ScaleUp.SelectPolicy = &selectPolicy
+		}
+		if behavior.ScaleDown != nil && behavior.ScaleDown.SelectPolicy == nil {
+			selectPolicy := autoscalingv2.MaxChangePolicySelect
+			hpa.Spec.GraphdPolicy.Behavior.ScaleDown.SelectPolicy = &selectPolicy
+		}
 	}
 }
 

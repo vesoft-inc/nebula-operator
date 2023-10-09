@@ -169,7 +169,6 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
 		oldVolumeClaims := extender.GetDataVolumeClaims(oldWorkload)
 		newVolumeClaims := extender.GetDataVolumeClaims(newWorkload)
-		// TODO: webhook validating
 		if len(oldVolumeClaims) != len(newVolumeClaims) {
 			return fmt.Errorf("update storage data volume claims is not supported")
 		}

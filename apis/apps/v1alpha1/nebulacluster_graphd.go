@@ -129,7 +129,8 @@ func (c *graphdComponent) GetEndpoints(portName string) []string {
 }
 
 func (c *graphdComponent) IsReady() bool {
-	return *c.nc.Spec.Graphd.Replicas == c.nc.Status.Graphd.Workload.ReadyReplicas
+	return *c.nc.Spec.Graphd.Replicas == c.nc.Status.Graphd.Workload.ReadyReplicas &&
+		rollingUpdateDone(c.nc.Status.Graphd.Workload)
 }
 
 func (c *graphdComponent) GenerateLabels() map[string]string {

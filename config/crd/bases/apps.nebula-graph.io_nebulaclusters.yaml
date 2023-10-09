@@ -18,6 +18,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: READY
+      type: string
     - description: The desired number of graphd pods.
       jsonPath: .spec.graphd.replicas
       name: GRAPHD-DESIRED
@@ -11599,7 +11602,7 @@ spec:
                 type: object
               suspend:
                 type: boolean
-              toleration:
+              tolerations:
                 items:
                   properties:
                     effect:

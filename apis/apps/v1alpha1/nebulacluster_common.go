@@ -182,6 +182,13 @@ func getClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {
 	}
 }
 
+func rollingUpdateDone(workloadStatus WorkloadStatus) bool {
+	return workloadStatus.UpdatedReplicas == workloadStatus.Replicas &&
+		workloadStatus.ReadyReplicas == workloadStatus.Replicas &&
+		workloadStatus.CurrentReplicas == workloadStatus.UpdatedReplicas &&
+		workloadStatus.CurrentRevision == workloadStatus.UpdateRevision
+}
+
 func upgradeStatefulSet(sts *appsv1.StatefulSet) (*kruisev1alpha1.StatefulSet, error) {
 	data, err := json.Marshal(sts)
 	if err != nil {

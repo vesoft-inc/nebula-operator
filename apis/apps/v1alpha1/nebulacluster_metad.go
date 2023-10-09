@@ -146,7 +146,8 @@ func (c *metadComponent) GetEndpoints(portName string) []string {
 }
 
 func (c *metadComponent) IsReady() bool {
-	return *c.nc.Spec.Metad.Replicas == c.nc.Status.Metad.Workload.ReadyReplicas
+	return *c.nc.Spec.Metad.Replicas == c.nc.Status.Metad.Workload.ReadyReplicas &&
+		rollingUpdateDone(c.nc.Status.Metad.Workload)
 }
 
 func (c *metadComponent) GenerateLabels() map[string]string {

@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -85,6 +86,8 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 // Run runs the controller-manager with options. This should never exit.
 func Run(ctx context.Context, opts *options.Options) error {
 	klog.Infof("nebula-controller-manager version: %s", version.Version())
+
+	logf.SetLogger(klog.Background())
 
 	profileflag.ListenAndServe(opts.ProfileOpts)
 

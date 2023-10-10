@@ -23,7 +23,6 @@ import (
 	"os"
 	"testing"
 
-	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -31,6 +30,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 
+	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/config"
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 )

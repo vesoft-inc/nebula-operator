@@ -20,13 +20,14 @@ import (
 	"context"
 	stderrors "errors"
 
-	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
+
+	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 )
 
 type (

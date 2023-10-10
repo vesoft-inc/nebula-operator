@@ -37,6 +37,9 @@ import (
 
 const (
 	ImagePullSecretName = "image-pull-secret.e2e"
+
+	LabelKeyCategory = "category"
+	LabelKeyCase     = "case"
 )
 
 var (

@@ -156,6 +156,12 @@ func (nc *NebulaCluster) IsReady() bool {
 	return nc.Status.ObservedGeneration == nc.Generation && nc.IsConditionReady()
 }
 
+func (nc *NebulaCluster) IsStoragedAvailable() bool {
+	return nc.StoragedComponent().IsReady() &&
+		nc.Status.Storaged.BalancedSpaces == nil &&
+		nc.Status.Storaged.LastBalanceJob == nil
+}
+
 func (nc *NebulaCluster) IsConditionReady() bool {
 	for _, condition := range nc.Status.Conditions {
 		if condition.Type == NebulaClusterReady {

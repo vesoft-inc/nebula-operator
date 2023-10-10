@@ -165,8 +165,8 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		return err
 	}
 
-	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
-		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
+	equal := extender.PodTemplateEqual(newWorkload, oldWorkload)
+	if !equal || nc.Status.Storaged.Phase == v1alpha1.UpdatePhase {
 		oldVolumeClaims := extender.GetDataVolumeClaims(oldWorkload)
 		newVolumeClaims := extender.GetDataVolumeClaims(newWorkload)
 		if len(oldVolumeClaims) != len(newVolumeClaims) {
@@ -181,7 +181,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		return err
 	}
 
-	if nc.StoragedComponent().IsReady() {
+	if equal && nc.StoragedComponent().IsReady() {
 		endpoints := nc.GetStoragedEndpoints(v1alpha1.StoragedPortNameHTTP)
 		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update storaged cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)

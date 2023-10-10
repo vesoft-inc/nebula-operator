@@ -34,154 +34,45 @@ import (
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 )
 
-func TestNebulaClusterBasic(t *testing.T) {
-	type tmpTestUpgradeCase struct {
+var ncGlobalTestCases []ncTestCase
+
+func init() {
+	ncGlobalTestCases = append(ncGlobalTestCases, testCasesBasic...)
+}
+
+type (
+	ncTestCase struct {
+		Name                 string
+		Labels               map[string]string
+		InstallNCOptions     []envfuncsext.NebulaClusterOption
+		InstallWaitNCOptions []envfuncsext.NebulaClusterOption
+		LoadLDBC             bool
+		UpgradeCases         []ncTestUpgradeCase
+	}
+
+	ncTestUpgradeCase struct {
 		Name                 string
 		UpgradeFunc          features.Func // Customize the upgrade function, otherwise use the default upgrade with UpgradeNCOptions.
 		UpgradeNCOptions     []envfuncsext.NebulaClusterOption
 		UpgradeWaitNCOptions []envfuncsext.NebulaClusterOption
 	}
-	type tmpTestCase struct {
-		Name                 string
-		InstallNCOptions     []envfuncsext.NebulaClusterOption
-		InstallWaitNCOptions []envfuncsext.NebulaClusterOption
-		UpgradeCases         []tmpTestUpgradeCase
-	}
+)
 
-	testCases := []tmpTestCase{
-		{
-			Name: "default 2-3-3",
-			InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
-				envfuncsext.WithNebulaClusterReadyFuncs(
-					envfuncsext.NebulaClusterReadyFuncForReplicas(2, 3, 3),
-					envfuncsext.DefaultNebulaClusterReadyFunc,
-				),
-			},
-			UpgradeCases: []tmpTestUpgradeCase{
-				{
-					Name:        "scale out [graphd, storaged]: 4-3-4",
-					UpgradeFunc: nil,
-					UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterHelmRawOptions(
-							helm.WithArgs(
-								"--set", "nebula.graphd.replicas=4",
-								"--set", "nebula.metad.replicas=3",
-								"--set", "nebula.storaged.replicas=4",
-							),
-						),
-					},
-					UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterReadyFuncs(
-							envfuncsext.NebulaClusterReadyFuncForReplicas(4, 3, 4),
-							envfuncsext.DefaultNebulaClusterReadyFunc,
-						),
-					},
-				},
-				{
-					Name:        "scale out  [graphd]: 5-3-4",
-					UpgradeFunc: nil,
-					UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterHelmRawOptions(
-							helm.WithArgs(
-								"--set", "nebula.graphd.replicas=5",
-								"--set", "nebula.metad.replicas=3",
-								"--set", "nebula.storaged.replicas=4",
-							),
-						),
-					},
-					UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterReadyFuncs(
-							envfuncsext.NebulaClusterReadyFuncForReplicas(5, 3, 4),
-							envfuncsext.DefaultNebulaClusterReadyFunc,
-						),
-					},
-				},
-				{
-					Name:        "scale out [storaged]: 5-3-5",
-					UpgradeFunc: nil,
-					UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterHelmRawOptions(
-							helm.WithArgs(
-								"--set", "nebula.graphd.replicas=5",
-								"--set", "nebula.metad.replicas=3",
-								"--set", "nebula.storaged.replicas=5",
-							),
-						),
-					},
-					UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterReadyFuncs(
-							envfuncsext.NebulaClusterReadyFuncForReplicas(5, 3, 5),
-							envfuncsext.DefaultNebulaClusterReadyFunc,
-						),
-					},
-				},
-				{
-					Name: "scale in [graphd, storaged]: 3-3-4",
-					UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterHelmRawOptions(
-							helm.WithArgs(
-								"--set", "nebula.graphd.replicas=3",
-								"--set", "nebula.metad.replicas=3",
-								"--set", "nebula.storaged.replicas=4",
-							),
-						),
-					},
-					UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterReadyFuncs(
-							envfuncsext.NebulaClusterReadyFuncForReplicas(3, 3, 4),
-							envfuncsext.DefaultNebulaClusterReadyFunc,
-						),
-					},
-				},
-				{
-					Name: "scale in [storaged]: 3-3-3",
-					UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterHelmRawOptions(
-							helm.WithArgs(
-								"--set", "nebula.graphd.replicas=3",
-								"--set", "nebula.metad.replicas=3",
-								"--set", "nebula.storaged.replicas=3",
-							),
-						),
-					},
-					UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterReadyFuncs(
-							envfuncsext.NebulaClusterReadyFuncForReplicas(3, 3, 3),
-							envfuncsext.DefaultNebulaClusterReadyFunc,
-						),
-					},
-				},
-				{
-					Name: "scale in[graphd]: 2-3-3",
-					UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterHelmRawOptions(
-							helm.WithArgs(
-								"--set", "nebula.graphd.replicas=2",
-								"--set", "nebula.metad.replicas=3",
-								"--set", "nebula.storaged.replicas=3",
-							),
-						),
-					},
-					UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
-						envfuncsext.WithNebulaClusterReadyFuncs(
-							envfuncsext.NebulaClusterReadyFuncForReplicas(2, 3, 3),
-							envfuncsext.DefaultNebulaClusterReadyFunc,
-						),
-					},
-				},
-			},
-		},
-	}
-
-	testFeatures := make([]features.Feature, 0, len(testCases))
-	for caseIdx := range testCases {
+func TestNebulaCluster(t *testing.T) {
+	testFeatures := make([]features.Feature, 0, len(ncGlobalTestCases))
+	for caseIdx := range ncGlobalTestCases {
 		caseIdx := caseIdx
-		tc := testCases[caseIdx]
+		tc := ncGlobalTestCases[caseIdx]
 
 		namespace := envconf.RandomName(fmt.Sprintf("e2e-nc-%d", caseIdx), 32)
 		name := envconf.RandomName(fmt.Sprintf("e2e-nc-%d", caseIdx), 32)
 
 		feature := features.New(fmt.Sprintf("Create NebulaCluster %s", tc.Name))
+
+		feature.WithLabel(LabelKeyCase, tc.Name)
+		for key, value := range tc.Labels {
+			feature.WithLabel(key, value)
+		}
 
 		feature.Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			var err error
@@ -230,33 +121,35 @@ func TestNebulaClusterBasic(t *testing.T) {
 			},
 		)
 
-		feature.Assess("Load LDBC-SNB dataset",
-			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-				klog.V(4).InfoS("Loading LDBC-SNB dataset", "namespace", namespace, "name", name)
+		if tc.LoadLDBC {
+			feature.Assess("Load LDBC-SNB dataset",
+				func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+					klog.V(4).InfoS("Loading LDBC-SNB dataset", "namespace", namespace, "name", name)
 
-				var err error
+					var err error
 
-				ncCtxValue := envfuncsext.GetNebulaClusterCtxValue(ctx)
-				nc := &appsv1alpha1.NebulaCluster{}
-				if err = cfg.Client().Resources().Get(ctx, ncCtxValue.Name, ncCtxValue.Namespace, nc); err != nil {
-					t.Errorf("failed to get NebulaCluster %v", err)
-				}
+					ncCtxValue := envfuncsext.GetNebulaClusterCtxValue(ctx)
+					nc := &appsv1alpha1.NebulaCluster{}
+					if err = cfg.Client().Resources().Get(ctx, ncCtxValue.Name, ncCtxValue.Namespace, nc); err != nil {
+						t.Errorf("failed to get NebulaCluster %v", err)
+					}
 
-				ctx, err = envfuncsext.ImportLDBC(
-					envfuncsext.WithImporterName(nc.Name+"-import-ldbc"),
-					envfuncsext.WithImporterNamespace(nc.Namespace),
-					envfuncsext.WithImporterClientAddress(nc.GraphdComponent().GetConnAddress(appsv1alpha1.GraphdPortNameThrift)),
-					envfuncsext.WithImporterWaitOptions(
-						wait.WithInterval(time.Second*5),
-						wait.WithTimeout(time.Minute*5),
-					),
-				)(ctx, cfg)
-				if err != nil {
-					t.Errorf("failed to create importer to load data %v", err)
-				}
-				return ctx
-			},
-		)
+					ctx, err = envfuncsext.ImportLDBC(
+						envfuncsext.WithImporterName(nc.Name+"-import-ldbc"),
+						envfuncsext.WithImporterNamespace(nc.Namespace),
+						envfuncsext.WithImporterClientAddress(nc.GraphdComponent().GetConnAddress(appsv1alpha1.GraphdPortNameThrift)),
+						envfuncsext.WithImporterWaitOptions(
+							wait.WithInterval(time.Second*5),
+							wait.WithTimeout(time.Minute*5),
+						),
+					)(ctx, cfg)
+					if err != nil {
+						t.Errorf("failed to create importer to load data %v", err)
+					}
+					return ctx
+				},
+			)
+		}
 
 		for upgradeCaseIdx := range tc.UpgradeCases {
 			upgradeCase := tc.UpgradeCases[upgradeCaseIdx]

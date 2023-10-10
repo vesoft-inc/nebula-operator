@@ -22,14 +22,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vesoft-inc/nebula-operator/tests/e2e/config"
-	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/envfuncs"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
+
+	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/config"
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 )
 
 func TestNebulaClusterBasic(t *testing.T) {
@@ -223,6 +225,34 @@ func TestNebulaClusterBasic(t *testing.T) {
 				}, tc.InstallWaitNCOptions...)...)(ctx, cfg)
 				if err != nil {
 					t.Errorf("failed waiting for NebulaCluster to be ready %v", err)
+				}
+				return ctx
+			},
+		)
+
+		feature.Assess("Load LDBC-SNB dataset",
+			func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+				klog.V(4).InfoS("Loading LDBC-SNB dataset", "namespace", namespace, "name", name)
+
+				var err error
+
+				ncCtxValue := envfuncsext.GetNebulaClusterCtxValue(ctx)
+				nc := &appsv1alpha1.NebulaCluster{}
+				if err = cfg.Client().Resources().Get(ctx, ncCtxValue.Name, ncCtxValue.Namespace, nc); err != nil {
+					t.Errorf("failed to get NebulaCluster %v", err)
+				}
+
+				ctx, err = envfuncsext.ImportLDBC(
+					envfuncsext.WithImporterName(nc.Name+"-import-ldbc"),
+					envfuncsext.WithImporterNamespace(nc.Namespace),
+					envfuncsext.WithImporterClientAddress(nc.GraphdComponent().GetConnAddress(appsv1alpha1.GraphdPortNameThrift)),
+					envfuncsext.WithImporterWaitOptions(
+						wait.WithInterval(time.Second*5),
+						wait.WithTimeout(time.Minute*5),
+					),
+				)(ctx, cfg)
+				if err != nil {
+					t.Errorf("failed to create importer to load data %v", err)
 				}
 				return ctx
 			},

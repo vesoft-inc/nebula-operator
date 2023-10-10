@@ -206,11 +206,9 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		if err := metaClient.BalanceLeader(*space.Id.SpaceID); err != nil {
 			return err
 		}
-		if nc.Status.Storaged.LastBalanceJob != nil {
-			nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, nc.Status.Storaged.LastBalanceJob.SpaceID)
-			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
-				return err
-			}
+		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
+		if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
+			return err
 		}
 	}
 
@@ -233,12 +231,10 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 			nc.StoragedComponent().GetName())}
 	}
 
-	if nc.StoragedComponent().IsReady() {
-		klog.Infof("storaged cluster [%s/%s] all used pvcs were reclaimed", ns, componentName)
-		nc.Status.Storaged.BalancedSpaces = nil
-		nc.Status.Storaged.LastBalanceJob = nil
-		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
-	}
+	klog.Infof("storaged cluster [%s/%s] all used pvcs were reclaimed", ns, componentName)
+	nc.Status.Storaged.BalancedSpaces = nil
+	nc.Status.Storaged.LastBalanceJob = nil
+	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
 }
 

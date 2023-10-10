@@ -591,7 +591,7 @@ type NormalizationArg struct {
 // 3. Apply the constraints period (i.e. add no more than 4 pods per minute)
 // 4. Apply the stabilization (i.e. add no more than 4 pods per minute, and pick the smallest recommendation during last 5 minutes)
 func (a *HorizontalController) normalizeDesiredReplicasWithBehaviors(hpa *v1alpha1.NebulaAutoscaler, key string, currentReplicas, prenormalizedDesiredReplicas, minReplicas int32) int32 {
-	a.maybeInitScaleDownStabilizationWindow(hpa)
+	a.maybeInitStabilizationWindow(hpa)
 	a.maybeInitSelectPolicy(hpa)
 	normalizationArg := NormalizationArg{
 		Key:               key,
@@ -619,11 +619,22 @@ func (a *HorizontalController) normalizeDesiredReplicasWithBehaviors(hpa *v1alph
 	return desiredReplicas
 }
 
-func (a *HorizontalController) maybeInitScaleDownStabilizationWindow(hpa *v1alpha1.NebulaAutoscaler) {
+func (a *HorizontalController) maybeInitStabilizationWindow(hpa *v1alpha1.NebulaAutoscaler) {
 	behavior := hpa.Spec.GraphdPolicy.Behavior
-	if behavior != nil && behavior.ScaleDown != nil && behavior.ScaleDown.StabilizationWindowSeconds == nil {
-		stabilizationWindowSeconds := (int32)(a.downscaleStabilisationWindow.Seconds())
-		hpa.Spec.GraphdPolicy.Behavior.ScaleDown.StabilizationWindowSeconds = &stabilizationWindowSeconds
+	if behavior != nil {
+		if behavior.ScaleDown == nil {
+			hpa.Spec.GraphdPolicy.Behavior.ScaleDown = &autoscalingv2.HPAScalingRules{}
+		}
+		if behavior.ScaleDown.StabilizationWindowSeconds == nil {
+			behavior.ScaleDown.StabilizationWindowSeconds = pointer.Int32(int32(a.downscaleStabilisationWindow.Seconds()))
+		}
+
+		if behavior.ScaleUp == nil {
+			hpa.Spec.GraphdPolicy.Behavior.ScaleUp = &autoscalingv2.HPAScalingRules{}
+		}
+		if behavior.ScaleUp.StabilizationWindowSeconds == nil {
+			behavior.ScaleUp.StabilizationWindowSeconds = pointer.Int32(0)
+		}
 	}
 }
 
@@ -885,6 +896,9 @@ func markScaleEventsOutdated(scaleEvents []timestampedScaleEvent, longestPolicyP
 }
 
 func getLongestPolicyPeriod(scalingRules *autoscalingv2.HPAScalingRules) int32 {
+	if scalingRules == nil {
+		return 0
+	}
 	var longestPolicyPeriod int32
 	for _, policy := range scalingRules.Policies {
 		if policy.PeriodSeconds > longestPolicyPeriod {

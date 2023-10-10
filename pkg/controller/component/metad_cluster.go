@@ -124,8 +124,8 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return utilerrors.ReconcileErrorf("waiting for metad cluster %s running", newWorkload.GetName())
 	}
 
-	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
-		nc.Status.Metad.Phase == v1alpha1.UpdatePhase {
+	equal := extender.PodTemplateEqual(newWorkload, oldWorkload)
+	if !equal || nc.Status.Metad.Phase == v1alpha1.UpdatePhase {
 		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	if nc.MetadComponent().IsReady() {
+	if equal && nc.MetadComponent().IsReady() {
 		if err := c.setVersion(nc); err != nil {
 			return err
 		}

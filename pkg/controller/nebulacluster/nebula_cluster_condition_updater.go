@@ -69,7 +69,7 @@ func (u *nebulaClusterConditionUpdater) updateReadyCondition(nc *v1alpha1.Nebula
 	case !nc.MetadComponent().IsReady():
 		reason = condition.MetadUnhealthy
 		message = "Metad is not healthy"
-	case !nc.StoragedComponent().IsReady():
+	case !nc.IsStoragedAvailable():
 		reason = condition.StoragedUnhealthy
 		message = "Storaged is not healthy"
 	default:

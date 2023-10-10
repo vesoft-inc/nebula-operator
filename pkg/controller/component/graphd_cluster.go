@@ -127,8 +127,8 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 
-	if !extender.PodTemplateEqual(newWorkload, oldWorkload) ||
-		nc.Status.Graphd.Phase == v1alpha1.UpdatePhase {
+	equal := extender.PodTemplateEqual(newWorkload, oldWorkload)
+	if !equal || nc.Status.Graphd.Phase == v1alpha1.UpdatePhase {
 		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	if nc.GraphdComponent().IsReady() {
+	if equal && nc.GraphdComponent().IsReady() {
 		endpoints := nc.GetGraphdEndpoints(v1alpha1.GraphdPortNameHTTP)
 		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update graphd cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
@@ -167,14 +167,16 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 	if updating &&
 		nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
 		nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
-	} else if *newReplicas < *oldReplicas {
+	} else if *newReplicas < *oldReplicas ||
+		nc.Status.Graphd.Workload.Replicas < nc.Status.Graphd.Workload.ReadyReplicas {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleInPhase
 		if nc.Spec.Graphd.LogVolumeClaim != nil {
 			if err := PVCMark(c.clientSet.PVC(), nc.GraphdComponent(), *oldReplicas, *newReplicas); err != nil {
 				return err
 			}
 		}
-	} else if *newReplicas > *oldReplicas {
+	} else if *newReplicas > *oldReplicas ||
+		nc.Status.Graphd.Workload.Replicas > nc.Status.Graphd.Workload.ReadyReplicas {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleOutPhase
 	} else {
 		nc.Status.Graphd.Phase = v1alpha1.RunningPhase
@@ -220,7 +222,6 @@ func (c *graphdCluster) setTopologyZone(nc *v1alpha1.NebulaCluster, newReplicas 
 		return err
 	}
 	newCM := generateZoneConfigMap(nc.GraphdComponent())
-	namespace := nc.GetNamespace()
 	for i := int32(0); i < newReplicas; i++ {
 		podName := nc.GraphdComponent().GetPodName(i)
 		value, ok := cm.Data[podName]
@@ -247,7 +248,7 @@ func (c *graphdCluster) setTopologyZone(nc *v1alpha1.NebulaCluster, newReplicas 
 		if !ok {
 			return fmt.Errorf("node %s topology zone not found", pod.Spec.NodeName)
 		}
-		klog.Infof("graphd pod [%s/%s] scheduled on node %s in zone %s", namespace, podName, pod.Spec.NodeName, zone)
+		klog.Infof("graphd pod [%s/%s] scheduled on node %s in zone %s", nc.Namespace, podName, pod.Spec.NodeName, zone)
 		newCM.Data[podName] = zone
 	}
 	if err := c.clientSet.ConfigMap().CreateOrUpdateConfigMap(newCM); err != nil {

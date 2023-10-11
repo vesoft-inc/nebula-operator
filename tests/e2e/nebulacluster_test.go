@@ -67,9 +67,8 @@ func TestNebulaCluster(t *testing.T) {
 		namespace := envconf.RandomName(fmt.Sprintf("e2e-nc-%d", caseIdx), 32)
 		name := envconf.RandomName(fmt.Sprintf("e2e-nc-%d", caseIdx), 32)
 
-		feature := features.New(fmt.Sprintf("Create NebulaCluster %s", tc.Name))
+		feature := features.New(tc.Name)
 
-		feature.WithLabel(LabelKeyCase, tc.Name)
 		for key, value := range tc.Labels {
 			feature.WithLabel(key, value)
 		}

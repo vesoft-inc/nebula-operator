@@ -5,11 +5,28 @@ import (
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 )
 
-var testCasesBasic = []ncTestCase{
+const (
+	LabelCategoryBasic = "basic"
+	LabelGroupScale    = "scale"
+)
+
+var testCasesBasic []ncTestCase
+
+func init() {
+	testCasesBasic = append(testCasesBasic, testCasesBasicScale...)
+	testCasesBasic = append(testCasesBasic, testCasesBasicVersion...)
+	testCasesBasic = append(testCasesBasic, testCasesBasicResources...)
+	testCasesBasic = append(testCasesBasic, testCasesBasicImage...)
+	testCasesBasic = append(testCasesBasic, testCasesBasicVolume...)
+}
+
+// test cases about scale
+var testCasesBasicScale = []ncTestCase{
 	{
-		Name: "default 2-3-3",
+		Name: "scale with default values",
 		Labels: map[string]string{
-			LabelKeyCategory: "basic",
+			LabelKeyCategory: LabelCategoryBasic,
+			LabelKeyGroup:    LabelGroupScale,
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
@@ -132,4 +149,24 @@ var testCasesBasic = []ncTestCase{
 			},
 		},
 	},
+}
+
+// test cases about version of graphd｜metad｜storaged
+var testCasesBasicVersion = []ncTestCase{
+	// TODO
+}
+
+// test cases about resources of graphd｜metad｜storaged
+var testCasesBasicResources = []ncTestCase{
+	// TODO
+}
+
+// test cases about image of graphd｜metad｜storaged
+var testCasesBasicImage = []ncTestCase{
+	// TODO
+}
+
+// test cases about log and data volume of graphd｜metad｜storaged
+var testCasesBasicVolume = []ncTestCase{
+	// TODO
 }

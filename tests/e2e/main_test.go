@@ -39,7 +39,7 @@ const (
 	ImagePullSecretName = "image-pull-secret.e2e"
 
 	LabelKeyCategory = "category"
-	LabelKeyCase     = "case"
+	LabelKeyGroup    = "group"
 )
 
 var (

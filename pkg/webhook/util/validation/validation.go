@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	fmtNotHaModeErrorDetail = "should be at least %d not in ha mode"
-	fmtHaModeErrorDetail    = "should be at least %d in ha mode"
+	fmtNotHaModeErrorDetail = "should be at least %d not in HA mode"
+	fmtHaModeErrorDetail    = "should be at least %d in HA mode"
 	oddNumberDetail         = "should be odd number"
 )
 

@@ -51,7 +51,7 @@ The restore flow:
 
 ![avatar](../pictures/restore.png)
 
-Update the [apps_v1alpha1_nebularestore.yaml](../../config/samples/apps_v1alpha1_nebularestore.yaml) fields:
+Update the [apps_v1alpha1_nebularestore.yaml](../../config/samples/nebularestore.yaml) fields:
 
 * clusterName
 * backupName

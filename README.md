@@ -21,7 +21,7 @@ See [install/uninstall nebula operator](doc/user/install_guide.md) .
 ### Create and destroy a nebula cluster
 
 ```bash
-$ kubectl create -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl create -f config/samples/nebulacluster.yaml
 ```
 
 A none ha-mode nebula cluster will be created.
@@ -53,7 +53,7 @@ Welcome to NebulaGraph!
 Destroy the nebula cluster:
 
 ```bash
-$ kubectl delete -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl delete -f config/samples/nebulacluster.yaml
 ```
 
 ### Resize a nebula cluster
@@ -61,10 +61,10 @@ $ kubectl delete -f config/samples/apps_v1alpha1_nebulacluster.yaml
 Create a nebula cluster:
 
 ```bash
-$ kubectl create -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl create -f config/samples/nebulacluster.yaml
 ```
 
-In `config/samples/apps_v1alpha1_nebulacluster.yaml` the initial storaged replicas is 3.  
+In `config/samples/nebulacluster.yaml` the initial storaged replicas is 3.  
 Modify the file and change `replicas` from 3 to 5.
 
 ```yaml
@@ -89,7 +89,7 @@ Modify the file and change `replicas` from 3 to 5.
 Apply the replicas change to the cluster CR:
 
 ```bash
-$ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl apply -f config/samples/nebulacluster.yaml
 ```
 
 The storaged cluster will scale to 5 members (5 pods):
@@ -147,7 +147,7 @@ In addition, you can [Install Nebula Cluster with helm](doc/user/nebula_cluster_
 Create a nebula cluster with the version specified (v3.6.0):
 
 ```bash
-$ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl apply -f config/samples/nebulacluster.yaml
 $ kubectl get pods -l app.kubernetes.io/cluster=nebula
 NAME                READY   STATUS    RESTARTS   AGE
 nebula-graphd-0     1/1     Running   0          25m
@@ -166,12 +166,12 @@ $ kubectl get pods -l app.kubernetes.io/cluster=nebula  -o jsonpath="{.items[*].
       3 vesoft/nebula-storaged:v3.6.0
 ```
 
-Now modify the file `apps_v1alpha1_nebulacluster.yaml` and change the `version` from v3.6.0 to v3.6.x:
+Now modify the file `nebulacluster.yaml` and change the `version` from v3.6.0 to v3.6.x:
 
 Apply the version change to the cluster CR:
 
 ```bash
-$ kubectl apply -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl apply -f config/samples/nebulacluster.yaml
 ```
 
 Wait few minutes. The container image version should be updated to v3.6.x:
@@ -199,7 +199,7 @@ through this in the following steps.
 Create a nebula cluster:
 
 ```bash
-$ kubectl create -f config/samples/apps_v1alpha1_nebulacluster.yaml
+$ kubectl create -f config/samples/nebulacluster.yaml
 ```
 
 Wait until pods are up. Simulate a member failure by deleting a storaged pod:

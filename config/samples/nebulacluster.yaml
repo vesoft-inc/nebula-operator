@@ -1,0 +1,95 @@
+apiVersion: apps.nebula-graph.io/v1alpha1
+kind: NebulaCluster
+metadata:
+  name: nebula
+spec:
+  graphd:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "2"
+        memory: "2Gi"
+    replicas: 1
+    image: vesoft/nebula-graphd
+    version: v3.6.0
+    service:
+      type: NodePort
+      externalTrafficPolicy: Local
+    logVolumeClaim:
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: ebs-sc
+  metad:
+#    licenseManagerURL: "nebula-license-manager-svc:9119"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+    replicas: 1
+    image: vesoft/nebula-metad
+    version: v3.6.0
+    dataVolumeClaim:
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: ebs-sc
+    logVolumeClaim:
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: ebs-sc
+  storaged:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "2"
+        memory: "2Gi"
+    replicas: 3
+    image: vesoft/nebula-storaged
+    version: v3.6.0
+    dataVolumeClaims:
+    - resources:
+        requests:
+          storage: 10Gi
+      storageClassName: ebs-sc
+    logVolumeClaim:
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: ebs-sc
+  exporter:
+    image: vesoft/nebula-stats-exporter
+    version: v3.3.0
+    replicas: 1
+    maxRequests: 20
+  agent:
+    image: vesoft/nebula-agent
+    version: latest
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+  reference:
+    name: statefulsets.apps
+    version: v1
+  schedulerName: default-scheduler
+#  enablePVReclaim: false
+#  enableBR: false
+  logRotate:
+    rotate: 5
+    size: "100M"
+  imagePullPolicy: Always
+  topologySpreadConstraints:
+  - topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway

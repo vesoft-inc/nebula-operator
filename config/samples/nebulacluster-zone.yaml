@@ -3,16 +3,21 @@ kind: NebulaCluster
 metadata:
   name: nebula
 spec:
+  # Alpine image built with linux tools.
+  alpineImage: "reg.vesoft-inc.com/nebula-alpine:latest"
   graphd:
+    config:
+      prioritize_intra_zone_reading: "true"
+      stick_to_intra_zone_on_failure: "true"
     resources:
       requests:
         cpu: "500m"
         memory: "500Mi"
       limits:
-        cpu: "1"
-        memory: "1Gi"
+        cpu: "2"
+        memory: "2Gi"
     replicas: 1
-    image: vesoft/nebula-graphd
+    image: reg.vesoft-inc.com/nebula-graphd-ent
     version: v3.6.0
     service:
       type: NodePort
@@ -23,9 +28,9 @@ spec:
           storage: 1Gi
       storageClassName: ebs-sc
   metad:
-#    license:
-#      secretName: "nebula-license"
-#      licenseKey: "nebula.license"
+    licenseManagerURL: "nebula-license-manager-svc:9119"
+    config:
+      zone_list: az1,az2,az3
     resources:
       requests:
         cpu: "500m"
@@ -34,7 +39,7 @@ spec:
         cpu: "1"
         memory: "1Gi"
     replicas: 1
-    image: vesoft/nebula-metad
+    image: reg.vesoft-inc.com/nebula-metad-ent
     version: v3.6.0
     dataVolumeClaim:
       resources:
@@ -52,10 +57,10 @@ spec:
         cpu: "500m"
         memory: "500Mi"
       limits:
-        cpu: "1"
-        memory: "1Gi"
+        cpu: "2"
+        memory: "2Gi"
     replicas: 3
-    image: vesoft/nebula-storaged
+    image: reg.vesoft-inc.com/nebula-storaged-ent
     version: v3.6.0
     dataVolumeClaims:
     - resources:
@@ -67,31 +72,11 @@ spec:
         requests:
           storage: 1Gi
       storageClassName: ebs-sc
-  exporter:
-    image: vesoft/nebula-stats-exporter
-    version: v3.3.0
-    replicas: 1
-    maxRequests: 20
-  agent:
-    image: vesoft/nebula-agent
-    version: latest
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
-      limits:
-        cpu: "200m"
-        memory: "256Mi"
   reference:
     name: statefulsets.apps
     version: v1
-  schedulerName: default-scheduler
-#  enablePVReclaim: false
-#  enableBR: false
-  logRotate:
-    rotate: 5
-    size: "100M"
+  schedulerName: nebula-scheduler
   imagePullPolicy: Always
   topologySpreadConstraints:
-  - topologyKey: kubernetes.io/hostname
-    whenUnsatisfiable: ScheduleAnyway
+  - topologyKey: "topology.kubernetes.io/zone"
+    whenUnsatisfiable: "DoNotSchedule"

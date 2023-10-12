@@ -20,7 +20,7 @@ If you set helm chart nebula-operator _.Values.admissionWebhook.create_ to false
 [cert-manager](https://cert-manager.io/) is a tool that automates certificate management. It makes use of extending the
 Kubernetes API server using a Webhook server to provide dynamic admission control over cert-manager resources.
 
-Refer to the [cert-manager installation documentation](https://cert-manager.io/docs/installation/kubernetes/) to get
+Refer to the [cert-manager installation documentation](https://cert-manager.io/docs/installation/) to get
 started.
 
 cert-manager is used for validating NebulaGraph each component replicas, if you run it in production environment and

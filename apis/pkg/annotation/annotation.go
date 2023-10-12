@@ -24,7 +24,7 @@ const (
 	AnnPodNameKey = "nebula-graph.io/pod-name"
 	// AnnLastSyncTimestampKey is annotation key to indicate the last timestamp the operator sync the workload
 	AnnLastSyncTimestampKey = "nebula-graph.io/sync-timestamp"
-	// AnnHaModeKey is annotation key to indicate whether in ha mode
+	// AnnHaModeKey is annotation key to indicate whether in HA mode
 	AnnHaModeKey = "nebula-graph.io/ha-mode"
 	// AnnLastAppliedDynamicFlagsKey is annotation key to indicate the last applied custom dynamic flags
 	AnnLastAppliedDynamicFlagsKey = "nebula-graph.io/last-applied-dynamic-flags"
@@ -48,7 +48,7 @@ const (
 	// AnnRestoreStageKey is the annotation key to indicate what is the current stage
 	AnnRestoreStageKey = "restore-stage"
 
-	// AnnHaModeVal is annotation value to indicate whether in ha mode
+	// AnnHaModeVal is annotation value to indicate whether in HA mode
 	AnnHaModeVal = "true"
 
 	// AnnRestoreMetadStepVal is annotation value to indicate whether Metad restore step is completed in stage 1
@@ -100,7 +100,7 @@ func IsInRestoreStage2(ann map[string]string) bool {
 	return false
 }
 
-// IsInHaMode check whether in ha mode
+// IsInHaMode check whether in HA mode
 func IsInHaMode(ann map[string]string) bool {
 	if ann != nil {
 		val, ok := ann[AnnHaModeKey]

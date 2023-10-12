@@ -26,11 +26,11 @@ spec:
       stick_to_intra_zone_on_failure: "true"
     resources:
       requests:
-        cpu: "200m"
+        cpu: "500m"
         memory: "500Mi"
       limits:
-        cpu: "1"
-        memory: "1Gi"
+        cpu: "2"
+        memory: "2Gi"
     logVolumeClaim:
       resources:
         requests:
@@ -46,7 +46,7 @@ spec:
     licenseManagerURL: "192.168.8.53:9119"
     resources:
       requests:
-        cpu: "300m"
+        cpu: "500m"
         memory: "500Mi"
       limits:
         cpu: "1"

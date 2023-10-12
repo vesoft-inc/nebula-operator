@@ -1,0 +1,108 @@
+apiVersion: apps.nebula-graph.io/v1alpha1
+kind: NebulaCluster
+metadata:
+  name: nebula
+spec:
+  graphd:
+    config:
+      ca_client_path: certs/root.crt
+      ca_path: certs/root.crt
+      cert_path: certs/server.crt
+      key_path: certs/server.key
+      enable_graph_ssl: "true"
+    initContainers:
+      - name: init-auth-sidecar
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - cp /certs/* /credentials/
+        imagePullPolicy: Always
+        image: reg.vesoft-inc.com/nebula-certs:latest
+        volumeMounts:
+          - name: credentials
+            mountPath: /credentials
+    sidecarContainers:
+      - name: auth-sidecar
+        imagePullPolicy: Always
+        image: reg.vesoft-inc.com/nebula-certs:latest
+        volumeMounts:
+          - name: credentials
+            mountPath: /credentials
+    volumes:
+      - name: credentials
+        emptyDir:
+          medium: Memory
+    volumeMounts:
+      - name: credentials
+        mountPath: /usr/local/nebula/certs
+    logVolumeClaim:
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: local-path
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "2"
+        memory: "2Gi"
+    replicas: 1
+    image: reg.vesoft-inc.com/nebula-graphd-ent
+    version: v3.6.0
+  metad:
+    licenseManagerURL: "nebula-license-manager-svc:9119"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+    replicas: 1
+    image: reg.vesoft-inc.com/rc/nebula-metad-ent
+    version: v3.6.0
+    dataVolumeClaim:
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: local-path
+    logVolumeClaim:
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: local-path
+  storaged:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "500Mi"
+      limits:
+        cpu: "2"
+        memory: "2Gi"
+    replicas: 1
+    image: reg.vesoft-inc.com/nebula-storaged-ent
+    version: v3.6.0
+    dataVolumeClaims:
+      - resources:
+          requests:
+            storage: 2Gi
+        storageClassName: local-path
+    logVolumeClaim:
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: local-path
+    enableAutoBalance: true
+  reference:
+    name: statefulsets.apps
+    version: v1
+  schedulerName: default-scheduler
+  imagePullPolicy: Always
+  imagePullSecrets:
+    - name: nebula-image
+  enablePVReclaim: true
+  topologySpreadConstraints:
+  - topologyKey: "kubernetes.io/hostname"
+    whenUnsatisfiable: "ScheduleAnyway"

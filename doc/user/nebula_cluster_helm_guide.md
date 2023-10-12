@@ -2,7 +2,7 @@
 
 Please install [nebula-operator](install_guide.md) before installing NebulaGraph cluster.
 
-### Get Repo Info
+### Get repo Info
 
 ```shell script
 # If you have already added it, please skip.

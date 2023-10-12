@@ -42,9 +42,8 @@ spec:
       redirect_stdout: "false"
       # The numbers of severity level INFO, WARNING, ERROR, and FATAL are 0, 1, 2, and 3, respectively.
       stderrthreshold: "0"
-    env:
-    - name: GLOG_logtostderr # Logs are written to standard error instead of to files
-      value: "1"
+      # Logs are written to standard error instead of to files
+      logtostderr: "true"
     image: vesoft/nebula-graphd
     replicas: 1
     resources:
@@ -60,14 +59,12 @@ spec:
     config:
       redirect_stdout: "false"
       stderrthreshold: "0"
+      logtostderr: "true"
     dataVolumeClaim:
       resources:
         requests:
           storage: 1Gi
       storageClassName: ebs-sc
-    env:
-    - name: GLOG_logtostderr
-      value: "1"
     image: vesoft/nebula-metad
     replicas: 1
     resources:
@@ -83,6 +80,7 @@ spec:
     config:
       redirect_stdout: "false"
       stderrthreshold: "0"
+      logtostderr: "true"
     dataVolumeClaims:
     - resources:
         requests:
@@ -90,9 +88,6 @@ spec:
       storageClassName: ebs-sc
     enableAutoBalance: true
     enableForceUpdate: false
-    env:
-    - name: GLOG_logtostderr
-      value: "1"
     image: vesoft/nebula-storaged
     replicas: 1
     resources:

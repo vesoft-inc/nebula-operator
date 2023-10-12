@@ -26,18 +26,14 @@ spec:
           command:
             - /usr/local/bin/controller-manager
           args:
-            {{- if .Values.syncPeriod }}
             - --sync-period={{ .Values.syncPeriod }}
-            {{- end }}
-            {{- if .Values.concurrentNebulaClusterSyncs }}
             - --concurrent-nebulacluster-syncs={{ .Values.concurrentNebulaClusterSyncs }}
-            {{- end }}
-            {{- if .Values.concurrentNebulaRestoreSyncs }}
             - --concurrent-nebularestore-syncs={{ .Values.concurrentNebulaRestoreSyncs }}
-            {{- end }}
             - --leader-elect
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
-            - --enable-admission-webhook={{ .Values.admissionWebhook.create | default false }}
+            - --enable-admission-webhook={{ .Values.admissionWebhook.create }}
+            - --webhook-secure-port={{ .Values.admissionWebhook.webhookBindPort }}
+            - --enable-kruise-scheme={{ .Values.enableKruiseScheme }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
             {{- if .Values.kubernetesClusterDomain }}
@@ -80,9 +76,7 @@ spec:
           command:
             - /usr/local/bin/autoscaler
           args:
-           {{- if .Values.concurrentAutoscalerSyncs }}
             - --concurrent-autoscaler-syncs={{ .Values.concurrentAutoscalerSyncs }}
-           {{- end }}
             - --health-probe-bind-address=:8091
             - --metrics-bind-address=:8090
             - --leader-elect

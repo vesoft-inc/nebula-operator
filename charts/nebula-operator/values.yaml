@@ -49,9 +49,6 @@ enableKruiseScheme: false
 # Period at which the controller forces the repopulation of its local object stores. (default 0h30m0s)
 syncPeriod: 0h30m0s
 
-# Namespace the controller watches for updates to Kubernetes objects, If empty, all namespaces are watched.
-watchNamespace:
-
 # The number of NebulaCluster objects that are allowed to sync concurrently. (default 5)
 concurrentNebulaClusterSyncs: 5
 

@@ -94,36 +94,36 @@ status:
 ```
 
 ### Validate rules
-- Append storage volume
+Append storage volume
 ```shell
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"storaged": {"dataVolumeClaims":[{"resources": {"requests": {"storage": "2Gi"}}, "storageClassName": "local-path"},{"resources": {"requests": {"storage": "3Gi"}}, "storageClassName": "fask-disks"}]}}}'
 Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: spec.storaged.dataVolumeClaims: Forbidden: storaged dataVolumeClaims is immutable
-- ```
+```
 
-- Shrink PV
+Shrink PV
 ```shell
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"storaged": {"dataVolumeClaims":[{"resources": {"requests": {"storage": "1Gi"}}, "storageClassName": "fast-disks"}]}}}'
 Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: spec.storaged.dataVolumeClaims: Invalid value: resource.Quantity{i:resource.int64Amount{value:1073741824, scale:0}, d:resource.infDecAmount{Dec:(*inf.Dec)(nil)}, s:"1Gi", Format:"BinarySI"}: data volume size can only be increased
-- ```
+```
 
-- Modify thrift ports
+Modify thrift ports
 ```shell
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"graphd": {"port": 8669}}}'
 Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: spec.graphd.port: Invalid value: 8669: field is immutable
-- ```
+```
 
-- Intermediate state scaling
+Scale in intermediate state
 ```shell
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"storaged": {"replicas": 5}}}'
 nebulacluster.apps.nebula-graph.io/nebula patched
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"storaged": {"replicas": 3}}}'
 Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: [spec.storaged: Forbidden: field is immutable while in ScaleOut phase, spec.storaged.replicas: Invalid value: 3: field is immutable while not in Running phase]
-- ```
+```
 
-- HA mode
+HA mode
 ```shell
 # Create a nebula cluster with 2 graphd, 3 metad, and 3 storaged to meet the minimum HA configuration requirement.
 $ kubectl annotate nc nebula nebula-graph.io/ha-mode=true
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"graphd": {"replicas":1}}}'
 Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: spec.graphd.replicas: Invalid value: 1: should be at least 2 in HA mode
-- ```
+```

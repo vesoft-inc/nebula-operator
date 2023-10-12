@@ -3,13 +3,16 @@ package e2e
 import (
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2evalidator"
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 )
 
 const (
-	LabelCategoryBasic = "basic"
-	LabelGroupScale    = "scale"
-	LabelGroupVersion  = "version"
+	LabelCategoryBasic  = "basic"
+	LabelGroupScale     = "scale"
+	LabelGroupVersion   = "version"
+	LabelGroupResources = "resources"
 )
 
 var testCasesBasic []ncTestCase
@@ -292,7 +295,136 @@ var testCasesBasicVersion = []ncTestCase{
 
 // test cases about resources of graphd｜metad｜storaged
 var testCasesBasicResources = []ncTestCase{
-	// TODO
+	{
+		Name: "update resources",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCategoryBasic,
+			LabelKeyGroup:    LabelGroupResources,
+		},
+		InstallNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.enablePVReclaim=true",
+				),
+			),
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.NebulaClusterReadyFuncForMetadResource(corev1.ResourceRequirements{
+					Requests: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("500Mi"),
+					},
+					Limits: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU:    resource.MustParse("1"),
+						corev1.ResourceMemory: resource.MustParse("1Gi"),
+					},
+				}),
+				envfuncsext.NebulaClusterReadyFuncForStoragedResource(corev1.ResourceRequirements{
+					Requests: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("500Mi"),
+					},
+					Limits: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU:    resource.MustParse("1"),
+						corev1.ResourceMemory: resource.MustParse("1Gi"),
+					},
+				}),
+				envfuncsext.NebulaClusterReadyFuncForGraphdResource(corev1.ResourceRequirements{
+					Requests: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("500Mi"),
+					},
+					Limits: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU:    resource.MustParse("1"),
+						corev1.ResourceMemory: resource.MustParse("500Mi"),
+					},
+				}),
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		LoadLDBC: true,
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name: "update graphd resources",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.graphd.resources.limits.cpu=1100m",
+							"--set", "nebula.graphd.resources.limits.memory=1100Mi",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForGraphdResource(corev1.ResourceRequirements{
+							Requests: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+							Limits: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceCPU:    resource.MustParse("1100m"),
+								corev1.ResourceMemory: resource.MustParse("1100Mi"),
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+			{
+				Name: "update metad resources",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.metad.resources.limits.cpu=1100m",
+							"--set", "nebula.metad.resources.limits.memory=1100Mi",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForMetadResource(corev1.ResourceRequirements{
+							Requests: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+							Limits: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceCPU:    resource.MustParse("1100m"),
+								corev1.ResourceMemory: resource.MustParse("1100Mi"),
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+			{
+				Name: "update storaged resources",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.storaged.resources.limits.cpu=1100m",
+							"--set", "nebula.storaged.resources.limits.memory=1100Mi",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForStoragedResource(corev1.ResourceRequirements{
+							Requests: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+							Limits: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceCPU:    resource.MustParse("1100m"),
+								corev1.ResourceMemory: resource.MustParse("1100Mi"),
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
 }
 
 // test cases about image of graphd｜metad｜storaged

@@ -1,15 +1,19 @@
 package e2e
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"sigs.k8s.io/e2e-framework/third_party/helm"
+
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2evalidator"
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
-	"sigs.k8s.io/e2e-framework/third_party/helm"
 )
 
 const (
-	LabelCategoryBasic = "basic"
-	LabelGroupScale    = "scale"
-	LabelGroupVersion  = "version"
+	LabelCategoryBasic  = "basic"
+	LabelGroupScale     = "scale"
+	LabelGroupVersion   = "version"
+	LabelGroupResources = "resources"
 )
 
 var testCasesBasic []ncTestCase
@@ -32,7 +36,7 @@ var testCasesBasicScale = []ncTestCase{
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
-				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]e2evalidator.Rule{
+				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]e2evalidator.Ruler{
 					"Spec.Graphd.Replicas":   e2evalidator.Eq(2),
 					"Spec.Metad.Replicas":    e2evalidator.Eq(3),
 					"Spec.Storaged.Replicas": e2evalidator.Eq(3),
@@ -56,7 +60,7 @@ var testCasesBasicScale = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":   e2evalidator.Eq(4),
 							"Spec.Metad.Replicas":    e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas": e2evalidator.Eq(4),
@@ -79,7 +83,7 @@ var testCasesBasicScale = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":   e2evalidator.Eq(5),
 							"Spec.Metad.Replicas":    e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas": e2evalidator.Eq(4),
@@ -102,7 +106,7 @@ var testCasesBasicScale = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":   e2evalidator.Eq(5),
 							"Spec.Metad.Replicas":    e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas": e2evalidator.Eq(5),
@@ -124,7 +128,7 @@ var testCasesBasicScale = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":   e2evalidator.Eq(3),
 							"Spec.Metad.Replicas":    e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas": e2evalidator.Eq(4),
@@ -146,7 +150,7 @@ var testCasesBasicScale = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":   e2evalidator.Eq(3),
 							"Spec.Metad.Replicas":    e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas": e2evalidator.Eq(3),
@@ -168,7 +172,7 @@ var testCasesBasicScale = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":   e2evalidator.Eq(2),
 							"Spec.Metad.Replicas":    e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas": e2evalidator.Eq(3),
@@ -191,7 +195,7 @@ var testCasesBasicVersion = []ncTestCase{
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
-				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]e2evalidator.Rule{
+				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]e2evalidator.Ruler{
 					"Spec.Graphd.Replicas":            e2evalidator.Eq(2),
 					"Spec.Metad.Replicas":             e2evalidator.Eq(3),
 					"Spec.Storaged.Replicas":          e2evalidator.Eq(3),
@@ -217,7 +221,7 @@ var testCasesBasicVersion = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":            e2evalidator.Eq(2),
 							"Spec.Metad.Replicas":             e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas":          e2evalidator.Eq(3),
@@ -244,7 +248,7 @@ var testCasesBasicVersion = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":            e2evalidator.Eq(4),
 							"Spec.Metad.Replicas":             e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas":          e2evalidator.Eq(4),
@@ -273,7 +277,7 @@ var testCasesBasicVersion = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Rule{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
 							"Spec.Graphd.Replicas":            e2evalidator.Eq(2),
 							"Spec.Metad.Replicas":             e2evalidator.Eq(3),
 							"Spec.Storaged.Replicas":          e2evalidator.Eq(3),
@@ -292,7 +296,156 @@ var testCasesBasicVersion = []ncTestCase{
 
 // test cases about resources of graphd｜metad｜storaged
 var testCasesBasicResources = []ncTestCase{
-	// TODO
+	{
+		Name: "update resources",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCategoryBasic,
+			LabelKeyGroup:    LabelGroupResources,
+		},
+		InstallNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.enablePVReclaim=true",
+				),
+			),
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
+					"Spec.Metad.Resources": &e2evalidator.AnyStruct{
+						Val: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("1"),
+								"memory": resource.MustParse("1Gi"),
+							},
+						},
+					},
+					"Spec.Storaged.Resources": &e2evalidator.AnyStruct{
+						Val: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("1"),
+								"memory": resource.MustParse("1Gi"),
+							},
+						},
+					},
+					"Spec.Graphd.Resources": &e2evalidator.AnyStruct{
+						Val: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("1"),
+								"memory": resource.MustParse("500Mi"),
+							},
+						},
+					},
+				}),
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		LoadLDBC: true,
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name: "update graphd resources",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.graphd.resources.limits.cpu=1100m",
+							"--set", "nebula.graphd.resources.limits.memory=1100Mi",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
+							"Spec.Graphd.Resources": &e2evalidator.AnyStruct{
+								Val: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										"cpu":    resource.MustParse("500m"),
+										"memory": resource.MustParse("500Mi"),
+									},
+									Limits: corev1.ResourceList{
+										"cpu":    resource.MustParse("1100m"),
+										"memory": resource.MustParse("1100Mi"),
+									},
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+			{
+				Name: "update metad resources",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.metad.resources.limits.cpu=1100m",
+							"--set", "nebula.metad.resources.limits.memory=1100Mi",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
+							"Spec.Metad.Resources": &e2evalidator.AnyStruct{
+								Val: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										"cpu":    resource.MustParse("500m"),
+										"memory": resource.MustParse("500Mi"),
+									},
+									Limits: corev1.ResourceList{
+										"cpu":    resource.MustParse("1100m"),
+										"memory": resource.MustParse("1100Mi"),
+									},
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+			{
+				Name: "update storaged resources",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.storaged.resources.limits.cpu=1100m",
+							"--set", "nebula.storaged.resources.limits.memory=1100Mi",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
+							"Spec.Storaged.Resources": &e2evalidator.AnyStruct{
+								Val: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										"cpu":    resource.MustParse("500m"),
+										"memory": resource.MustParse("500Mi"),
+									},
+									Limits: corev1.ResourceList{
+										"cpu":    resource.MustParse("1100m"),
+										"memory": resource.MustParse("1100Mi"),
+									},
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
 }
 
 // test cases about image of graphd｜metad｜storaged

@@ -87,7 +87,7 @@ func InstallNebulaCluster(opts ...NebulaClusterOption) env.Func {
 		o := (&NebulaClusterOptions{}).
 			WithOptions(
 				WithNebulaClusterHelmOptions(WithHelmOptions(
-				// default values
+					// default values
 				)),
 			).WithOptions(opts...)
 
@@ -110,7 +110,7 @@ func UpgradeNebulaCluster(opts ...NebulaClusterOption) env.Func {
 		o := (&NebulaClusterOptions{}).
 			WithOptions(
 				WithNebulaClusterHelmOptions(WithHelmOptions(
-				// default values
+					// default values
 				)),
 			).WithOptions(opts...)
 
@@ -133,7 +133,7 @@ func WaitNebulaClusterReady(opts ...NebulaClusterOption) env.Func {
 		o := (&NebulaClusterOptions{}).
 			WithOptions(
 				WithNebulaClusterHelmOptions(WithHelmOptions(
-				// default values
+					// default values
 				)),
 			).WithOptions(opts...)
 
@@ -192,7 +192,7 @@ func UninstallNebulaCluster(opts ...NebulaClusterOption) env.Func {
 		o := (&NebulaClusterOptions{}).
 			WithOptions(
 				WithNebulaClusterHelmOptions(WithHelmOptions(
-				// default values
+					// default values
 				)),
 			).WithOptions(opts...)
 

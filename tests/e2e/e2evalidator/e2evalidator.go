@@ -8,9 +8,28 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+type Ruler interface {
+	Cmp(val any) error
+}
+
 type Rule string
 
-func StructWithRules(actual any, rulesMapping map[string]Rule) (errMessages []string) {
+func (r Rule) Cmp(val any) error {
+	return validator.New().Var(val, string(r))
+}
+
+type AnyStruct struct {
+	Val any
+}
+
+func (a AnyStruct) Cmp(val any) error {
+	if !reflect.DeepEqual(val, a.Val) {
+		return fmt.Errorf("objects not equal, expected %v, got %v", a, val)
+	}
+	return nil
+}
+
+func StructWithRules(actual any, rulesMapping map[string]Ruler) (errMessages []string) {
 	for field, rule := range rulesMapping {
 		actualVal := reflect.ValueOf(actual)
 
@@ -32,7 +51,8 @@ func StructWithRules(actual any, rulesMapping map[string]Rule) (errMessages []st
 				actualVal = actualVal.Elem()
 			}
 			val := actualVal.Interface()
-			if err := validator.New().Var(val, string(rule)); err != nil {
+
+			if err := rule.Cmp(val); err != nil {
 				errMessages = append(errMessages, fmt.Sprintf("field %q(%v) does not match %q\n", field, val, rule))
 			}
 		}

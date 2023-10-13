@@ -2,10 +2,11 @@ package e2evalidator
 
 import (
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"strings"
+
+	"github.com/go-playground/validator/v10"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Ruler interface {

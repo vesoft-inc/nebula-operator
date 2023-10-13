@@ -1,11 +1,12 @@
 package e2e
 
 import (
-	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2evalidator"
-	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
+
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2evalidator"
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 )
 
 const (

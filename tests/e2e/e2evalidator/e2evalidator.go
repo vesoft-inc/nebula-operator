@@ -2,15 +2,33 @@ package e2evalidator
 
 import (
 	"fmt"
+	"github.com/go-playground/validator/v10"
+	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"strings"
-
-	"github.com/go-playground/validator/v10"
 )
+
+type Ruler interface {
+	Cmp(val any) error
+}
 
 type Rule string
 
-func StructWithRules(actual any, rulesMapping map[string]Rule) (errMessages []string) {
+func (r Rule) Cmp(val any) error {
+	return validator.New().Var(val, string(r))
+}
+
+type Resource corev1.ResourceRequirements
+
+func (r Resource) Cmp(val any) error {
+	if !reflect.DeepEqual(val, corev1.ResourceRequirements(r)) {
+		return fmt.Errorf("resource not equal, expected %v, got %v", r, val)
+	}
+
+	return nil
+}
+
+func StructWithRules(actual any, rulesMapping map[string]Ruler) (errMessages []string) {
 	for field, rule := range rulesMapping {
 		actualVal := reflect.ValueOf(actual)
 
@@ -32,7 +50,8 @@ func StructWithRules(actual any, rulesMapping map[string]Rule) (errMessages []st
 				actualVal = actualVal.Elem()
 			}
 			val := actualVal.Interface()
-			if err := validator.New().Var(val, string(rule)); err != nil {
+
+			if err := rule.Cmp(val); err != nil {
 				errMessages = append(errMessages, fmt.Sprintf("field %q(%v) does not match %q\n", field, val, rule))
 			}
 		}

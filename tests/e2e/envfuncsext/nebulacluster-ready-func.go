@@ -19,6 +19,9 @@ package envfuncsext
 import (
 	"context"
 	stderrors "errors"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"reflect"
 
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -46,7 +49,7 @@ func DefaultNebulaClusterReadyFunc(ctx context.Context, cfg *envconf.Config, nc 
 	return true, nil
 }
 
-func NebulaClusterReadyFuncForFields(ignoreValidationErrors bool, rulesMapping map[string]e2evalidator.Rule) NebulaClusterReadyFunc {
+func NebulaClusterReadyFuncForFields(ignoreValidationErrors bool, rulesMapping map[string]e2evalidator.Ruler) NebulaClusterReadyFunc {
 	return func(_ context.Context, _ *envconf.Config, nc *appsv1alpha1.NebulaCluster) (isReady bool, err error) {
 		if errMessages := e2evalidator.StructWithRules(nc, rulesMapping); len(errMessages) > 0 {
 			if ignoreValidationErrors {
@@ -61,7 +64,7 @@ func NebulaClusterReadyFuncForFields(ignoreValidationErrors bool, rulesMapping m
 	}
 }
 
-func defaultNebulaClusterReadyFuncForStatus(_ context.Context, _ *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+func defaultNebulaClusterReadyFuncForStatus(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
 	isReady := nc.IsReady()
 	if isReady {
 		// TODO: Add more checks
@@ -110,6 +113,24 @@ func defaultNebulaClusterReadyFuncForStatus(_ context.Context, _ *envconf.Config
 				)
 			}
 		}
+
+		{ // Metad Resource checks
+			if !isComponentResourceExpected(ctx, cfg, nc.MetadComponent()) {
+				isReady = false
+			}
+		}
+
+		{ // Storaged Resource checks
+			if !isComponentResourceExpected(ctx, cfg, nc.StoragedComponent()) {
+				isReady = false
+			}
+		}
+
+		{ // Graphd Resource checks
+			if !isComponentResourceExpected(ctx, cfg, nc.GraphdComponent()) {
+				isReady = false
+			}
+		}
 	}
 
 	return isReady, nil
@@ -152,7 +173,7 @@ func isComponentStatusExpected(
 ) bool {
 	if errMessages := e2evalidator.StructWithRules(
 		componentStatus,
-		map[string]e2evalidator.Rule{
+		map[string]e2evalidator.Ruler{
 			"Version":                    e2evalidator.Eq(componentSpec.Version),
 			"Phase":                      e2evalidator.Eq(appsv1alpha1.RunningPhase),
 			"Workload.ReadyReplicas":     e2evalidator.Eq(*componentSpec.Replicas),
@@ -172,4 +193,42 @@ func isComponentStatusExpected(
 	}
 
 	return true
+}
+
+func isComponentResourceExpected(ctx context.Context, cfg *envconf.Config, component appsv1alpha1.NebulaClusterComponent) bool {
+	sts := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      component.GetName(),
+			Namespace: component.GetNamespace(),
+		},
+	}
+
+	if err := cfg.Client().Resources().Get(ctx, sts.Name, sts.Namespace, sts); err != nil {
+		klog.InfoS("Check Component Resource but statefulset not found",
+			"namespace", sts.Namespace,
+			"name", sts.Name,
+		)
+		return false
+	}
+
+	for _, c := range sts.Spec.Template.Spec.Containers {
+		if c.Name != component.ComponentType().String() {
+			continue
+		}
+		resource := component.ComponentSpec().Resources()
+		if reflect.DeepEqual(c.Resources.DeepCopy(), resource) {
+			return true
+		} else {
+			klog.InfoS("Check Component Resource but not expected",
+				"namespace", sts.Namespace,
+				"name", sts.Name,
+				"requests", c.Resources.Requests,
+				"requestsExpected", resource.Requests,
+				"limits", c.Resources.Limits,
+				"limitsExpected", resource.Limits,
+			)
+		}
+	}
+
+	return false
 }

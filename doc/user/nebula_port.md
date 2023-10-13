@@ -1,10 +1,7 @@
 ### Nebula port configurable
 
-We provide the fields `port` and `httpPort` in CRD to define the port settings for each component in NebulaGraph.
-- The Thrift port can be configured upon creation, but changes are prohibited when the cluster is running.
-- The HTTP port can be configured at any time.
-
-Here is the configuration file for NebulaCluster which have a custom HTTP port:
+We provide the fields `config` in CRD to define the port settings for each component in NebulaGraph.
+Here is the configuration file for NebulaCluster which have a custom port and http port:
 ```yaml
 apiVersion: apps.nebula-graph.io/v1alpha1
 kind: NebulaCluster
@@ -13,9 +10,9 @@ metadata:
   namespace: default
 spec:
   graphd:
-    port: 9669
-    httpPort: 8080
     config:
+      port: "3669"
+      ws_http_port: "8080"
       logtostderr: "true"
       redirect_stdout: "false"
       stderrthreshold: "0"
@@ -30,9 +27,8 @@ spec:
     image: vesoft/nebula-graphd
     version: v3.6.0
   metad:
-    port: 9559
-    httpPort: 8081
     config:
+      ws_http_port: 8081
       redirect_stdout: "false"
       stderrthreshold: "0"
       logtostder: "true"
@@ -52,9 +48,8 @@ spec:
           storage: 2Gi
       storageClassName: local-path
   storaged:
-    port: 9779
-    httpPort: 8082
     config:
+      ws_http_port: 8082
       redirect_stdout: "false"
       stderrthreshold: "0"
       logtostder: "true"
@@ -91,8 +86,8 @@ Verify the configuration:
 ```shell
 $ kubectl get svc
 NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
-nebula-graphd-headless      ClusterIP   None             <none>        9669/TCP,8080/TCP            10m
-nebula-graphd-svc           ClusterIP   10.102.13.115    <none>        9669/TCP,8080/TCP            10m
+nebula-graphd-headless      ClusterIP   None             <none>        3669/TCP,8080/TCP            10m
+nebula-graphd-svc           ClusterIP   10.102.13.115    <none>        3669/TCP,8080/TCP            10m
 nebula-metad-headless       ClusterIP   None             <none>        9559/TCP,8081/TCP            11m
 nebula-storaged-headless    ClusterIP   None             <none>        9779/TCP,8082/TCP,9778/TCP   11m
 $ curl 10.102.13.115:8080/status

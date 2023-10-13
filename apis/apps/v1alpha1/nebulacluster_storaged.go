@@ -34,7 +34,6 @@ const (
 	StoragedPortNameHTTP      = "http"
 	defaultStoragedPortHTTP   = 19779
 	StoragedPortNameAdmin     = "admin"
-	defaultStoragedPortAdmin  = 9778
 	defaultStoragedImage      = "vesoft/nebula-storaged"
 )
 
@@ -156,18 +155,28 @@ func (c *storagedComponent) GenerateLabels() map[string]string {
 }
 
 func (c *storagedComponent) GenerateContainerPorts() []corev1.ContainerPort {
+	thriftPort, err := parseCustomPort(defaultStoragedPortThrift, c.GetConfig()["port"])
+	if err != nil {
+		return nil
+	}
+
+	httpPort, err := parseCustomPort(defaultStoragedPortHTTP, c.GetConfig()["ws_http_port"])
+	if err != nil {
+		return nil
+	}
+
 	return []corev1.ContainerPort{
 		{
 			Name:          StoragedPortNameThrift,
-			ContainerPort: c.nc.Spec.Storaged.Port,
+			ContainerPort: thriftPort,
 		},
 		{
 			Name:          StoragedPortNameHTTP,
-			ContainerPort: c.nc.Spec.Storaged.HTTPPort,
+			ContainerPort: httpPort,
 		},
 		{
 			Name:          StoragedPortNameAdmin,
-			ContainerPort: c.nc.Spec.Storaged.Port - 1,
+			ContainerPort: thriftPort - 1,
 		},
 	}
 }
@@ -383,20 +392,4 @@ func storageDataVolumeClaims(storageClaims []StorageClaim, componentType string)
 		})
 	}
 	return pvcs, nil
-}
-
-func (c *storagedComponent) IsDefaultThriftPort() bool {
-	return c.nc.Spec.Storaged.Port == defaultStoragedPortThrift
-}
-
-func (c *storagedComponent) GetThriftPort() int32 {
-	return c.nc.Spec.Storaged.Port
-}
-
-func (c *storagedComponent) IsDefaultHTTPPort() bool {
-	return c.nc.Spec.Storaged.HTTPPort == defaultStoragedPortHTTP
-}
-
-func (c *storagedComponent) GetHTTPPort() int32 {
-	return c.nc.Spec.Storaged.HTTPPort
 }

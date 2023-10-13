@@ -106,12 +106,6 @@ $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"storaged": {"dataV
 Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: spec.storaged.dataVolumeClaims: Invalid value: resource.Quantity{i:resource.int64Amount{value:1073741824, scale:0}, d:resource.infDecAmount{Dec:(*inf.Dec)(nil)}, s:"1Gi", Format:"BinarySI"}: data volume size can only be increased
 ```
 
-Modify thrift ports
-```shell
-$ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"graphd": {"port": 8669}}}'
-Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: spec.graphd.port: Invalid value: 8669: field is immutable
-```
-
 Scale in intermediate state
 ```shell
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"storaged": {"replicas": 5}}}'

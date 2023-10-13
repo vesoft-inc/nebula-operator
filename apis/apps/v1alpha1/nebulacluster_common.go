@@ -127,6 +127,18 @@ func getTopologySpreadConstraints(constraints []TopologySpreadConstraint, labels
 	return tscs
 }
 
+func parseCustomPort(defaultPort int32, customPort string) (int32, error) {
+	p := defaultPort
+	if customPort != "" {
+		v, err := strconv.Atoi(customPort)
+		if err != nil {
+			return 0, err
+		}
+		p = int32(v)
+	}
+	return p, nil
+}
+
 func GetClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {
 	return getClientCertsVolume(sslCerts)
 }
@@ -444,7 +456,7 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 	containers := c.ComponentSpec().InitContainers()
 	nc := c.GetNebulaCluster()
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsZoneEnabled() {
 		nodeLabelsContainer := genNodeLabelsContainer(nc)
 		containers = append(containers, nodeLabelsContainer)
 	}
@@ -474,18 +486,12 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 	if c.ComponentType() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
 		flags += " --license_manager_url=" + pointer.StringDeref(nc.Spec.Metad.LicenseManagerURL, "")
 	}
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsZoneEnabled() {
 		flags += " --assigned_zone=$NODE_ZONE"
-	}
-	if !c.IsDefaultThriftPort() {
-		flags += " --port=" + strconv.Itoa(int(c.GetThriftPort()))
-	}
-	if !c.IsDefaultHTTPPort() {
-		flags += " --ws_http_port=" + strconv.Itoa(int(c.GetHTTPPort()))
 	}
 
 	cmd := []string{"/bin/sh", "-ecx"}
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsZoneEnabled() {
 		cmd = append(cmd, fmt.Sprintf(". /node/zone; echo $NODE_ZONE; exec /usr/local/nebula/bin/nebula-%s", componentType)+
 			fmt.Sprintf(" --flagfile=/usr/local/nebula/etc/nebula-%s.conf", componentType)+flags)
 	} else {
@@ -503,7 +509,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 		})
 		mounts = append(mounts, c.ComponentSpec().VolumeMounts()...)
 	}
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsZoneEnabled() {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      "node-info",
 			MountPath: "/node",
@@ -596,7 +602,7 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		volumes = append(volumes, certVolumes...)
 	}
 
-	if c.ComponentType() == GraphdComponentType && nc.IsIntraZoneReadingEnabled() {
+	if c.ComponentType() == GraphdComponentType && nc.IsZoneEnabled() {
 		volumes = append(volumes, corev1.Volume{
 			Name: "node-info",
 			VolumeSource: corev1.VolumeSource{

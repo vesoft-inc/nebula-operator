@@ -109,12 +109,6 @@ func validateNebulaClusterCreate(nc *v1alpha1.NebulaCluster) (allErrs field.Erro
 
 // validateNebulaClusterGraphd validates a NebulaCluster for Graphd on update.
 func validateNebulaClusterUpdateGraphd(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
-		nc.Spec.Graphd.Port,
-		oldNC.Spec.Graphd.Port,
-		field.NewPath("spec").Child("graphd").Child("port"),
-	)...)
-
 	allErrs = append(allErrs, validateNebulaClusterGraphd(nc)...)
 
 	return allErrs
@@ -122,11 +116,6 @@ func validateNebulaClusterUpdateGraphd(nc, oldNC *v1alpha1.NebulaCluster) (allEr
 
 // validateNebulaClusterMetad validates a NebulaCluster for Metad on Update.
 func validateNebulaClusterUpdateMetad(nc, oldNC *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
-		nc.Spec.Metad.Port,
-		oldNC.Spec.Metad.Port,
-		field.NewPath("spec").Child("metad").Child("port"),
-	)...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
 		nc.Spec.Metad.Replicas,
 		oldNC.Spec.Metad.Replicas,
@@ -155,12 +144,6 @@ func validateNebulaClusterUpdateStoraged(nc, oldNC *v1alpha1.NebulaCluster) (all
 			))
 		}
 	}
-
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(
-		nc.Spec.Storaged.Port,
-		oldNC.Spec.Storaged.Port,
-		field.NewPath("spec").Child("storaged").Child("port"),
-	)...)
 
 	allErrs = append(allErrs, validateNebulaClusterUpdateStoragedDataVolume(nc, oldNC)...)
 	allErrs = append(allErrs, validateNebulaClusterStoraged(nc)...)

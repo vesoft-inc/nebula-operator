@@ -155,14 +155,24 @@ func (c *metadComponent) GenerateLabels() map[string]string {
 }
 
 func (c *metadComponent) GenerateContainerPorts() []corev1.ContainerPort {
+	thriftPort, err := parseCustomPort(defaultMetadPortThrift, c.GetConfig()["port"])
+	if err != nil {
+		return nil
+	}
+
+	httpPort, err := parseCustomPort(defaultMetadPortHTTP, c.GetConfig()["ws_http_port"])
+	if err != nil {
+		return nil
+	}
+
 	return []corev1.ContainerPort{
 		{
 			Name:          MetadPortNameThrift,
-			ContainerPort: c.nc.Spec.Metad.Port,
+			ContainerPort: thriftPort,
 		},
 		{
 			Name:          MetadPortNameHTTP,
-			ContainerPort: c.nc.Spec.Metad.HTTPPort,
+			ContainerPort: httpPort,
 		},
 	}
 }
@@ -381,20 +391,4 @@ func (c *metadComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *metadComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Metad = *status
-}
-
-func (c *metadComponent) IsDefaultThriftPort() bool {
-	return c.nc.Spec.Metad.Port == defaultMetadPortThrift
-}
-
-func (c *metadComponent) GetThriftPort() int32 {
-	return c.nc.Spec.Metad.Port
-}
-
-func (c *metadComponent) IsDefaultHTTPPort() bool {
-	return c.nc.Spec.Metad.HTTPPort == defaultMetadPortHTTP
-}
-
-func (c *metadComponent) GetHTTPPort() int32 {
-	return c.nc.Spec.Metad.HTTPPort
 }

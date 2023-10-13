@@ -138,14 +138,24 @@ func (c *graphdComponent) GenerateLabels() map[string]string {
 }
 
 func (c *graphdComponent) GenerateContainerPorts() []corev1.ContainerPort {
+	thriftPort, err := parseCustomPort(defaultGraphdPortThrift, c.GetConfig()["port"])
+	if err != nil {
+		return nil
+	}
+
+	httpPort, err := parseCustomPort(defaultGraphdPortHTTP, c.GetConfig()["ws_http_port"])
+	if err != nil {
+		return nil
+	}
+
 	return []corev1.ContainerPort{
 		{
 			Name:          GraphdPortNameThrift,
-			ContainerPort: c.nc.Spec.Graphd.Port,
+			ContainerPort: thriftPort,
 		},
 		{
 			Name:          GraphdPortNameHTTP,
-			ContainerPort: c.nc.Spec.Graphd.HTTPPort,
+			ContainerPort: httpPort,
 		},
 	}
 }
@@ -303,20 +313,4 @@ func (c *graphdComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *graphdComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Graphd = *status
-}
-
-func (c *graphdComponent) IsDefaultThriftPort() bool {
-	return c.nc.Spec.Graphd.Port == defaultGraphdPortThrift
-}
-
-func (c *graphdComponent) GetThriftPort() int32 {
-	return c.nc.Spec.Graphd.Port
-}
-
-func (c *graphdComponent) IsDefaultHTTPPort() bool {
-	return c.nc.Spec.Graphd.HTTPPort == defaultGraphdPortHTTP
-}
-
-func (c *graphdComponent) GetHTTPPort() int32 {
-	return c.nc.Spec.Graphd.HTTPPort
 }

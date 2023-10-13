@@ -113,42 +113,45 @@ func defaultNebulaClusterReadyFuncForStatus(ctx context.Context, cfg *envconf.Co
 				)
 			}
 		}
+	}
 
-		{ // Metad Resource checks
-			if !isComponentResourceExpected(ctx, cfg, nc.MetadComponent()) {
-				isReady = false
-			}
-		}
+	return isReady, nil
+}
 
-		{ // Storaged Resource checks
-			if !isComponentResourceExpected(ctx, cfg, nc.StoragedComponent()) {
-				isReady = false
-			}
-		}
+func defaultNebulaClusterReadyFuncForGraphd(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+	isReady := true
 
-		{ // Graphd Resource checks
-			if !isComponentResourceExpected(ctx, cfg, nc.GraphdComponent()) {
-				isReady = false
-			}
+	{ // Graphd Resource checks
+		if !isComponentResourceExpected(ctx, cfg, nc.GraphdComponent()) {
+			isReady = false
 		}
 	}
 
 	return isReady, nil
 }
 
-func defaultNebulaClusterReadyFuncForGraphd(_ context.Context, _ *envconf.Config, _ *appsv1alpha1.NebulaCluster) (bool, error) {
-	// TODO
-	return true, nil
+func defaultNebulaClusterReadyFuncForMetad(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+	isReady := true
+
+	{ // Metad Resource checks
+		if !isComponentResourceExpected(ctx, cfg, nc.MetadComponent()) {
+			isReady = false
+		}
+	}
+
+	return isReady, nil
 }
 
-func defaultNebulaClusterReadyFuncForMetad(_ context.Context, _ *envconf.Config, _ *appsv1alpha1.NebulaCluster) (bool, error) {
-	// TODO
-	return true, nil
-}
+func defaultNebulaClusterReadyFuncForStoraged(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+	isReady := true
 
-func defaultNebulaClusterReadyFuncForStoraged(_ context.Context, _ *envconf.Config, _ *appsv1alpha1.NebulaCluster) (bool, error) {
-	// TODO
-	return true, nil
+	{ // Storaged Resource checks
+		if !isComponentResourceExpected(ctx, cfg, nc.StoragedComponent()) {
+			isReady = false
+		}
+	}
+
+	return isReady, nil
 }
 
 func defaultNebulaClusterReadyFuncForAgent(_ context.Context, _ *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
@@ -215,6 +218,8 @@ func isComponentResourceExpected(ctx context.Context, cfg *envconf.Config, compo
 		if c.Name != component.ComponentType().String() {
 			continue
 		}
+
+		// TODO: check more fields
 		resource := component.ComponentSpec().Resources()
 		if reflect.DeepEqual(c.Resources.DeepCopy(), resource) {
 			return true

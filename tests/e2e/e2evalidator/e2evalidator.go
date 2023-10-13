@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type Ruler interface {
@@ -19,13 +18,14 @@ func (r Rule) Cmp(val any) error {
 	return validator.New().Var(val, string(r))
 }
 
-type Resource corev1.ResourceRequirements
+type AnyStruct struct {
+	Val any
+}
 
-func (r Resource) Cmp(val any) error {
-	if !reflect.DeepEqual(val, corev1.ResourceRequirements(r)) {
-		return fmt.Errorf("resource not equal, expected %v, got %v", r, val)
+func (a AnyStruct) Cmp(val any) error {
+	if !reflect.DeepEqual(val, a.Val) {
+		return fmt.Errorf("objects not equal, expected %v, got %v", a, val)
 	}
-
 	return nil
 }
 

@@ -312,34 +312,40 @@ var testCasesBasicResources = []ncTestCase{
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
 				envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
-					"Spec.Metad.Resources": &e2evalidator.Resource{
-						Requests: corev1.ResourceList{
-							"cpu":    resource.MustParse("500m"),
-							"memory": resource.MustParse("500Mi"),
-						},
-						Limits: corev1.ResourceList{
-							"cpu":    resource.MustParse("1"),
-							"memory": resource.MustParse("1Gi"),
-						},
-					},
-					"Spec.Storaged.Resources": &e2evalidator.Resource{
-						Requests: corev1.ResourceList{
-							"cpu":    resource.MustParse("500m"),
-							"memory": resource.MustParse("500Mi"),
-						},
-						Limits: corev1.ResourceList{
-							"cpu":    resource.MustParse("1"),
-							"memory": resource.MustParse("1Gi"),
+					"Spec.Metad.Resources": &e2evalidator.AnyStruct{
+						Val: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("1"),
+								"memory": resource.MustParse("1Gi"),
+							},
 						},
 					},
-					"Spec.Graphd.Resources": &e2evalidator.Resource{
-						Requests: corev1.ResourceList{
-							"cpu":    resource.MustParse("500m"),
-							"memory": resource.MustParse("500Mi"),
+					"Spec.Storaged.Resources": &e2evalidator.AnyStruct{
+						Val: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("1"),
+								"memory": resource.MustParse("1Gi"),
+							},
 						},
-						Limits: corev1.ResourceList{
-							"cpu":    resource.MustParse("1"),
-							"memory": resource.MustParse("500Mi"),
+					},
+					"Spec.Graphd.Resources": &e2evalidator.AnyStruct{
+						Val: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("1"),
+								"memory": resource.MustParse("500Mi"),
+							},
 						},
 					},
 				}),
@@ -361,14 +367,16 @@ var testCasesBasicResources = []ncTestCase{
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
 						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
-							"Spec.Graphd.Resources": &e2evalidator.Resource{
-								Requests: corev1.ResourceList{
-									"cpu":    resource.MustParse("500m"),
-									"memory": resource.MustParse("500Mi"),
-								},
-								Limits: corev1.ResourceList{
-									"cpu":    resource.MustParse("1100m"),
-									"memory": resource.MustParse("1100Mi"),
+							"Spec.Graphd.Resources": &e2evalidator.AnyStruct{
+								Val: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										"cpu":    resource.MustParse("500m"),
+										"memory": resource.MustParse("500Mi"),
+									},
+									Limits: corev1.ResourceList{
+										"cpu":    resource.MustParse("1100m"),
+										"memory": resource.MustParse("1100Mi"),
+									},
 								},
 							},
 						}),
@@ -389,14 +397,16 @@ var testCasesBasicResources = []ncTestCase{
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
 						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
-							"Spec.Metad.Resources": &e2evalidator.Resource{
-								Requests: corev1.ResourceList{
-									"cpu":    resource.MustParse("500m"),
-									"memory": resource.MustParse("500Mi"),
-								},
-								Limits: corev1.ResourceList{
-									"cpu":    resource.MustParse("1100m"),
-									"memory": resource.MustParse("1100Mi"),
+							"Spec.Metad.Resources": &e2evalidator.AnyStruct{
+								Val: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										"cpu":    resource.MustParse("500m"),
+										"memory": resource.MustParse("500Mi"),
+									},
+									Limits: corev1.ResourceList{
+										"cpu":    resource.MustParse("1100m"),
+										"memory": resource.MustParse("1100Mi"),
+									},
 								},
 							},
 						}),
@@ -417,14 +427,16 @@ var testCasesBasicResources = []ncTestCase{
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
 						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]e2evalidator.Ruler{
-							"Spec.Storaged.Resources": &e2evalidator.Resource{
-								Requests: corev1.ResourceList{
-									"cpu":    resource.MustParse("500m"),
-									"memory": resource.MustParse("500Mi"),
-								},
-								Limits: corev1.ResourceList{
-									"cpu":    resource.MustParse("1100m"),
-									"memory": resource.MustParse("1100Mi"),
+							"Spec.Storaged.Resources": &e2evalidator.AnyStruct{
+								Val: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										"cpu":    resource.MustParse("500m"),
+										"memory": resource.MustParse("500Mi"),
+									},
+									Limits: corev1.ResourceList{
+										"cpu":    resource.MustParse("1100m"),
+										"memory": resource.MustParse("1100Mi"),
+									},
 								},
 							},
 						}),

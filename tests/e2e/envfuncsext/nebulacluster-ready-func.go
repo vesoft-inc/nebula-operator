@@ -19,7 +19,7 @@ package envfuncsext
 import (
 	"context"
 	stderrors "errors"
-	"reflect"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2evalidator"
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2ematcher"
 )
 
 var defaultNebulaClusterReadyFuncs = []NebulaClusterReadyFunc{
@@ -49,15 +49,15 @@ func DefaultNebulaClusterReadyFunc(ctx context.Context, cfg *envconf.Config, nc 
 	return true, nil
 }
 
-func NebulaClusterReadyFuncForFields(ignoreValidationErrors bool, rulesMapping map[string]e2evalidator.Ruler) NebulaClusterReadyFunc {
-	return func(_ context.Context, _ *envconf.Config, nc *appsv1alpha1.NebulaCluster) (isReady bool, err error) {
-		if errMessages := e2evalidator.StructWithRules(nc, rulesMapping); len(errMessages) > 0 {
+func NebulaClusterReadyFuncForFields(ignoreValidationErrors bool, matchersMapping map[string]any) NebulaClusterReadyFunc {
+	return func(_ context.Context, _ *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+		if err := e2ematcher.Struct(nc, matchersMapping); err != nil {
 			if ignoreValidationErrors {
-				klog.InfoS("Waiting for NebulaCluster to be ready but not expected", "errMessages", errMessages)
+				klog.InfoS("Waiting for NebulaCluster to be ready but not expected", "err", err)
 				return false, nil
 			}
 
-			klog.Error(nil, "Waiting for NebulaCluster to be ready but not expected", "errMessages", errMessages)
+			klog.Error(err, "Waiting for NebulaCluster to be ready but not expected")
 			return false, stderrors.New("check NebulaCluster")
 		}
 		return true, nil
@@ -121,8 +121,8 @@ func defaultNebulaClusterReadyFuncForStatus(ctx context.Context, cfg *envconf.Co
 func defaultNebulaClusterReadyFuncForGraphd(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
 	isReady := true
 
-	{ // Graphd Resource checks
-		if !isComponentResourceExpected(ctx, cfg, nc.GraphdComponent()) {
+	{ // Graphd StatefulSet checks
+		if !isComponentStatefulSetExpected(ctx, cfg, nc.GraphdComponent()) {
 			isReady = false
 		}
 	}
@@ -134,7 +134,7 @@ func defaultNebulaClusterReadyFuncForMetad(ctx context.Context, cfg *envconf.Con
 	isReady := true
 
 	{ // Metad Resource checks
-		if !isComponentResourceExpected(ctx, cfg, nc.MetadComponent()) {
+		if !isComponentStatefulSetExpected(ctx, cfg, nc.MetadComponent()) {
 			isReady = false
 		}
 	}
@@ -146,7 +146,7 @@ func defaultNebulaClusterReadyFuncForStoraged(ctx context.Context, cfg *envconf.
 	isReady := true
 
 	{ // Storaged Resource checks
-		if !isComponentResourceExpected(ctx, cfg, nc.StoragedComponent()) {
+		if !isComponentStatefulSetExpected(ctx, cfg, nc.StoragedComponent()) {
 			isReady = false
 		}
 	}
@@ -174,31 +174,28 @@ func isComponentStatusExpected(
 	componentSpec *appsv1alpha1.ComponentSpec,
 	logKeysAndValues ...any,
 ) bool {
-	if errMessages := e2evalidator.StructWithRules(
+	if err := e2ematcher.Struct(
 		componentStatus,
-		map[string]e2evalidator.Ruler{
-			"Version":                    e2evalidator.Eq(componentSpec.Version),
-			"Phase":                      e2evalidator.Eq(appsv1alpha1.RunningPhase),
-			"Workload.ReadyReplicas":     e2evalidator.Eq(*componentSpec.Replicas),
-			"Workload.UpdatedReplicas":   e2evalidator.Eq(*componentSpec.Replicas),
-			"Workload.CurrentReplicas":   e2evalidator.Eq(*componentSpec.Replicas),
-			"Workload.AvailableReplicas": e2evalidator.Eq(*componentSpec.Replicas),
-			"Workload.CurrentRevision":   e2evalidator.Eq(componentStatus.Workload.UpdateRevision),
+		map[string]any{
+			"Version": e2ematcher.ValidatorEq(componentSpec.Version),
+			"Phase":   e2ematcher.ValidatorEq(appsv1alpha1.RunningPhase),
+			"Workload": map[string]any{
+				"ReadyReplicas":     e2ematcher.ValidatorEq(*componentSpec.Replicas),
+				"UpdatedReplicas":   e2ematcher.ValidatorEq(*componentSpec.Replicas),
+				"CurrentReplicas":   e2ematcher.ValidatorEq(*componentSpec.Replicas),
+				"AvailableReplicas": e2ematcher.ValidatorEq(*componentSpec.Replicas),
+				"CurrentRevision":   e2ematcher.ValidatorEq(componentStatus.Workload.UpdateRevision),
+			},
 		},
-	); len(errMessages) > 0 {
-		klog.InfoS("Waiting for NebulaCluster to be ready but componentStatus not expected",
-			append(
-				logKeysAndValues,
-				"errMessages", errMessages,
-			)...,
-		)
+	); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but componentStatus not expected", logKeysAndValues...)
 		return false
 	}
 
 	return true
 }
 
-func isComponentResourceExpected(ctx context.Context, cfg *envconf.Config, component appsv1alpha1.NebulaClusterComponent) bool {
+func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, component appsv1alpha1.NebulaClusterComponent) bool {
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      component.GetName(),
@@ -207,33 +204,65 @@ func isComponentResourceExpected(ctx context.Context, cfg *envconf.Config, compo
 	}
 
 	if err := cfg.Client().Resources().Get(ctx, sts.Name, sts.Namespace, sts); err != nil {
-		klog.InfoS("Check Component Resource but statefulset not found",
+		klog.InfoS("Check Component Resource but StatefulSet not found",
 			"namespace", sts.Namespace,
 			"name", sts.Name,
 		)
 		return false
 	}
 
-	for _, c := range sts.Spec.Template.Spec.Containers {
-		if c.Name != component.ComponentType().String() {
-			continue
-		}
-
-		// TODO: check more fields
-		resource := component.ComponentSpec().Resources()
-		if reflect.DeepEqual(c.Resources.DeepCopy(), resource) {
-			return true
-		} else {
-			klog.InfoS("Check Component Resource but not expected",
-				"namespace", sts.Namespace,
-				"name", sts.Name,
-				"requests", c.Resources.Requests,
-				"requestsExpected", resource.Requests,
-				"limits", c.Resources.Limits,
-				"limitsExpected", resource.Limits,
-			)
+	componentContainerIdx := -1
+	for i, c := range sts.Spec.Template.Spec.Containers {
+		if c.Name == component.ComponentType().String() {
+			componentContainerIdx = i
+			break
 		}
 	}
 
-	return false
+	if componentContainerIdx == -1 {
+		klog.InfoS("Check Component Resource but container not found",
+			"namespace", sts.Namespace,
+			"name", sts.Name,
+			"container", component.ComponentType().String(),
+		)
+		return false
+	}
+
+	klog.InfoS("Check Component Resource find container",
+		"namespace", sts.Namespace,
+		"name", sts.Name,
+		"container", component.ComponentType().String(),
+		"index", componentContainerIdx,
+	)
+
+	if err := e2ematcher.Struct(
+		sts,
+		map[string]any{
+			"ObjectMeta": map[string]any{
+				"Name":      e2ematcher.ValidatorEq(component.GetName()),
+				"Namespace": e2ematcher.ValidatorEq(component.GetNamespace()),
+			},
+			"Spec": map[string]any{
+				"Replicas": e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
+				"Template": map[string]any{
+					"Spec": map[string]any{
+						"Containers": map[string]any{
+							fmt.Sprint(componentContainerIdx): map[string]any{
+								"Image":     e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
+								"Resources": e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
+							},
+						},
+					},
+				},
+			},
+		},
+	); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but StatefulSet not expected",
+			"namespace", sts.Namespace,
+			"name", sts.Name,
+		)
+		return false
+	}
+
+	return true
 }

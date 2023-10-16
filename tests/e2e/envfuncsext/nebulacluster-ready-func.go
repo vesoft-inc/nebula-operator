@@ -228,7 +228,7 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 		return false
 	}
 
-	klog.InfoS("Check Component Resource find container",
+	klog.InfoS("Check Component Resource find container in StatefulSet",
 		"namespace", sts.Namespace,
 		"name", sts.Name,
 		"container", component.ComponentType().String(),

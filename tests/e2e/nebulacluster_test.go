@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -59,6 +61,8 @@ type (
 )
 
 func TestNebulaCluster(t *testing.T) {
+	defaultNebulaClusterHelmArgs := getDefaultNebulaClusterHelmArgs()
+
 	testFeatures := make([]features.Feature, 0, len(ncGlobalTestCases))
 	for caseIdx := range ncGlobalTestCases {
 		caseIdx := caseIdx
@@ -79,6 +83,23 @@ func TestNebulaCluster(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to create namespace %v", err)
 			}
+
+			ctx, err = envfuncsext.CreateObject(
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      ImagePullSecretName,
+						Namespace: namespace,
+					},
+					Type: corev1.SecretTypeDockerConfigJson,
+					Data: map[string][]byte{
+						corev1.DockerConfigJsonKey: config.C.DockerConfigJsonSecret,
+					},
+				},
+			)(ctx, cfg)
+			if err != nil {
+				t.Errorf("failed to create secret %v", err)
+			}
+
 			return ctx
 		})
 
@@ -92,6 +113,7 @@ func TestNebulaCluster(t *testing.T) {
 						helm.WithChart(config.C.NebulaGraph.ChartPath),
 						helm.WithNamespace(namespace),
 						helm.WithName(name),
+						helm.WithArgs(defaultNebulaClusterHelmArgs...),
 						helm.WithArgs("--set", fmt.Sprintf("nameOverride=%s", name)),
 					),
 				}, tc.InstallNCOptions...)...)(ctx, cfg)
@@ -163,6 +185,7 @@ func TestNebulaCluster(t *testing.T) {
 							helm.WithChart(config.C.NebulaGraph.ChartPath),
 							helm.WithNamespace(namespace),
 							helm.WithName(name),
+							helm.WithArgs(defaultNebulaClusterHelmArgs...),
 							helm.WithArgs("--set", fmt.Sprintf("nameOverride=%s", name)),
 						),
 					}, upgradeCase.UpgradeNCOptions...)...)(ctx, cfg)
@@ -224,4 +247,27 @@ func TestNebulaCluster(t *testing.T) {
 	}
 
 	_ = testEnv.TestInParallel(t, testFeatures...)
+}
+
+func getDefaultNebulaClusterHelmArgs() []string {
+	var args = []string{
+		"--set", fmt.Sprintf("imagePullSecrets[0].name=%s", ImagePullSecretName),
+	}
+
+	if config.C.NebulaGraph.Version != "" {
+		args = append(args, "--set", fmt.Sprintf("nebula.version=%s", config.C.NebulaGraph.Version))
+	}
+	if config.C.NebulaGraph.GraphdImage != "" {
+		args = append(args, "--set", fmt.Sprintf("nebula.graphd.image=%s", config.C.NebulaGraph.GraphdImage))
+	}
+	if config.C.NebulaGraph.MetadImage != "" {
+		args = append(args, "--set", fmt.Sprintf("nebula.metad.image=%s", config.C.NebulaGraph.MetadImage))
+	}
+	if config.C.NebulaGraph.StoragedImage != "" {
+		args = append(args, "--set", fmt.Sprintf("nebula.storaged.image=%s", config.C.NebulaGraph.StoragedImage))
+	}
+	if config.C.NebulaGraph.LicenseManagerURL != "" {
+		args = append(args, "--set", fmt.Sprintf("nebula.metad.licenseManagerURL=%s", config.C.NebulaGraph.LicenseManagerURL))
+	}
+	return args
 }

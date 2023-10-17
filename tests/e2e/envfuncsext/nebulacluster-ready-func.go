@@ -17,11 +17,15 @@ limitations under the License.
 package envfuncsext
 
 import (
+	"bufio"
 	"context"
 	stderrors "errors"
 	"fmt"
+	"regexp"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -121,8 +125,12 @@ func defaultNebulaClusterReadyFuncForStatus(ctx context.Context, cfg *envconf.Co
 func defaultNebulaClusterReadyFuncForGraphd(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
 	isReady := true
 
-	{ // Graphd StatefulSet checks
+	{
 		if !isComponentStatefulSetExpected(ctx, cfg, nc.GraphdComponent()) {
+			isReady = false
+		}
+
+		if !isComponentConfigMapExpected(ctx, cfg, nc.GraphdComponent()) {
 			isReady = false
 		}
 	}
@@ -133,8 +141,12 @@ func defaultNebulaClusterReadyFuncForGraphd(ctx context.Context, cfg *envconf.Co
 func defaultNebulaClusterReadyFuncForMetad(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
 	isReady := true
 
-	{ // Metad Resource checks
+	{
 		if !isComponentStatefulSetExpected(ctx, cfg, nc.MetadComponent()) {
+			isReady = false
+		}
+
+		if !isComponentConfigMapExpected(ctx, cfg, nc.MetadComponent()) {
 			isReady = false
 		}
 	}
@@ -145,8 +157,12 @@ func defaultNebulaClusterReadyFuncForMetad(ctx context.Context, cfg *envconf.Con
 func defaultNebulaClusterReadyFuncForStoraged(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
 	isReady := true
 
-	{ // Storaged Resource checks
+	{
 		if !isComponentStatefulSetExpected(ctx, cfg, nc.StoragedComponent()) {
+			isReady = false
+		}
+
+		if !isComponentConfigMapExpected(ctx, cfg, nc.StoragedComponent()) {
 			isReady = false
 		}
 	}
@@ -260,6 +276,69 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but StatefulSet not expected",
 			"namespace", sts.Namespace,
 			"name", sts.Name,
+		)
+		return false
+	}
+
+	return true
+}
+
+func isComponentConfigMapExpected(ctx context.Context, cfg *envconf.Config, component appsv1alpha1.NebulaClusterComponent) bool {
+	componentConfigExpected := component.GetConfig()
+	if len(componentConfigExpected) == 0 {
+		return true
+	}
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      component.GetName(),
+			Namespace: component.GetNamespace(),
+		},
+	}
+
+	if err := cfg.Client().Resources().Get(ctx, cm.Name, cm.Namespace, cm); err != nil {
+		klog.InfoS("Check Component Resource but ConfigMap not found",
+			"namespace", cm.Namespace,
+			"name", cm.Name,
+		)
+		return false
+	}
+
+	// extract configuration
+	componentConfig := make(map[string]string)
+	paramValuePattern := regexp.MustCompile(`--(\w+)=(.+)`)
+	scanner := bufio.NewScanner(strings.NewReader(cm.Data[component.GetConfigMapKey()]))
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "--") {
+			continue
+		}
+
+		matches := paramValuePattern.FindStringSubmatch(line)
+		if len(matches) != 3 {
+			continue
+		}
+
+		componentConfig[matches[1]] = matches[2]
+	}
+	if err := scanner.Err(); err != nil {
+		klog.ErrorS(err, "failed to parse configuration",
+			"namespace", cm.Namespace,
+			"name", cm.Name,
+		)
+		return false
+	}
+
+	matchers := make(map[string]any, len(componentConfigExpected))
+	for k, v := range componentConfigExpected {
+		matchers[k] = e2ematcher.ValidatorEq(v)
+	}
+
+	if err := e2ematcher.Struct(componentConfig, matchers); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but ConfigMap not expected",
+			"namespace", cm.Namespace,
+			"name", cm.Name,
 		)
 		return false
 	}

@@ -567,6 +567,18 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 		return false
 	}
 
+	klog.InfoS("Check Component Resource find container in StatefulSet",
+		"namespace", sts.Namespace,
+		"name", sts.Name,
+		"container", component.ComponentType().String(),
+		"index", componentContainerIdx,
+	)
+
+	env := component.ComponentSpec().PodEnvVars()
+	if len(env) == 0 {
+		env = nil
+	}
+
 	if err := e2ematcher.Struct(
 		sts,
 		map[string]any{
@@ -582,6 +594,7 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 							fmt.Sprint(componentContainerIdx): map[string]any{
 								"Image":     e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
 								"Resources": e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
+								"Env":       e2ematcher.DeepEqual(env),
 							},
 						},
 					},

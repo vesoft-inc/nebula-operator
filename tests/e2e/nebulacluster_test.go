@@ -36,6 +36,14 @@ import (
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 )
 
+var ncGlobalTestCases []ncTestCase
+
+func init() {
+	ncGlobalTestCases = append(ncGlobalTestCases, testCasesBasic...)
+	ncGlobalTestCases = append(ncGlobalTestCases, testCasesCustomConfig...)
+	ncGlobalTestCases = append(ncGlobalTestCases, testCasesK8s...)
+}
+
 type (
 	ncTestCase struct {
 		Name                 string

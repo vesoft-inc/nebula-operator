@@ -40,6 +40,7 @@ var ncGlobalTestCases []ncTestCase
 
 func init() {
 	ncGlobalTestCases = append(ncGlobalTestCases, testCasesBasic...)
+	ncGlobalTestCases = append(ncGlobalTestCases, testCasesCustomConfig...)
 }
 
 type (

@@ -578,6 +578,10 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 	if len(env) == 0 {
 		env = nil
 	}
+	nodeSelector := component.ComponentSpec().NodeSelector()
+	if len(nodeSelector) == 0 {
+		nodeSelector = nil
+	}
 
 	if err := e2ematcher.Struct(
 		sts,
@@ -601,6 +605,9 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 								"Env":       e2ematcher.DeepEqual(env),
 							},
 						},
+						"NodeSelector": e2ematcher.DeepEqual(nodeSelector),
+						//"Affinity":     e2ematcher.DeepEqual(&[]corev1.Affinity{}),
+						"Tolerations": e2ematcher.DeepEqual(component.ComponentSpec().Tolerations()),
 					},
 				},
 			},

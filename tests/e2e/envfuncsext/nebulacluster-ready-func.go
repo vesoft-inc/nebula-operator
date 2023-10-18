@@ -589,6 +589,10 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 			"Spec": map[string]any{
 				"Replicas": e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
 				"Template": map[string]any{
+					"ObjectMeta": map[string]any{
+						"Annotations": e2ematcher.MapContainsMatchers(component.ComponentSpec().PodAnnotations()),
+						"Labels":      e2ematcher.MapContainsMatchers(component.ComponentSpec().PodLabels()),
+					},
 					"Spec": map[string]any{
 						"Containers": map[string]any{
 							fmt.Sprint(componentContainerIdx): map[string]any{
@@ -615,30 +619,6 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 			"name", sts.Name,
 		)
 		return false
-	}
-
-	// check pod annotations
-	for k, v := range component.ComponentSpec().PodAnnotations() {
-		if sts.Spec.Template.Annotations[k] != v {
-			klog.InfoS("Check Component statefulset annotations  but not expected",
-				"namespace", sts.Namespace,
-				"name", sts.Name,
-				"podAnnotations", sts.Spec.Template.Annotations,
-			)
-			return false
-		}
-	}
-
-	// check pod labels
-	for k, v := range component.ComponentSpec().PodLabels() {
-		if sts.Spec.Template.Labels[k] != v {
-			klog.InfoS("Check Component statefulset labels  but not expected",
-				"namespace", sts.Namespace,
-				"name", sts.Name,
-				"podLabels", sts.Spec.Template.Labels,
-			)
-			return false
-		}
 	}
 
 	return true

@@ -330,12 +330,7 @@ func isComponentConfigMapExpected(ctx context.Context, cfg *envconf.Config, comp
 		return false
 	}
 
-	matchers := make(map[string]any, len(componentConfigExpected))
-	for k, v := range componentConfigExpected {
-		matchers[k] = e2ematcher.ValidatorEq(v)
-	}
-
-	if err := e2ematcher.Struct(componentConfig, matchers); err != nil {
+	if err := e2ematcher.Struct(componentConfig, e2ematcher.MapContainsMatchers(componentConfigExpected)); err != nil {
 		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but ConfigMap not expected",
 			"namespace", cm.Namespace,
 			"name", cm.Name,

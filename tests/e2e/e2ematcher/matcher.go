@@ -1,6 +1,8 @@
 package e2ematcher
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -41,4 +43,12 @@ func Any(ms ...Matcher) Matcher {
 		}
 		return retErr
 	})
+}
+
+func MapContainsMatchers[K comparable, V any](m map[K]V) map[string]any {
+	matchers := make(map[string]any, len(m))
+	for k, v := range m {
+		matchers[fmt.Sprint(k)] = ValidatorEq(v)
+	}
+	return matchers
 }

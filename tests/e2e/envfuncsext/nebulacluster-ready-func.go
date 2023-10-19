@@ -21,6 +21,8 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -32,6 +34,7 @@ import (
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2ematcher"
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2eutils"
 )
 
 var defaultNebulaClusterReadyFuncs = []NebulaClusterReadyFunc{
@@ -133,6 +136,10 @@ func defaultNebulaClusterReadyFuncForGraphd(ctx context.Context, cfg *envconf.Co
 		if !isComponentConfigMapExpected(ctx, cfg, nc.GraphdComponent()) {
 			isReady = false
 		}
+
+		if !isComponentFlagsExpected(ctx, cfg, nc.GraphdComponent()) {
+			isReady = false
+		}
 	}
 
 	return isReady, nil
@@ -149,6 +156,10 @@ func defaultNebulaClusterReadyFuncForMetad(ctx context.Context, cfg *envconf.Con
 		if !isComponentConfigMapExpected(ctx, cfg, nc.MetadComponent()) {
 			isReady = false
 		}
+
+		if !isComponentFlagsExpected(ctx, cfg, nc.MetadComponent()) {
+			isReady = false
+		}
 	}
 
 	return isReady, nil
@@ -163,6 +174,10 @@ func defaultNebulaClusterReadyFuncForStoraged(ctx context.Context, cfg *envconf.
 		}
 
 		if !isComponentConfigMapExpected(ctx, cfg, nc.StoragedComponent()) {
+			isReady = false
+		}
+
+		if !isComponentFlagsExpected(ctx, cfg, nc.StoragedComponent()) {
 			isReady = false
 		}
 	}
@@ -212,6 +227,8 @@ func isComponentStatusExpected(
 }
 
 func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, component appsv1alpha1.NebulaClusterComponent) bool {
+	klog.V(5).InfoS("START isComponentStatefulSetExpected", "component", component.ComponentType())
+	defer klog.V(5).InfoS("END   isComponentStatefulSetExpected", "component", component.ComponentType())
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      component.GetName(),
@@ -243,13 +260,6 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 		)
 		return false
 	}
-
-	klog.InfoS("Check Component Resource find container in StatefulSet",
-		"namespace", sts.Namespace,
-		"name", sts.Name,
-		"container", component.ComponentType().String(),
-		"index", componentContainerIdx,
-	)
 
 	if err := e2ematcher.Struct(
 		sts,
@@ -284,6 +294,9 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 }
 
 func isComponentConfigMapExpected(ctx context.Context, cfg *envconf.Config, component appsv1alpha1.NebulaClusterComponent) bool {
+	klog.V(5).InfoS("START isComponentConfigMapExpected", "component", component.ComponentType())
+	defer klog.V(5).InfoS("END   isComponentConfigMapExpected", "component", component.ComponentType())
+
 	componentConfigExpected := component.GetConfig()
 	if len(componentConfigExpected) == 0 {
 		return true
@@ -304,26 +317,12 @@ func isComponentConfigMapExpected(ctx context.Context, cfg *envconf.Config, comp
 		return false
 	}
 
-	// extract configuration
-	componentConfig := make(map[string]string)
-	paramValuePattern := regexp.MustCompile(`--(\w+)=(.+)`)
-	scanner := bufio.NewScanner(strings.NewReader(cm.Data[component.GetConfigMapKey()]))
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.HasPrefix(line, "--") {
-			continue
-		}
-
-		matches := paramValuePattern.FindStringSubmatch(line)
-		if len(matches) != 3 {
-			continue
-		}
-
-		componentConfig[matches[1]] = matches[2]
-	}
-	if err := scanner.Err(); err != nil {
-		klog.ErrorS(err, "failed to parse configuration",
+	componentConfig, err := extractComponentConfig(
+		strings.NewReader(cm.Data[component.GetConfigMapKey()]),
+		regexp.MustCompile(`^--(\w+)=(.+)`),
+	)
+	if err != nil {
+		klog.ErrorS(err, "failed to parse configmap configuration",
 			"namespace", cm.Namespace,
 			"name", cm.Name,
 		)
@@ -339,4 +338,109 @@ func isComponentConfigMapExpected(ctx context.Context, cfg *envconf.Config, comp
 	}
 
 	return true
+}
+
+func isComponentFlagsExpected(_ context.Context, cfg *envconf.Config, component appsv1alpha1.NebulaClusterComponent) bool {
+	klog.V(5).InfoS("START isComponentFlagsExpected", "component", component.ComponentType())
+	defer klog.V(5).InfoS("END   isComponentFlagsExpected", "component", component.ComponentType())
+
+	componentConfigExpected := component.GetConfig()
+	if len(componentConfigExpected) == 0 {
+		return true
+	}
+
+	var httpPortName string
+	switch component.ComponentType() {
+	case appsv1alpha1.GraphdComponentType:
+		httpPortName = appsv1alpha1.GraphdPortNameHTTP
+	case appsv1alpha1.MetadComponentType:
+		httpPortName = appsv1alpha1.GraphdPortNameHTTP
+	case appsv1alpha1.StoragedComponentType:
+		httpPortName = appsv1alpha1.StoragedPortNameHTTP
+	default:
+		klog.ErrorS(nil, "unknown component type", "component", component.ComponentType())
+		return false
+	}
+
+	httpPort := int(component.GetPort(httpPortName))
+	for ordinal := int32(0); ordinal < component.ComponentSpec().Replicas(); ordinal++ {
+		if err := func() error {
+			podName := component.GetPodName(ordinal)
+			localPorts, stopChan, err := e2eutils.PortForward(
+				e2eutils.WithRestConfig(cfg.Client().RESTConfig()),
+				e2eutils.WithPod(component.GetNamespace(), podName),
+				e2eutils.WithAddress("localhost"),
+				e2eutils.WithPorts(httpPort),
+			)
+			if err != nil {
+				klog.ErrorS(err, "failed port forward",
+					"namespace", component.GetNamespace(),
+					"name", podName,
+					"ports", []int{httpPort},
+				)
+				return err
+			}
+			defer close(stopChan)
+
+			resp, err := http.Get(fmt.Sprintf("http://localhost:%d/flags", localPorts[0]))
+			if err != nil {
+				klog.ErrorS(err, "failed to get flags",
+					"namespace", component.GetNamespace(),
+					"name", podName,
+					"port", httpPort,
+				)
+				return err
+			}
+			defer func() {
+				if err = resp.Body.Close(); err != nil {
+					klog.ErrorS(err, "failed to close body",
+						"namespace", component.GetNamespace(),
+						"name", podName,
+					)
+				}
+			}()
+
+			componentConfig, err := extractComponentConfig(
+				resp.Body,
+				regexp.MustCompile(`^(\w+)=(.+)`),
+			)
+			if err != nil {
+				klog.ErrorS(err, "failed to parse flags configuration ",
+					"namespace", component.GetNamespace(),
+					"name", podName,
+				)
+				return err
+			}
+			if err = e2ematcher.Struct(componentConfig, e2ematcher.MapContainsMatchers(componentConfigExpected)); err != nil {
+				klog.ErrorS(err, "Waiting for NebulaCluster to be ready but component flags not expected",
+					"namespace", component.GetNamespace(),
+					"name", podName,
+				)
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return false
+		}
+	}
+
+	return true
+}
+
+func extractComponentConfig(r io.Reader, paramValuePattern *regexp.Regexp) (map[string]string, error) {
+	componentConfig := make(map[string]string)
+	scanner := bufio.NewScanner(r)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		matches := paramValuePattern.FindStringSubmatch(scanner.Text())
+		if len(matches) != 3 {
+			continue
+		}
+
+		componentConfig[matches[1]] = matches[2]
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return componentConfig, nil
 }

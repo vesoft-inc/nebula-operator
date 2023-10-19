@@ -481,7 +481,6 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 	metadAddress := strings.Join(nc.GetMetadEndpoints(MetadPortNameThrift), ",")
 	flags := " --meta_server_addrs=" + metadAddress +
 		" --local_ip=$(hostname)." + c.GetServiceFQDN() +
-		" --ws_ip=$(hostname)." + c.GetServiceFQDN() +
 		" --daemonize=false" + dataPath
 	if c.ComponentType() == MetadComponentType && nc.Spec.Metad.LicenseManagerURL != nil {
 		flags += " --license_manager_url=" + pointer.StringDeref(nc.Spec.Metad.LicenseManagerURL, "")

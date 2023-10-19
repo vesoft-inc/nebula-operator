@@ -46,7 +46,7 @@ enableKruiseScheme: false
 # Period at which the controller forces the repopulation of its local object stores. (default 0h30m0s)
 syncPeriod: 0h30m0s
 
-# Namespaces restricts the controller watches for updates to Kubernetes objects. If empty, all namespaces are watched.
+# Namespaces restricts the controller-manager watches for updates to Kubernetes objects. If empty, all namespaces are watched.
 # e.g. ns1,ns2,ns3
 watchNamespaces: ""
 

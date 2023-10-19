@@ -111,7 +111,8 @@ func Run(ctx context.Context, opts *options.Options) error {
 
 		Cache: cache.Options{
 			SyncPeriod: &opts.HPAOpts.HorizontalPodAutoscalerSyncPeriod.Duration,
-			Namespaces: opts.Namespaces,
+			// FIXME: *cache.multiNamespaceInformer missing method GetController
+			//Namespaces: opts.Namespaces,
 		},
 		Controller: config.Controller{
 			GroupKindConcurrency: map[string]int{

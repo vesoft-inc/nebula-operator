@@ -2,9 +2,6 @@ image:
   nebulaOperator:
     image: vesoft/nebula-operator:latest
     imagePullPolicy: Always
-  kubeRBACProxy:
-    image: bitnami/kube-rbac-proxy:0.14.2
-    imagePullPolicy: Always
 
 imagePullSecrets: [ ]
 kubernetesClusterDomain: ""
@@ -48,6 +45,10 @@ enableKruiseScheme: false
 
 # Period at which the controller forces the repopulation of its local object stores. (default 0h30m0s)
 syncPeriod: 0h30m0s
+
+# Namespaces restricts the controller watches for updates to Kubernetes objects. If empty, all namespaces are watched.
+# e.g. ns1,ns2,ns3
+watchNamespaces: ""
 
 # The number of NebulaCluster objects that are allowed to sync concurrently. (default 5)
 concurrentNebulaClusterSyncs: 5

@@ -26,6 +26,9 @@ spec:
           command:
             - /usr/local/bin/controller-manager
           args:
+            {{- if .Values.watchNamespaces }}
+            - --watch-namespaces={{ .Values.watchNamespaces }}
+            {{- end }}
             - --sync-period={{ .Values.syncPeriod }}
             - --concurrent-nebulacluster-syncs={{ .Values.concurrentNebulaClusterSyncs }}
             - --concurrent-nebularestore-syncs={{ .Values.concurrentNebulaRestoreSyncs }}
@@ -76,6 +79,9 @@ spec:
           command:
             - /usr/local/bin/autoscaler
           args:
+            {{- if .Values.watchNamespaces }}
+            - --watch-namespaces={{ .Values.watchNamespaces }}
+            {{- end }}
             - --concurrent-autoscaler-syncs={{ .Values.concurrentAutoscalerSyncs }}
             - --health-probe-bind-address=:8091
             - --metrics-bind-address=:8090

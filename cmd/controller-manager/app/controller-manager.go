@@ -96,6 +96,12 @@ func Run(ctx context.Context, opts *options.Options) error {
 		klog.Info("register openkruise scheme")
 	}
 
+	if len(opts.Namespaces) == 0 {
+		klog.Info("nebula-controller-manager watches all namespaces")
+	} else {
+		klog.Infof("nebula-controller-manager watches namespaces %v", opts.Namespaces)
+	}
+
 	cfg, err := ctrlruntime.GetConfig()
 	if err != nil {
 		panic(err)
@@ -115,7 +121,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 		MetricsBindAddress:         opts.MetricsBindAddress,
 		Cache: cache.Options{
 			SyncPeriod: &opts.SyncPeriod.Duration,
-			//Namespaces: opts.Namespaces,
+			Namespaces: opts.Namespaces,
 		},
 		Controller: config.Controller{
 			GroupKindConcurrency: map[string]int{
@@ -181,7 +187,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 	}
 
 	if err := mgr.Start(ctx); err != nil {
-		klog.Errorf("controller manager exits unexpectedly: %v", err)
+		klog.Errorf("nebula-controller-manager exits unexpectedly: %v", err)
 		return err
 	}
 

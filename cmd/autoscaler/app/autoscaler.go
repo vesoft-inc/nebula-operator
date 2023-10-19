@@ -85,6 +85,12 @@ func Run(ctx context.Context, opts *options.Options) error {
 
 	profileflag.ListenAndServe(opts.ProfileOpts)
 
+	if len(opts.Namespaces) == 0 {
+		klog.Info("nebula-autoscaler watches all namespaces")
+	} else {
+		klog.Infof("nebula-autoscaler watches namespaces %v", opts.Namespaces)
+	}
+
 	cfg, err := ctrlruntime.GetConfig()
 	if err != nil {
 		panic(err)
@@ -105,7 +111,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 
 		Cache: cache.Options{
 			SyncPeriod: &opts.HPAOpts.HorizontalPodAutoscalerSyncPeriod.Duration,
-			//Namespaces: opts.Namespaces,
+			Namespaces: opts.Namespaces,
 		},
 		Controller: config.Controller{
 			GroupKindConcurrency: map[string]int{
@@ -117,7 +123,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 
 	mgr, err := ctrlruntime.NewManager(cfg, ctrlOptions)
 	if err != nil {
-		klog.Errorf("Failed to build controller manager: %v", err)
+		klog.Errorf("Failed to build nebula-autoscaler: %v", err)
 		return err
 	}
 
@@ -146,7 +152,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 	}
 
 	if err := mgr.Start(ctx); err != nil {
-		klog.Errorf("controller manager exits unexpectedly: %v", err)
+		klog.Errorf("nebula-autoscaler exits unexpectedly: %v", err)
 		return err
 	}
 

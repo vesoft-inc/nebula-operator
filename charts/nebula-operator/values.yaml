@@ -2,9 +2,6 @@ image:
   nebulaOperator:
     image: vesoft/nebula-operator:latest
     imagePullPolicy: Always
-  kubeRBACProxy:
-    image: bitnami/kube-rbac-proxy:0.14.2
-    imagePullPolicy: Always
 
 imagePullSecrets: [ ]
 kubernetesClusterDomain: ""

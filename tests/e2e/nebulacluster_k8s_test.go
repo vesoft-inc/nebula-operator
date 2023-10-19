@@ -12,12 +12,14 @@ import (
 const (
 	LabelCategoryK8s = "k8s"
 
-	LabelGroupK8sEnv          = "env"
-	LabelGroupK8sAnnotations  = "annotations"
-	LabelGroupK8sLabels       = "labels"
-	LabelGroupK8sNodeSelector = "nodeSelector"
-	LabelGroupK8sAffinity     = "affinity"
-	LabelGroupK8sTolerations  = "tolerations"
+	LabelGroupK8sEnv               = "env"
+	LabelGroupK8sAnnotations       = "annotations"
+	LabelGroupK8sLabels            = "labels"
+	LabelGroupK8sNodeSelector      = "nodeSelector"
+	LabelGroupK8sAffinity          = "affinity"
+	LabelGroupK8sTolerations       = "tolerations"
+	LabelGroupK8sInitContainers    = "initContainers"
+	LabelGroupK8sSidecarContainers = "sidecarContainers"
 )
 
 var testCasesK8s []ncTestCase
@@ -29,6 +31,8 @@ func init() {
 	testCasesK8s = append(testCasesK8s, testCaseK8sNodeSelector...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sAffinity...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sTolerations...)
+	testCasesK8s = append(testCasesK8s, testCaseK8sInitContainers...)
+	testCasesK8s = append(testCasesK8s, testCaseK8sSidecarContainers...)
 }
 
 var testCaseK8sEnv = []ncTestCase{
@@ -230,7 +234,7 @@ var testCaseK8sLabels = []ncTestCase{
 
 var testCaseK8sNodeSelector = []ncTestCase{
 	{
-		Name: "k8s node selector with default values",
+		Name: "k8s nodeSelector with default values",
 		Labels: map[string]string{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sNodeSelector,
@@ -383,7 +387,7 @@ var testCaseK8sAffinity = []ncTestCase{
 
 var testCaseK8sTolerations = []ncTestCase{
 	{
-		Name: "k8s node selector with default values",
+		Name: "k8s tolerations with default values",
 		Labels: map[string]string{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sTolerations,
@@ -445,6 +449,151 @@ var testCaseK8sTolerations = []ncTestCase{
 											Operator: corev1.TolerationOpEqual,
 											Value:    "test-value",
 											Effect:   corev1.TaintEffectNoSchedule,
+										},
+									}),
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
+}
+
+var testCaseK8sInitContainers = []ncTestCase{
+	{
+		Name: "k8s initContainers with default values",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCategoryK8s,
+			LabelKeyGroup:    LabelGroupK8sInitContainers,
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name: "update components initContainers",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.graphd.initContainers[0].name=init-container",
+							"--set", "nebula.graphd.initContainers[0].image=busybox",
+							"--set", "nebula.graphd.initContainers[0].command[0]=sh",
+							"--set", "nebula.storaged.initContainers[0].name=init-container",
+							"--set", "nebula.storaged.initContainers[0].image=busybox",
+							"--set", "nebula.storaged.initContainers[0].command[0]=sh",
+							"--set", "nebula.metad.initContainers[0].name=init-container",
+							"--set", "nebula.metad.initContainers[0].image=busybox",
+							"--set", "nebula.metad.initContainers[0].command[0]=sh",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
+							"Spec": map[string]any{
+								"Graphd": map[string]any{
+									"InitContainers": e2ematcher.DeepEqual([]corev1.Container{
+										{
+											Name:    "init-container",
+											Image:   "busybox",
+											Command: []string{"sh"},
+										},
+									}),
+								},
+								"Storaged": map[string]any{
+									"InitContainers": e2ematcher.DeepEqual([]corev1.Container{
+										{
+											Name:    "init-container",
+											Image:   "busybox",
+											Command: []string{"sh"},
+										},
+									}),
+								},
+								"Metad": map[string]any{
+									"InitContainers": e2ematcher.DeepEqual([]corev1.Container{
+										{
+											Name:    "init-container",
+											Image:   "busybox",
+											Command: []string{"sh"},
+										},
+									}),
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
+}
+
+var testCaseK8sSidecarContainers = []ncTestCase{
+	{
+		Name: "k8s sidecarContainers with default values",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCategoryK8s,
+			LabelKeyGroup:    LabelGroupK8sSidecarContainers,
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name: "update components sidecarContainers",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.graphd.sidecarContainers[0].name=sidecar-container",
+							"--set", "nebula.graphd.sidecarContainers[0].image=busybox",
+							"--set", "nebula.graphd.sidecarContainers[0].command[0]=sleep",
+							"--set", "nebula.graphd.sidecarContainers[0].command[1]=infinity",
+							"--set", "nebula.storaged.sidecarContainers[0].name=sidecar-container",
+							"--set", "nebula.storaged.sidecarContainers[0].image=busybox",
+							"--set", "nebula.storaged.sidecarContainers[0].command[0]=sleep",
+							"--set", "nebula.storaged.sidecarContainers[0].command[1]=infinity",
+							"--set", "nebula.metad.sidecarContainers[0].name=sidecar-container",
+							"--set", "nebula.metad.sidecarContainers[0].image=busybox",
+							"--set", "nebula.metad.sidecarContainers[0].command[0]=sleep",
+							"--set", "nebula.metad.sidecarContainers[0].command[1]=infinity",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
+							"Spec": map[string]any{
+								"Graphd": map[string]any{
+									"SidecarContainers": e2ematcher.DeepEqual([]corev1.Container{
+										{
+											Name:    "sidecar-container",
+											Image:   "busybox",
+											Command: []string{"sleep", "infinity"},
+										},
+									}),
+								},
+								"Storaged": map[string]any{
+									"SidecarContainers": e2ematcher.DeepEqual([]corev1.Container{
+										{
+											Name:    "sidecar-container",
+											Image:   "busybox",
+											Command: []string{"sleep", "infinity"},
+										},
+									}),
+								},
+								"Metad": map[string]any{
+									"SidecarContainers": e2ematcher.DeepEqual([]corev1.Container{
+										{
+											Name:    "sidecar-container",
+											Image:   "busybox",
+											Command: []string{"sleep", "infinity"},
 										},
 									}),
 								},

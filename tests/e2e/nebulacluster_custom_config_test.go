@@ -18,6 +18,7 @@ const (
 	LabelCustomConfig        = "custom config"
 	LabelCustomConfigStatic  = "static"
 	LabelCustomConfigDynamic = "dynamic"
+	LabelCustomConfigPort    = "port"
 )
 
 var testCasesCustomConfig []ncTestCase
@@ -25,6 +26,7 @@ var testCasesCustomConfig []ncTestCase
 func init() {
 	testCasesCustomConfig = append(testCasesCustomConfig, testCasesCustomConfigStatic...)
 	testCasesCustomConfig = append(testCasesCustomConfig, testCasesCustomConfigDynamic...)
+	testCasesCustomConfig = append(testCasesCustomConfig, testCasesCustomConfigPort...)
 }
 
 // test cases about static custom config
@@ -249,6 +251,108 @@ var testCasesCustomConfigDynamic = []ncTestCase{
 									"Replicas": e2ematcher.ValidatorEq(3),
 									"Config": map[string]any{
 										"v": e2ematcher.ValidatorEq("3"),
+									},
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
+}
+
+// test cases about port custom config
+var testCasesCustomConfigPort = []ncTestCase{
+	{
+		Name: "custom config thrift port and http port",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCustomConfig,
+			LabelKeyGroup:    LabelCustomConfigPort,
+		},
+		InstallNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs( // thrift 90x9, http 190x9
+					"--set-string", "nebula.graphd.config.port=9069",
+					"--set-string", "nebula.graphd.config.ws_http_port=19069",
+					"--set-string", "nebula.metad.config.port=9059",
+					"--set-string", "nebula.metad.config.ws_http_port=19059",
+					"--set-string", "nebula.storaged.config.port=9079",
+					"--set-string", "nebula.storaged.config.ws_http_port=19079",
+				),
+			),
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
+					"Spec": map[string]any{
+						"Graphd": map[string]any{
+							"Replicas": e2ematcher.ValidatorEq(2),
+							"Config": map[string]any{
+								"port":         e2ematcher.ValidatorEq("9069"),
+								"ws_http_port": e2ematcher.ValidatorEq("19069"),
+							},
+						},
+						"Metad": map[string]any{
+							"Replicas": e2ematcher.ValidatorEq(3),
+							"Config": map[string]any{
+								"port":         e2ematcher.ValidatorEq("9059"),
+								"ws_http_port": e2ematcher.ValidatorEq("19059"),
+							},
+						},
+						"Storaged": map[string]any{
+							"Replicas": e2ematcher.ValidatorEq(3),
+							"Config": map[string]any{
+								"port":         e2ematcher.ValidatorEq("9079"),
+								"ws_http_port": e2ematcher.ValidatorEq("19079"),
+							},
+						},
+					},
+				}),
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		LoadLDBC: true,
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name:        "update http ports",
+				UpgradeFunc: nil,
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs( // http 190x9 => 191x9
+							"--set-string", "nebula.graphd.config.port=9069",
+							"--set-string", "nebula.graphd.config.ws_http_port=19169",
+							"--set-string", "nebula.metad.config.port=9059",
+							"--set-string", "nebula.metad.config.ws_http_port=19159",
+							"--set-string", "nebula.storaged.config.port=9079",
+							"--set-string", "nebula.storaged.config.ws_http_port=19179",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
+							"Spec": map[string]any{
+								"Graphd": map[string]any{
+									"Replicas": e2ematcher.ValidatorEq(2),
+									"Config": map[string]any{
+										"port":         e2ematcher.ValidatorEq("9069"),
+										"ws_http_port": e2ematcher.ValidatorEq("19169"),
+									},
+								},
+								"Metad": map[string]any{
+									"Replicas": e2ematcher.ValidatorEq(3),
+									"Config": map[string]any{
+										"port":         e2ematcher.ValidatorEq("9059"),
+										"ws_http_port": e2ematcher.ValidatorEq("19159"),
+									},
+								},
+								"Storaged": map[string]any{
+									"Replicas": e2ematcher.ValidatorEq(3),
+									"Config": map[string]any{
+										"port":         e2ematcher.ValidatorEq("9079"),
+										"ws_http_port": e2ematcher.ValidatorEq("19179"),
 									},
 								},
 							},

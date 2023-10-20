@@ -71,7 +71,7 @@ var testCasesCustomConfigStatic = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
 							"Spec": map[string]any{
 								"Graphd": map[string]any{
 									"Replicas": e2ematcher.ValidatorEq(2),
@@ -116,7 +116,7 @@ var testCasesCustomConfigStatic = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
 							"Spec": map[string]any{
 								"Graphd": map[string]any{
 									"Replicas": e2ematcher.ValidatorEq(2),
@@ -188,7 +188,7 @@ var testCasesCustomConfigDynamic = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
 							"Spec": map[string]any{
 								"Graphd": map[string]any{
 									"Replicas": e2ematcher.ValidatorEq(2),
@@ -233,7 +233,7 @@ var testCasesCustomConfigDynamic = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
 							"Spec": map[string]any{
 								"Graphd": map[string]any{
 									"Replicas": e2ematcher.ValidatorEq(2),
@@ -332,7 +332,7 @@ var testCasesCustomConfigPort = []ncTestCase{
 				},
 				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterReadyFuncs(
-						envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
 							"Spec": map[string]any{
 								"Graphd": map[string]any{
 									"Replicas": e2ematcher.ValidatorEq(2),

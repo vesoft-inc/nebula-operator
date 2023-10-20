@@ -185,17 +185,84 @@ func defaultNebulaClusterReadyFuncForStoraged(ctx context.Context, cfg *envconf.
 	return isReady, nil
 }
 
-func defaultNebulaClusterReadyFuncForAgent(_ context.Context, _ *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+func defaultNebulaClusterReadyFuncForAgent(_ context.Context, _ *envconf.Config, _ *appsv1alpha1.NebulaCluster) (bool, error) {
 	// TODO
 	return true, nil
 }
 
-func defaultNebulaClusterReadyFuncForExporter(_ context.Context, _ *envconf.Config, _ *appsv1alpha1.NebulaCluster) (bool, error) {
-	// TODO
+func defaultNebulaClusterReadyFuncForExporter(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+	if nc.Spec.Exporter == nil {
+		return true, nil
+	}
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-exporter", nc.GetName()),
+			Namespace: nc.GetNamespace(),
+		},
+	}
+	if err := cfg.Client().Resources().Get(ctx, deploy.Name, deploy.Namespace, deploy); err != nil {
+		klog.InfoS("Check Exporter but Deployment not found",
+			"namespace", deploy.Namespace,
+			"name", deploy.Name,
+		)
+		return false, err
+	}
+
+	exporterContainerIdx := -1
+	for i, c := range deploy.Spec.Template.Spec.Containers {
+		if c.Name == "ng-exporter" {
+			exporterContainerIdx = i
+			break
+		}
+	}
+
+	if exporterContainerIdx == -1 {
+		klog.InfoS("Check Exporter but container not found",
+			"namespace", deploy.Namespace,
+			"name", deploy.Name,
+			"container", "ng-exporter",
+		)
+		return false, stderrors.New("container not found")
+	}
+
+	if err := e2ematcher.Struct(
+		deploy,
+		map[string]any{
+			"Spec": map[string]any{
+				"Replicas": e2ematcher.ValidatorEq(*nc.Spec.Exporter.Replicas),
+				"Template": map[string]any{
+					"Spec": map[string]any{
+						"Containers": map[string]any{
+							fmt.Sprint(exporterContainerIdx): map[string]any{
+								"Image":     e2ematcher.ValidatorEq(nc.ExporterComponent().ComponentSpec().PodImage()),
+								"Resources": e2ematcher.DeepEqual(*nc.ExporterComponent().ComponentSpec().Resources()),
+							},
+						},
+					},
+				},
+			},
+			"Status": map[string]any{
+				"ObservedGeneration": e2ematcher.ValidatorEq(deploy.Generation),
+				"Replicas":           e2ematcher.ValidatorEq(*nc.Spec.Exporter.Replicas),
+				"ReadyReplicas":      e2ematcher.ValidatorEq(*nc.Spec.Exporter.Replicas),
+			},
+		},
+	); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but Exporter not expected",
+			"namespace", deploy.Namespace,
+			"name", deploy.Name,
+		)
+		return false, err
+	}
+
 	return true, nil
 }
 
-func defaultNebulaClusterReadyFuncForConsole(_ context.Context, _ *envconf.Config, _ *appsv1alpha1.NebulaCluster) (bool, error) {
+func defaultNebulaClusterReadyFuncForConsole(_ context.Context, _ *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+	if nc.Spec.Console == nil {
+		return true, nil
+	}
+
 	// TODO
 	return true, nil
 }
@@ -280,6 +347,14 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 						},
 					},
 				},
+			},
+			"Status": map[string]any{
+				"ObservedGeneration": e2ematcher.ValidatorEq(sts.Generation),
+				"Replicas":           e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
+				"ReadyReplicas":      e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
+				"CurrentReplicas":    e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
+				"UpdatedReplicas":    e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
+				"AvailableReplicas":  e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
 			},
 		},
 	); err != nil {

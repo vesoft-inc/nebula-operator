@@ -3,6 +3,7 @@ package e2e
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2ematcher"
@@ -20,6 +21,8 @@ const (
 	LabelGroupK8sTolerations       = "tolerations"
 	LabelGroupK8sInitContainers    = "initContainers"
 	LabelGroupK8sSidecarContainers = "sidecarContainers"
+	LabelGroupK8sReadinessProbe    = "readinessProbe"
+	LabelGroupK8sLivenessProbe     = "livenessProbe"
 )
 
 var testCasesK8s []ncTestCase
@@ -33,6 +36,8 @@ func init() {
 	testCasesK8s = append(testCasesK8s, testCaseK8sTolerations...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sInitContainers...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sSidecarContainers...)
+	testCasesK8s = append(testCasesK8s, testCaseK8sReadinessProbe...)
+	testCasesK8s = append(testCasesK8s, testCaseK8sLivenessProbe...)
 }
 
 var testCaseK8sEnv = []ncTestCase{
@@ -594,6 +599,100 @@ var testCaseK8sSidecarContainers = []ncTestCase{
 											Name:    "sidecar-container",
 											Image:   "busybox",
 											Command: []string{"sleep", "infinity"},
+										},
+									}),
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
+}
+
+var testCaseK8sReadinessProbe = []ncTestCase{
+	{
+		Name: "k8s readinessProbe with default values",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCategoryK8s,
+			LabelKeyGroup:    LabelGroupK8sReadinessProbe,
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name: "update components readinessProbe",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.graphd.readinessProbe.httpGet.path=/status",
+							"--set", "nebula.graphd.readinessProbe.httpGet.port=19669",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
+							"Spec": map[string]any{
+								"Graphd": map[string]any{
+									"ReadinessProbe": e2ematcher.DeepEqual(corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path: "/status",
+												Port: intstr.FromInt(19669),
+											},
+										},
+									}),
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
+}
+
+var testCaseK8sLivenessProbe = []ncTestCase{
+	{
+		Name: "k8s livenessProbe with default values",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCategoryK8s,
+			LabelKeyGroup:    LabelGroupK8sLivenessProbe,
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name: "update components livenessProbe",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.graphd.livenessProbe.httpGet.path=/status",
+							"--set", "nebula.graphd.livenessProbe.httpGet.port=19669",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
+							"Spec": map[string]any{
+								"Graphd": map[string]any{
+									"LivenessProbe": e2ematcher.DeepEqual(corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path: "/status",
+												Port: intstr.FromInt(19669),
+											},
 										},
 									}),
 								},

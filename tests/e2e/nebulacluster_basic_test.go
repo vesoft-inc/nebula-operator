@@ -408,7 +408,7 @@ var testCasesBasicResources = []ncTestCase{
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
-				envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
+				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
 					"Spec": map[string]any{
 						"Metad": map[string]any{
 							"Resources": e2ematcher.DeepEqual(

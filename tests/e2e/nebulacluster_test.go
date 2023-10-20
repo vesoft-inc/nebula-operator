@@ -36,13 +36,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 )
 
-var ncGlobalTestCases []ncTestCase
-
-func init() {
-	ncGlobalTestCases = append(ncGlobalTestCases, testCasesBasic...)
-	ncGlobalTestCases = append(ncGlobalTestCases, testCasesCustomConfig...)
-}
-
 type (
 	ncTestCase struct {
 		Name                 string
@@ -62,12 +55,17 @@ type (
 )
 
 func TestNebulaCluster(t *testing.T) {
+	var ncTestCases []ncTestCase
+	ncTestCases = append(ncTestCases, testCasesBasic...)
+	ncTestCases = append(ncTestCases, testCasesCustomConfig...)
+	ncTestCases = append(ncTestCases, testCasesTools...)
+
 	defaultNebulaClusterHelmArgs := getDefaultNebulaClusterHelmArgs()
 
-	testFeatures := make([]features.Feature, 0, len(ncGlobalTestCases))
-	for caseIdx := range ncGlobalTestCases {
+	testFeatures := make([]features.Feature, 0, len(ncTestCases))
+	for caseIdx := range ncTestCases {
 		caseIdx := caseIdx
-		tc := ncGlobalTestCases[caseIdx]
+		tc := ncTestCases[caseIdx]
 
 		namespace := envconf.RandomName(fmt.Sprintf("e2e-nc-%d", caseIdx), 32)
 		name := envconf.RandomName(fmt.Sprintf("e2e-nc-%d", caseIdx), 32)

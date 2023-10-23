@@ -21,6 +21,7 @@ const (
 	LabelGroupK8sTolerations       = "tolerations"
 	LabelGroupK8sInitContainers    = "initContainers"
 	LabelGroupK8sSidecarContainers = "sidecarContainers"
+	LabelGroupK8sVolumes           = "volumes"
 	LabelGroupK8sReadinessProbe    = "readinessProbe"
 	LabelGroupK8sLivenessProbe     = "livenessProbe"
 )
@@ -36,6 +37,7 @@ func init() {
 	testCasesK8s = append(testCasesK8s, testCaseK8sTolerations...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sInitContainers...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sSidecarContainers...)
+	testCasesK8s = append(testCasesK8s, testCaseK8sVolumes...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sReadinessProbe...)
 	testCasesK8s = append(testCasesK8s, testCaseK8sLivenessProbe...)
 }
@@ -790,6 +792,107 @@ var testCaseK8sLivenessProbe = []ncTestCase{
 										PeriodSeconds:    int32(10),
 										TimeoutSeconds:   int32(1),
 										SuccessThreshold: int32(1),
+									}),
+								},
+							},
+						}),
+						envfuncsext.DefaultNebulaClusterReadyFunc,
+					),
+				},
+			},
+		},
+	},
+}
+
+var testCaseK8sVolumes = []ncTestCase{
+	{
+		Name: "k8s volumes with default values",
+		Labels: map[string]string{
+			LabelKeyCategory: LabelCategoryK8s,
+			LabelKeyGroup:    LabelGroupK8sVolumes,
+		},
+		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterReadyFuncs(
+				envfuncsext.DefaultNebulaClusterReadyFunc,
+			),
+		},
+		UpgradeCases: []ncTestUpgradeCase{
+			{
+				Name: "update components volumes",
+				UpgradeNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterHelmRawOptions(
+						helm.WithArgs(
+							"--set", "nebula.graphd.volumes[0].name=test-volume",
+							"--set", "nebula.graphd.volumes[0].emptyDir.medium=Memory",
+							"--set", "nebula.graphd.volumeMounts[0].name=test-volume",
+							"--set", "nebula.graphd.volumeMounts[0].mountPath=/test",
+							"--set", "nebula.storaged.volumes[0].name=test-volume",
+							"--set", "nebula.storaged.volumes[0].emptyDir.medium=Memory",
+							"--set", "nebula.storaged.volumeMounts[0].name=test-volume",
+							"--set", "nebula.storaged.volumeMounts[0].mountPath=/test",
+							"--set", "nebula.metad.volumes[0].name=test-volume",
+							"--set", "nebula.metad.volumes[0].emptyDir.medium=Memory",
+							"--set", "nebula.metad.volumeMounts[0].name=test-volume",
+							"--set", "nebula.metad.volumeMounts[0].mountPath=/test",
+						),
+					),
+				},
+				UpgradeWaitNCOptions: []envfuncsext.NebulaClusterOption{
+					envfuncsext.WithNebulaClusterReadyFuncs(
+						envfuncsext.NebulaClusterReadyFuncForFields(true, map[string]any{
+							"Spec": map[string]any{
+								"Graphd": map[string]any{
+									"Volumes": e2ematcher.DeepEqual([]corev1.Volume{
+										{
+											Name: "test-volume",
+											VolumeSource: corev1.VolumeSource{
+												EmptyDir: &corev1.EmptyDirVolumeSource{
+													Medium: corev1.StorageMediumMemory,
+												},
+											},
+										},
+									}),
+									"VolumeMounts": e2ematcher.DeepEqual([]corev1.VolumeMount{
+										{
+											Name:      "test-volume",
+											MountPath: "/test",
+										},
+									}),
+								},
+								"Storaged": map[string]any{
+									"Volumes": e2ematcher.DeepEqual([]corev1.Volume{
+										{
+											Name: "test-volume",
+											VolumeSource: corev1.VolumeSource{
+												EmptyDir: &corev1.EmptyDirVolumeSource{
+													Medium: corev1.StorageMediumMemory,
+												},
+											},
+										},
+									}),
+									"VolumeMounts": e2ematcher.DeepEqual([]corev1.VolumeMount{
+										{
+											Name:      "test-volume",
+											MountPath: "/test",
+										},
+									}),
+								},
+								"Metad": map[string]any{
+									"Volumes": e2ematcher.DeepEqual([]corev1.Volume{
+										{
+											Name: "test-volume",
+											VolumeSource: corev1.VolumeSource{
+												EmptyDir: &corev1.EmptyDirVolumeSource{
+													Medium: corev1.StorageMediumMemory,
+												},
+											},
+										},
+									}),
+									"VolumeMounts": e2ematcher.DeepEqual([]corev1.VolumeMount{
+										{
+											Name:      "test-volume",
+											MountPath: "/test",
+										},
 									}),
 								},
 							},

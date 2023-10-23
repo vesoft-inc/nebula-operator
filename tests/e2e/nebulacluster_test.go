@@ -36,14 +36,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 )
 
-var ncGlobalTestCases []ncTestCase
-
-func init() {
-	ncGlobalTestCases = append(ncGlobalTestCases, testCasesBasic...)
-	ncGlobalTestCases = append(ncGlobalTestCases, testCasesCustomConfig...)
-	ncGlobalTestCases = append(ncGlobalTestCases, testCasesK8s...)
-}
-
 type (
 	ncTestCase struct {
 		Name                 string
@@ -69,6 +61,7 @@ func TestNebulaCluster(t *testing.T) {
 	ncTestCases = append(ncTestCases, testCasesTools...)
 	ncTestCases = append(ncTestCases, testCasesZone...)
 	ncTestCases = append(ncTestCases, testCasesPV...)
+	ncTestCases = append(ncTestCases, testCasesK8s...)
 
 	defaultNebulaClusterHelmArgs := getDefaultNebulaClusterHelmArgs()
 

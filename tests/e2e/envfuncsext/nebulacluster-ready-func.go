@@ -606,8 +606,8 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 							},
 						},
 						"NodeSelector": e2ematcher.DeepEqual(nodeSelector),
-						//"Affinity":     e2ematcher.DeepEqual(&[]corev1.Affinity{}),
-						"Tolerations": e2ematcher.DeepEqual(component.ComponentSpec().Tolerations()),
+						"Affinity":     e2ematcher.DeepEqual(affinityPtrOrNil(component.ComponentSpec().Affinity())),
+						"Tolerations":  e2ematcher.DeepEqual(component.ComponentSpec().Tolerations()),
 					},
 				},
 			},
@@ -796,4 +796,11 @@ func extractComponentConfig(r io.Reader, paramValuePattern *regexp.Regexp) (map[
 		return nil, err
 	}
 	return componentConfig, nil
+}
+
+func affinityPtrOrNil(affinity *corev1.Affinity) any {
+	if affinity == nil {
+		return affinity
+	}
+	return *affinity
 }

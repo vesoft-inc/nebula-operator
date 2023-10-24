@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var statefulPodRegex = regexp.MustCompile("(.*)-([0-9]+)$")
@@ -58,4 +58,12 @@ func getConfigMapName(pod *corev1.Pod) string {
 func needSchedule(podName string) bool {
 	return strings.Contains(podName, v1alpha1.GraphdComponentType.String()) ||
 		strings.Contains(podName, v1alpha1.StoragedComponentType.String())
+}
+
+func getPodNameByOrdinal(parentName string, ordinal int) string {
+	return fmt.Sprintf("%s-%d", parentName, ordinal)
+}
+
+func getNamespacedName(obj metav1.Object) string {
+	return fmt.Sprintf("%v/%v", obj.GetNamespace(), obj.GetName())
 }

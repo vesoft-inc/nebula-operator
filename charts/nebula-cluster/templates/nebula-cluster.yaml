@@ -247,4 +247,6 @@ spec:
   {{- if .Values.nebula.logRotate }}
   logRotate: {{ toYaml .Values.nebula.logRotate | nindent 4 }}
   {{- end }}
-
+  {{- if .Values.nebula.alpineImage }}
+  alpineImage: {{ .Values.nebula.alpineImage }}
+  {{- end }}

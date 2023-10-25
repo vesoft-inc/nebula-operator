@@ -16,7 +16,17 @@ apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
 - role: worker
+  labels:
+    topology.kubernetes.io/zone: zone1
 - role: worker
+  labels:
+    topology.kubernetes.io/zone: zone2
 - role: worker
+  labels:
+    topology.kubernetes.io/zone: zone3
 - role: worker
+  labels:
+    topology.kubernetes.io/zone: zone1
 - role: worker
+  labels:
+    topology.kubernetes.io/zone: zone2

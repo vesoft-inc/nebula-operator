@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/klog/v2"
 )
 
 func Struct(actual any, matchers map[string]any) (retErr error) {
@@ -33,6 +34,7 @@ func structImpl(preFields []string, actual any, matchers map[string]any) (retErr
 			retErr = multierror.Append(retErr, fmt.Errorf("fields %q is invalid", currFields))
 			continue
 		}
+		klog.V(6).InfoS("e2ematcher struct impl on fields", "fields", currFields)
 
 		if m, ok := matcher.(Matcher); ok {
 			for actualVal.Kind() == reflect.Ptr {

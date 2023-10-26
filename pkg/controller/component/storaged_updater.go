@@ -239,7 +239,7 @@ func (s *storagedUpdater) transLeaderIfNecessary(
 				continue
 			}
 			if partItem.Leader.Host == host {
-				newLeader := getNewLeader(nc, *nc.Spec.Storaged.Replicas, ordinal)
+				newLeader := getNewLeaderFromPeers(partItem.Leader.Host, partItem.Peers)
 				if err := s.transLeader(sc, nc, spaceID, partItem.PartID, newLeader); err != nil {
 					return err
 				}
@@ -288,7 +288,7 @@ func (s *storagedUpdater) concurrentTransLeader(nc *v1alpha1.NebulaCluster, mc n
 							}
 						}()
 
-						newLeader := getNewLeader(nc, *nc.Spec.Storaged.Replicas, ordinal)
+						newLeader := getNewLeaderFromPeers(partItem.Leader.Host, partItem.Peers)
 						if err := s.transLeader(sc, nc, spaceID, partItem.PartID, newLeader); err != nil {
 							return err
 						}
@@ -325,7 +325,10 @@ func (s *storagedUpdater) transLeader(
 		return err
 	}
 	if host != "" {
-		leaderHost = host
+		newLeader.Host = host
+		if err, _ := storageClient.TransLeader(spaceID, partID, newLeader); err != nil {
+			return err
+		}
 	}
 	klog.Infof("storaged cluster [%s/%s] transfer leader spaceID %d partitionID %d to host %s successfully",
 		namespace, componentName, spaceID, partID, leaderHost)
@@ -348,19 +351,12 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 	return nil
 }
 
-func getNewLeader(nc *v1alpha1.NebulaCluster, replicas, ordinal int32) *nebulago.HostAddr {
-	var host string
-	newLeader := &nebulago.HostAddr{
-		Port: nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift),
+func getNewLeaderFromPeers(leaderHost string, peers []*nebulago.HostAddr) *nebulago.HostAddr {
+	for i, peer := range peers {
+		if peer.Host == leaderHost {
+			n := (i + 1) % len(peers)
+			return peers[n]
+		}
 	}
-
-	if replicas == 3 || replicas > 3 && replicas&1 == 0 {
-		host = nc.StoragedComponent().GetPodFQDN((ordinal + 2) % replicas)
-		newLeader.Host = host
-	} else if replicas > 3 && replicas&1 == 1 {
-		host = nc.StoragedComponent().GetPodFQDN((ordinal + 3) % replicas)
-		newLeader.Host = host
-	}
-
-	return newLeader
+	return nil
 }

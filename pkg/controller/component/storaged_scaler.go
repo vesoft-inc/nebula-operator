@@ -173,14 +173,6 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		}
 		if len(spaces) > 0 {
 			for _, space := range spaces {
-				leaderSets, err := metaClient.GetSpaceLeaderHosts(space.Name)
-				if err != nil {
-					return err
-				}
-				removed := filterRemovedHosts(sets.New[string](leaderSets...), scaleSets, hosts)
-				if len(removed) == 0 {
-					continue
-				}
 				if err := ss.removeHost(metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
 					klog.Errorf("remove hosts %v failed: %v", hosts, err)
 					return err
@@ -332,23 +324,4 @@ func (ss *storageScaler) removeHost(
 		return err
 	}
 	return nil
-}
-
-func filterRemovedHosts(leaderSets, scaleSets sets.Set[string], scaledHosts []*nebulago.HostAddr) []*nebulago.HostAddr {
-	result := sets.New[string]()
-	for key := range scaleSets {
-		if leaderSets.Has(key) {
-			result.Insert(key)
-		}
-	}
-	if len(result) == 0 {
-		return nil
-	}
-	removed := make([]*nebulago.HostAddr, 0)
-	for _, host := range scaledHosts {
-		if result.Has(host.Host) {
-			removed = append(removed, host)
-		}
-	}
-	return removed
 }

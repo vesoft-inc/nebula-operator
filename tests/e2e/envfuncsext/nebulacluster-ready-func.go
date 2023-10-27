@@ -45,6 +45,7 @@ var defaultNebulaClusterReadyFuncs = []NebulaClusterReadyFunc{
 	defaultNebulaClusterReadyFuncForGraphd,
 	defaultNebulaClusterReadyFuncForMetad,
 	defaultNebulaClusterReadyFuncForStoraged,
+	defaultNebulaClusterReadyFuncForPVC,
 	defaultNebulaClusterReadyFuncForZone,
 	defaultNebulaClusterReadyFuncForAgent,
 	defaultNebulaClusterReadyFuncForExporter,
@@ -187,6 +188,60 @@ func defaultNebulaClusterReadyFuncForStoraged(ctx context.Context, cfg *envconf.
 	}
 
 	return isReady, nil
+}
+
+func defaultNebulaClusterReadyFuncForPVC(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+	pvcResourcesMappingExpected := make(map[string]string)
+	for _, component := range []appsv1alpha1.NebulaClusterComponent{
+		nc.GraphdComponent(),
+		nc.MetadComponent(),
+		nc.StoragedComponent(),
+	} {
+		volumeClaims, err := component.GenerateVolumeClaim()
+		if err != nil {
+			klog.ErrorS(err, "Waiting for NebulaCluster to be ready but pvc not expected(GenerateVolumeClaim failed)",
+				"namespace", nc.GetNamespace(),
+				"name", nc.GetName(),
+				"component", component.ComponentType(),
+			)
+			return false, err
+		}
+		for i := range volumeClaims {
+			volumeClaim := volumeClaims[i]
+			for replicas := 0; replicas < int(component.ComponentSpec().Replicas()); replicas++ {
+				pvcName := fmt.Sprintf("%s-%s-%d", volumeClaim.Name, component.GetName(), replicas)
+				pvcResourcesMappingExpected[pvcName] = volumeClaim.Spec.Resources.Requests.Storage().String()
+			}
+		}
+	}
+
+	labelSelector := fmt.Sprintf("app.kubernetes.io/cluster=%s,app.kubernetes.io/component in (graphd, metad, storaged)", nc.Name)
+	pvcs := &corev1.PersistentVolumeClaimList{}
+	if err := cfg.Client().Resources().List(ctx, pvcs, resources.WithLabelSelector(labelSelector)); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but pvc not expected(list pvc failed)",
+			"namespace", nc.GetNamespace(),
+			"name", nc.GetName(),
+		)
+		return false, err
+	}
+
+	pvcResourcesMapping := make(map[string]string, len(pvcs.Items))
+	for i := range pvcs.Items {
+		pvc := pvcs.Items[i]
+		pvcResourcesMapping[pvc.Name] = pvc.Spec.Resources.Requests.Storage().String()
+	}
+
+	if err := e2ematcher.DeepEqual(pvcResourcesMappingExpected).Match(pvcResourcesMapping); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but pvc not expected",
+			"namespace", nc.GetNamespace(),
+			"name", nc.GetName(),
+		)
+		return false, err
+	}
+
+	klog.V(5).InfoS("Waiting for NebulaCluster to be ready for pvc", "namespace", nc.GetNamespace(), "name", nc.GetName())
+
+	return true, nil
 }
 
 func defaultNebulaClusterReadyFuncForZone(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {

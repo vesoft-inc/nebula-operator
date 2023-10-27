@@ -73,12 +73,13 @@ type OperatorConfig struct {
 }
 
 type NebulaClusterConfig struct {
-	ChartPath         string `env:"E2E_NC_CHART_PATH,notEmpty,required" envDefault:"../../charts/nebula-cluster"`
-	Version           string `env:"E2E_NC_VERSION"`
-	GraphdImage       string `env:"E2E_NC_GRAPHD_IMAGE"`
-	MetadImage        string `env:"E2E_NC_METAD_IMAGE"`
-	StoragedImage     string `env:"E2E_NC_STORAGED_IMAGE"`
-	LicenseManagerURL string `env:"E2E_NC_LICENSE_MANAGER_URL"`
+	ChartPath         string   `env:"E2E_NC_CHART_PATH,notEmpty,required" envDefault:"../../charts/nebula-cluster"`
+	Version           string   `env:"E2E_NC_VERSION"`
+	GraphdImage       string   `env:"E2E_NC_GRAPHD_IMAGE"`
+	MetadImage        string   `env:"E2E_NC_METAD_IMAGE"`
+	StoragedImage     string   `env:"E2E_NC_STORAGED_IMAGE"`
+	LicenseManagerURL string   `env:"E2E_NC_LICENSE_MANAGER_URL"`
+	Zones             []string `env:"E2E_NC_ZONES" envDefault:"zone1,zone2,zone3"`
 }
 
 var _ encoding.TextUnmarshaler = (*Base64Value)(nil)

@@ -22,14 +22,17 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"regexp"
 	"strings"
 
+	nebulago "github.com/vesoft-inc/nebula-go/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -42,6 +45,7 @@ var defaultNebulaClusterReadyFuncs = []NebulaClusterReadyFunc{
 	defaultNebulaClusterReadyFuncForGraphd,
 	defaultNebulaClusterReadyFuncForMetad,
 	defaultNebulaClusterReadyFuncForStoraged,
+	defaultNebulaClusterReadyFuncForZone,
 	defaultNebulaClusterReadyFuncForAgent,
 	defaultNebulaClusterReadyFuncForExporter,
 	defaultNebulaClusterReadyFuncForConsole,
@@ -183,6 +187,186 @@ func defaultNebulaClusterReadyFuncForStoraged(ctx context.Context, cfg *envconf.
 	}
 
 	return isReady, nil
+}
+
+func defaultNebulaClusterReadyFuncForZone(ctx context.Context, cfg *envconf.Config, nc *appsv1alpha1.NebulaCluster) (bool, error) {
+	metaConfig := nc.Spec.Metad.Config
+	if metaConfig == nil || metaConfig["zone_list"] == "" {
+		return true, nil
+	}
+	zones := strings.Split(metaConfig["zone_list"], ",")
+
+	klog.V(5).InfoS("Waiting for NebulaCluster to be ready for zones", "namespace", nc.GetNamespace(), "name", nc.GetName(), "zones", zones)
+
+	nodes := &corev1.NodeList{}
+	labelSelector := fmt.Sprintf("topology.kubernetes.io/zone in (%s)", strings.Join(zones, ","))
+	if err := cfg.Client().Resources().List(ctx, nodes, resources.WithLabelSelector(labelSelector)); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but zones not expected",
+			"namespace", nc.GetNamespace(),
+			"name", nc.GetName(),
+			"zones", zones,
+		)
+		return false, err
+	}
+	nodeZoneMapping := make(map[string]string, len(nodes.Items))
+	for i := range nodes.Items {
+		node := nodes.Items[i]
+		if lbs := node.GetLabels(); lbs != nil && lbs["topology.kubernetes.io/zone"] != "" {
+			nodeZoneMapping[node.Name] = lbs["topology.kubernetes.io/zone"]
+		}
+	}
+
+	labelSelector = fmt.Sprintf("app.kubernetes.io/cluster=%s,app.kubernetes.io/component in (graphd, storaged)", nc.Name)
+	pods := &corev1.PodList{}
+	if err := cfg.Client().Resources().List(ctx, pods, resources.WithLabelSelector(labelSelector)); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but zones not expected",
+			"namespace", nc.GetNamespace(),
+			"name", nc.GetName(),
+			"zones", zones,
+		)
+		return false, err
+	}
+
+	podZoneMapping := make(map[string]string)
+	componentZoneCountMapping := map[string]map[string]int{
+		"graphd":   make(map[string]int, len(zones)),
+		"storaged": make(map[string]int, len(zones)),
+	}
+	for i := range pods.Items {
+		pod := pods.Items[i]
+		componentName := pod.Labels["app.kubernetes.io/component"]
+		zoneName, ok := nodeZoneMapping[pod.Spec.NodeName]
+		if !ok {
+			klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but zones not expected(zone not found)",
+				"namespace", nc.GetNamespace(),
+				"name", nc.GetName(),
+				"zones", zones,
+				"podName", pod.Name,
+				"nodeName", pod.Spec.NodeName,
+			)
+			return false, stderrors.New("zone not found")
+		}
+		podZoneMapping[pod.Name] = zoneName
+		componentZoneCountMapping[componentName][zoneName] = componentZoneCountMapping[componentName][zoneName] + 1
+	}
+
+	for componentName, zoneCountMapping := range componentZoneCountMapping {
+		minCount, maxCount := math.MaxInt, 0
+		for _, count := range zoneCountMapping {
+			if count < minCount {
+				minCount = count
+			}
+			if count > maxCount {
+				maxCount = count
+			}
+		}
+		if minCount > maxCount || maxCount-minCount > 1 {
+			klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but zones not expected(zones not uneven)",
+				"namespace", nc.GetNamespace(),
+				"name", nc.GetName(),
+				"zones", zones,
+				"component", componentName,
+				"zoneCountMapping", zoneCountMapping,
+				"minCount", minCount,
+				"maxCount", maxCount,
+			)
+			return false, stderrors.New("zones not uneven")
+		}
+	}
+
+	// compare the zone in NebulaGraph
+	podName := nc.GraphdComponent().GetPodName(0)
+	thriftPort := int(nc.GraphdComponent().GetPort(appsv1alpha1.GraphdPortNameThrift))
+	localPorts, stopChan, err := e2eutils.PortForward(
+		e2eutils.WithRestConfig(cfg.Client().RESTConfig()),
+		e2eutils.WithPod(nc.GetNamespace(), podName),
+		e2eutils.WithAddress("localhost"),
+		e2eutils.WithPorts(thriftPort),
+	)
+	if err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but zones not expected(failed port forward)",
+			"namespace", nc.GetNamespace(),
+			"name", podName,
+			"ports", []int{thriftPort},
+		)
+		return false, err
+	}
+	defer close(stopChan)
+
+	pool, err := nebulago.NewSslConnectionPool(
+		[]nebulago.HostAddress{{Host: "localhost", Port: localPorts[0]}},
+		nebulago.PoolConfig{
+			MaxConnPoolSize: 10,
+		},
+		nil,
+		nebulago.DefaultLogger{},
+	)
+	if err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but zones not expected(create graph connection pool failed)",
+			"namespace", nc.GetNamespace(),
+			"name", podName,
+			"ports", []int{thriftPort},
+		)
+		return false, err
+	}
+	defer pool.Close()
+
+	session, err := pool.GetSession("root", "nebula")
+	if err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but zones not expected(create graph connection session failed)",
+			"namespace", nc.GetNamespace(),
+			"name", podName,
+			"ports", []int{thriftPort},
+		)
+		return false, err
+	}
+	defer session.Release()
+	rs, err := session.Execute("SHOW ZONES")
+	if err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but zones not expected(graph exec failed)",
+			"namespace", nc.GetNamespace(),
+			"name", podName,
+			"ports", []int{thriftPort},
+			"statement", "SHOW ZONES",
+		)
+		return false, err
+	}
+
+	colNameMapping := make(map[string]int, rs.GetColSize())
+	for i, colName := range rs.GetColNames() {
+		colNameMapping[colName] = i
+	}
+	zoneIndex, okZoneIndex := colNameMapping["Name"]
+	hostIndex, okHostIndex := colNameMapping["Host"]
+	if !okZoneIndex || !okHostIndex {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but zones not expected(graph ResultSet columns not found)",
+			"namespace", nc.GetNamespace(),
+			"name", podName,
+			"ports", []int{thriftPort},
+			"statement", "SHOW ZONES",
+			"columns", []string{"Name", "Host"},
+		)
+		return false, err
+	}
+
+	podZoneMappingInNebulaCluster := make(map[string]string)
+	for _, row := range rs.GetRows() {
+		vals := row.GetValues()
+		podZoneMappingInNebulaCluster[strings.Split(string(vals[hostIndex].GetSVal()), ".")[0]] = string(vals[zoneIndex].GetSVal())
+	}
+
+	if err = e2ematcher.Struct(podZoneMapping, e2ematcher.MapContainsMatchers(podZoneMappingInNebulaCluster)); err != nil {
+		klog.ErrorS(err, "Waiting for NebulaCluster to be ready but component flags not expected(pod zone mismatch)",
+			"namespace", nc.GetNamespace(),
+			"name", podName,
+			"ports", []int{thriftPort},
+		)
+		return false, err
+	}
+
+	klog.V(5).InfoS("Waiting for NebulaCluster to be ready for zones", "namespace", nc.GetNamespace(), "name", nc.GetName(), "zones mapping", componentZoneCountMapping)
+
+	return true, nil
 }
 
 func defaultNebulaClusterReadyFuncForAgent(_ context.Context, _ *envconf.Config, _ *appsv1alpha1.NebulaCluster) (bool, error) {
@@ -372,7 +556,18 @@ func isComponentConfigMapExpected(ctx context.Context, cfg *envconf.Config, comp
 	klog.V(5).InfoS("START isComponentConfigMapExpected", "component", component.ComponentType())
 	defer klog.V(5).InfoS("END   isComponentConfigMapExpected", "component", component.ComponentType())
 
-	componentConfigExpected := component.GetConfig()
+	componentConfigExpectedAll := component.GetConfig()
+
+	// TODO: remove the filter
+	// Filter out dynamic configuration
+	componentConfigExpected := make(map[string]string, len(componentConfigExpectedAll))
+	for k, v := range componentConfigExpectedAll {
+		if _, ok := appsv1alpha1.DynamicFlags[k]; ok {
+			continue
+		}
+		componentConfigExpected[k] = v
+	}
+
 	if len(componentConfigExpected) == 0 {
 		return true
 	}
@@ -511,8 +706,12 @@ func extractComponentConfig(r io.Reader, paramValuePattern *regexp.Regexp) (map[
 		if len(matches) != 3 {
 			continue
 		}
+		k, v := matches[1], matches[2]
+		if l := len(v); l >= 2 && v[0] == '"' && v[l-1] == '"' {
+			v = v[1 : l-1]
+		}
 
-		componentConfig[matches[1]] = matches[2]
+		componentConfig[k] = v
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err

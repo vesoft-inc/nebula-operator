@@ -13,12 +13,12 @@ manager:
   batch: 128
   readerConcurrency: 10
   importerConcurrency: 50
-  statsInterval: 1s
+  statsInterval: 10s
   hooks:
     before:
       - statements:
         - |
-          CREATE SPACE IF NOT EXISTS `e2e_ldbc_snb`(PARTITION_NUM = 120, REPLICA_FACTOR = 1, vid_type = INT);
+          CREATE SPACE IF NOT EXISTS `e2e_ldbc_snb`(PARTITION_NUM = 30, REPLICA_FACTOR = 3, vid_type = INT);
           USE `e2e_ldbc_snb`;
           CREATE TAG IF NOT EXISTS `Comment`(`creationDate` DATETIME,`locationIP` STRING,`browserUsed` STRING,`content` STRING,`length` INT);
           CREATE TAG IF NOT EXISTS `Forum`(`title` STRING,`creationDate` DATETIME);

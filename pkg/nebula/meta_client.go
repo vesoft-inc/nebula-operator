@@ -29,7 +29,10 @@ import (
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
-var ErrNoAvailableMetadEndpoints = errors.New("metadclient: no available hosts")
+var (
+	ErrNoAvailableMetadEndpoints = errors.New("metadclient: no available hosts")
+	ErrJobStatusFailed           = errors.New("job status failed")
+)
 
 var _ MetaInterface = (*metaClient)(nil)
 
@@ -55,6 +58,8 @@ type (
 		BalanceDataInZone(spaceID nebula.GraphSpaceID) (int32, error)
 		RemoveHost(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error)
 		RemoveHostInZone(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error)
+		RecoverDataBalanceJob(jobID int32, spaceID nebula.GraphSpaceID) error
+		RecoverInZoneBalanceJob(jobID int32, spaceID nebula.GraphSpaceID) error
 		RestoreMeta(hosts []*meta.HostPair, files []string) (*meta.RestoreMetaResp, error)
 		Disconnect() error
 	}
@@ -339,12 +344,11 @@ func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
 	if err != nil {
 		return err
 	}
-	klog.Infof("spaceID %d balance leader successfully", spaceID)
+	klog.Infof("space %d balance leader successfully", spaceID)
 	return nil
 }
 
-func (m *metaClient) balance(req *meta.AdminJobReq) (int32, error) {
-	klog.Info("start balance job")
+func (m *metaClient) runAdminJob(req *meta.AdminJobReq) (int32, error) {
 	resp, err := m.retryOnError(req, func(req interface{}) (interface{}, error) {
 		resp, err := m.client.RunAdminJob(req.(*meta.AdminJobReq))
 		return resp, err
@@ -354,6 +358,13 @@ func (m *metaClient) balance(req *meta.AdminJobReq) (int32, error) {
 	}
 	klog.Info("balance job running now")
 	jobID := resp.(*meta.AdminJobResp).GetResult_().GetJobID()
+	if jobID == 0 {
+		r, err := strconv.Atoi(string(req.Paras[0]))
+		if err != nil {
+			return 0, err
+		}
+		jobID = int32(r)
+	}
 	return jobID, utilerrors.ReconcileErrorf("waiting for balance job %d finished", jobID)
 }
 
@@ -364,7 +375,7 @@ func (m *metaClient) BalanceData(spaceID nebula.GraphSpaceID) (int32, error) {
 		Type:    meta.JobType_ZONE_BALANCE,
 	}
 
-	return m.balance(req)
+	return m.runAdminJob(req)
 }
 
 func (m *metaClient) BalanceDataInZone(spaceID nebula.GraphSpaceID) (int32, error) {
@@ -374,7 +385,7 @@ func (m *metaClient) BalanceDataInZone(spaceID nebula.GraphSpaceID) (int32, erro
 		Type:    meta.JobType_DATA_BALANCE,
 	}
 
-	return m.balance(req)
+	return m.runAdminJob(req)
 }
 
 func (m *metaClient) RemoveHost(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error) {
@@ -390,7 +401,7 @@ func (m *metaClient) RemoveHost(spaceID nebula.GraphSpaceID, hosts []*nebula.Hos
 		Paras:   paras,
 	}
 
-	return m.balance(req)
+	return m.runAdminJob(req)
 }
 
 func (m *metaClient) RemoveHostInZone(spaceID nebula.GraphSpaceID, hosts []*nebula.HostAddr) (int32, error) {
@@ -406,7 +417,7 @@ func (m *metaClient) RemoveHostInZone(spaceID nebula.GraphSpaceID, hosts []*nebu
 		Paras:   paras,
 	}
 
-	return m.balance(req)
+	return m.runAdminJob(req)
 }
 
 func (m *metaClient) BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) error {
@@ -427,9 +438,34 @@ func (m *metaClient) BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) err
 	if len(jobDesc) > 0 {
 		if jobDesc[0].Status == meta.JobStatus_FINISHED {
 			return nil
+		} else if jobDesc[0].Status == meta.JobStatus_FAILED {
+			klog.Errorf("space %d balance job %d status failed", spaceID, jobID)
+			return ErrJobStatusFailed
 		}
 	}
-	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("Balance job still in progress, jobID %d, spaceID %d", jobID, spaceID)}
+	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("balance job still in progress, jobID %d, spaceID %d", jobID, spaceID)}
+}
+
+func (m *metaClient) RecoverDataBalanceJob(jobID int32, spaceID nebula.GraphSpaceID) error {
+	req := &meta.AdminJobReq{
+		SpaceID: spaceID,
+		Op:      meta.JobOp_RECOVER,
+		Type:    meta.JobType_ZONE_BALANCE,
+		Paras:   [][]byte{[]byte(strconv.FormatInt(int64(jobID), 10))},
+	}
+	_, err := m.runAdminJob(req)
+	return err
+}
+
+func (m *metaClient) RecoverInZoneBalanceJob(jobID int32, spaceID nebula.GraphSpaceID) error {
+	req := &meta.AdminJobReq{
+		SpaceID: spaceID,
+		Op:      meta.JobOp_RECOVER,
+		Type:    meta.JobType_DATA_BALANCE,
+		Paras:   [][]byte{[]byte(strconv.FormatInt(int64(jobID), 10))},
+	}
+	_, err := m.runAdminJob(req)
+	return err
 }
 
 func (m *metaClient) RestoreMeta(hostPairs []*meta.HostPair, files []string) (*meta.RestoreMetaResp, error) {

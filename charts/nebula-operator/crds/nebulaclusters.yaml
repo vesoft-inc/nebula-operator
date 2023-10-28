@@ -11736,6 +11736,11 @@ spec:
                     type: object
                   phase:
                     type: string
+                  removedSpaces:
+                    items:
+                      format: int32
+                      type: integer
+                    type: array
                   version:
                     type: string
                   workload:

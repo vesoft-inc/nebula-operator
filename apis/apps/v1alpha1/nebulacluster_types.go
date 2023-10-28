@@ -136,6 +136,7 @@ type ComponentStatus struct {
 type StoragedStatus struct {
 	ComponentStatus `json:",inline"`
 	HostsAdded      bool        `json:"hostsAdded,omitempty"`
+	RemovedSpaces   []int32     `json:"removedSpaces,omitempty"`
 	BalancedSpaces  []int32     `json:"balancedSpaces,omitempty"`
 	LastBalanceJob  *BalanceJob `json:"lastBalanceJob,omitempty"`
 }

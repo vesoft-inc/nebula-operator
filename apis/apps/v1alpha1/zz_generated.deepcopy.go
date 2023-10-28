@@ -923,6 +923,11 @@ func (in *StoragedSpec) DeepCopy() *StoragedSpec {
 func (in *StoragedStatus) DeepCopyInto(out *StoragedStatus) {
 	*out = *in
 	in.ComponentStatus.DeepCopyInto(&out.ComponentStatus)
+	if in.RemovedSpaces != nil {
+		in, out := &in.RemovedSpaces, &out.RemovedSpaces
+		*out = make([]int32, len(*in))
+		copy(*out, *in)
+	}
 	if in.BalancedSpaces != nil {
 		in, out := &in.BalancedSpaces, &out.BalancedSpaces
 		*out = make([]int32, len(*in))

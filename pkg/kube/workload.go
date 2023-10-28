@@ -91,6 +91,7 @@ func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
 				obj.SetAnnotations(annotations)
 			} else {
 				utilruntime.HandleError(fmt.Errorf("get workload %s/%s failed: %v", ns, objName, err))
+				return err
 			}
 
 			updateErr := w.kubecli.Update(context.TODO(), obj)
@@ -111,6 +112,7 @@ func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
 			obj.SetAnnotations(annotations)
 		} else {
 			utilruntime.HandleError(fmt.Errorf("get workload %s/%s failed: %v", ns, objName, err))
+			return err
 		}
 
 		updateErr := w.kubecli.Update(context.TODO(), obj)

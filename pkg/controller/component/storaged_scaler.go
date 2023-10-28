@@ -117,7 +117,6 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 	return nil
 }
 
-// nolint: revive
 func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
 	ns := nc.GetNamespace()
 	componentName := nc.StoragedComponent().GetName()
@@ -147,6 +146,15 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		return err
 	}
 
+	if len(spaces) > 0 {
+		if nc.Status.Storaged.BalancedSpaces == nil {
+			nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
+		}
+		if nc.Status.Storaged.RemovedSpaces == nil {
+			nc.Status.Storaged.RemovedSpaces = make([]int32, 0, len(spaces))
+		}
+	}
+
 	if oldReplicas-newReplicas > 0 {
 		scaleSets := sets.New[string]()
 		hosts := make([]*nebulago.HostAddr, 0, oldReplicas-newReplicas)
@@ -171,24 +179,21 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 			})
 			scaleSets.Insert(host)
 		}
-		if len(spaces) > 0 {
-			for _, space := range spaces {
-				if err := ss.removeHost(metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
-					klog.Errorf("remove hosts %v failed: %v", hosts, err)
-					return err
-				}
-				klog.Infof("storaged cluster [%s/%s] remove hosts in the space %s successfully", ns, componentName, space.Name)
+		for _, space := range spaces {
+			if contains(nc.Status.Storaged.RemovedSpaces, *space.Id.SpaceID) {
+				continue
 			}
+			if err := ss.removeHost(metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
+				klog.Errorf("remove hosts %v failed: %v", hosts, err)
+				return err
+			}
+			klog.Infof("storaged cluster [%s/%s] remove hosts in the space %s successfully", ns, componentName, space.Name)
 		}
 		if err := metaClient.DropHosts(hosts); err != nil {
 			klog.Errorf("drop hosts %v failed: %v", hosts, err)
 			return err
 		}
 		klog.Infof("storaged cluster [%s/%s] drop hosts %v successfully", ns, componentName, hosts)
-	}
-
-	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
-		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
 	}
 
 	for _, space := range spaces {
@@ -225,6 +230,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 
 	klog.Infof("storaged cluster [%s/%s] all used pvcs were reclaimed", ns, componentName)
 	nc.Status.Storaged.BalancedSpaces = nil
+	nc.Status.Storaged.RemovedSpaces = nil
 	nc.Status.Storaged.LastBalanceJob = nil
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
@@ -233,6 +239,13 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaceID nebulago.GraphSpaceID) error {
 	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
 		if err := mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
+			if err == nebula.ErrJobStatusFailed {
+				klog.Infof("space %d balance job %d will be recovered", nc.Status.Storaged.LastBalanceJob.SpaceID, nc.Status.Storaged.LastBalanceJob.JobID)
+				if nc.IsZoneEnabled() {
+					return mc.RecoverInZoneBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
+				}
+				return mc.RecoverDataBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
+			}
 			return err
 		}
 		if err := mc.BalanceLeader(nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
@@ -286,7 +299,18 @@ func (ss *storageScaler) removeHost(
 	hosts []*nebulago.HostAddr,
 ) error {
 	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
-		return mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
+		if err := mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
+			if err == nebula.ErrJobStatusFailed {
+				klog.Infof("space %d balance job %d will be recovered", nc.Status.Storaged.LastBalanceJob.SpaceID, nc.Status.Storaged.LastBalanceJob.JobID)
+				if nc.IsZoneEnabled() {
+					return mc.RecoverInZoneBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
+				}
+				return mc.RecoverDataBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
+			}
+			return err
+		}
+		nc.Status.Storaged.RemovedSpaces = append(nc.Status.Storaged.RemovedSpaces, nc.Status.Storaged.LastBalanceJob.SpaceID)
+		return ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
 	}
 
 	namespace := nc.GetNamespace()

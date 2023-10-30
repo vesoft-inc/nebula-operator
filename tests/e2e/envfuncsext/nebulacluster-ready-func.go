@@ -21,6 +21,7 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"io"
 	"math"
 	"net/http"
@@ -626,6 +627,33 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 			"name", sts.Name,
 		)
 		return false
+	}
+
+	for _, sVolume := range component.ComponentSpec().Volumes() {
+		found := false
+		for _, volume := range sts.Spec.Template.Spec.Volumes {
+			if volume.Name == sVolume.Name {
+				if diff := cmp.Diff(volume, sVolume); diff != "" {
+					klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but StatefulSet volume not expected",
+						"namespace", sts.Namespace,
+						"name", sts.Name,
+						"volume", sVolume.Name,
+						"diff", fmt.Errorf("DeepEqual failed %s", diff),
+					)
+					return false
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but StatefulSet volume not found",
+				"namespace", sts.Namespace,
+				"name", sts.Name,
+				"volume", sVolume.Name,
+			)
+			return false
+		}
 	}
 
 	return true

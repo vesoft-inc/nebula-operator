@@ -43,6 +43,12 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/util/maputil"
 )
 
+var suspendOrder = []v1alpha1.ComponentType{
+	v1alpha1.GraphdComponentType,
+	v1alpha1.StoragedComponentType,
+	v1alpha1.MetadComponentType,
+}
+
 const (
 	InPlaceGracePeriodSeconds = 60
 )
@@ -72,7 +78,7 @@ func syncComponentStatus(
 }
 
 func setWorkloadStatus(obj *unstructured.Unstructured, status *v1alpha1.ComponentStatus) error {
-	workload := v1alpha1.WorkloadStatus{}
+	workload := &v1alpha1.WorkloadStatus{}
 	data, err := json.Marshal(extender.GetStatus(obj))
 	if err != nil {
 		return err
@@ -523,4 +529,55 @@ func syncPVC(
 		}
 	}
 	return nil
+}
+
+func suspendComponent(
+	workloadClient kube.Workload,
+	component v1alpha1.NebulaClusterComponent,
+	workload *unstructured.Unstructured) (bool, error) {
+	nc := component.GetNebulaCluster()
+	suspending := component.IsSuspending()
+	if !nc.IsSuspendEnabled() {
+		if suspending {
+			component.SetPhase(v1alpha1.RunningPhase)
+			return true, nil
+		}
+		klog.Infof("component %s is not needed to be suspended", component.GetName())
+		return false, nil
+	}
+	if !suspending {
+		if s, reason := canSuspendComponent(component); !s {
+			klog.Warningf("component %s can not be suspended: %s", component.GetName(), reason)
+			return false, nil
+		}
+		component.SetPhase(v1alpha1.SuspendPhase)
+		return true, nil
+	}
+	if workload != nil {
+		if err := workloadClient.DeleteWorkload(workload); err != nil {
+			return false, err
+		}
+	}
+	component.SetWorkloadStatus(nil)
+	return true, nil
+}
+
+func canSuspendComponent(component v1alpha1.NebulaClusterComponent) (bool, string) {
+	nc := component.GetNebulaCluster()
+	if component.GetPhase() != v1alpha1.RunningPhase && component.GetPhase() != v1alpha1.SuspendPhase {
+		return false, "component phase is not Running or Suspend"
+	}
+	for _, ct := range suspendOrder {
+		if ct == component.ComponentType() {
+			break
+		}
+		c, err := nc.ComponentByType(ct)
+		if err != nil {
+			return false, err.Error()
+		}
+		if !c.IsSuspended() {
+			return false, fmt.Sprintf("waiting for component %s to be suspended", ct)
+		}
+	}
+	return true, ""
 }

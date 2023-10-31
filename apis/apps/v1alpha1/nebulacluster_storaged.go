@@ -54,6 +54,9 @@ type storagedComponent struct {
 }
 
 func (c *storagedComponent) GetUpdateRevision() string {
+	if c.nc.Status.Storaged.Workload == nil {
+		return ""
+	}
 	return c.nc.Status.Storaged.Workload.UpdateRevision
 }
 
@@ -146,6 +149,9 @@ func (c *storagedComponent) GetEndpoints(portName string) []string {
 }
 
 func (c *storagedComponent) IsReady() bool {
+	if c.nc.Status.Storaged.Workload == nil {
+		return false
+	}
 	return *c.nc.Spec.Storaged.Replicas == c.nc.Status.Storaged.Workload.ReadyReplicas &&
 		rollingUpdateDone(c.nc.Status.Storaged.Workload)
 }
@@ -370,6 +376,32 @@ func (c *storagedComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *storagedComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Storaged.ComponentStatus = *status
+}
+
+func (c *storagedComponent) SetWorkloadStatus(status *WorkloadStatus) {
+	c.nc.Status.Storaged.Workload = status
+}
+
+func (c *storagedComponent) GetPhase() ComponentPhase {
+	return c.nc.Status.Storaged.Phase
+}
+
+func (c *storagedComponent) SetPhase(phase ComponentPhase) {
+	c.nc.Status.Storaged.Phase = phase
+}
+
+func (c *storagedComponent) IsSuspending() bool {
+	return c.nc.Status.Storaged.Phase == SuspendPhase
+}
+
+func (c *storagedComponent) IsSuspended() bool {
+	if !c.IsSuspending() {
+		return false
+	}
+	if c.nc.IsSuspendEnabled() && c.nc.Status.Storaged.Workload != nil {
+		return false
+	}
+	return true
 }
 
 func storageDataVolumeClaims(storageClaims []StorageClaim, componentType string) ([]corev1.PersistentVolumeClaim, error) {

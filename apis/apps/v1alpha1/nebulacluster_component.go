@@ -205,6 +205,11 @@ type NebulaClusterComponent interface {
 
 	IsReady() bool
 	GetUpdateRevision() string
+	SetPhase(phase ComponentPhase)
+	GetPhase() ComponentPhase
+	IsSuspending() bool
+	IsSuspended() bool
+	SetWorkloadStatus(status *WorkloadStatus)
 	UpdateComponentStatus(status *ComponentStatus)
 }
 

@@ -90,6 +90,10 @@ func (nc *NebulaCluster) GenerateOwnerReferences() []metav1.OwnerReference {
 	}
 }
 
+func (nc *NebulaCluster) IsSuspendEnabled() bool {
+	return pointer.BoolDeref(nc.Spec.Suspend, false)
+}
+
 func (nc *NebulaCluster) IsPVReclaimEnabled() bool {
 	return pointer.BoolDeref(nc.Spec.EnablePVReclaim, false)
 }
@@ -155,6 +159,7 @@ func (nc *NebulaCluster) IsReady() bool {
 func (nc *NebulaCluster) IsStoragedAvailable() bool {
 	return nc.StoragedComponent().IsReady() &&
 		nc.Status.Storaged.BalancedSpaces == nil &&
+		nc.Status.Storaged.RemovedSpaces == nil &&
 		nc.Status.Storaged.LastBalanceJob == nil
 }
 

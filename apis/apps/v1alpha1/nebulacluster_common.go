@@ -194,7 +194,7 @@ func getClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {
 	}
 }
 
-func rollingUpdateDone(workloadStatus WorkloadStatus) bool {
+func rollingUpdateDone(workloadStatus *WorkloadStatus) bool {
 	return workloadStatus.UpdatedReplicas == workloadStatus.Replicas &&
 		workloadStatus.ReadyReplicas == workloadStatus.Replicas &&
 		workloadStatus.CurrentReplicas == workloadStatus.UpdatedReplicas &&

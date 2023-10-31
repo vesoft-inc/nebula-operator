@@ -97,6 +97,15 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
+	needSuspend, err := suspendComponent(c.clientSet.Workload(), nc.StoragedComponent(), oldWorkload)
+	if err != nil {
+		return fmt.Errorf("suspend storaged cluster %s failed: %v", componentName, err)
+	}
+	if needSuspend {
+		klog.Infof("storaged cluster %s is suspended, skip reconciling", componentName)
+		return nil
+	}
+
 	cm, cmHash, err := c.syncStoragedConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
@@ -130,7 +139,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		if err := c.clientSet.Workload().CreateWorkload(newWorkload); err != nil {
 			return err
 		}
-		nc.Status.Storaged.Workload = v1alpha1.WorkloadStatus{}
+		nc.Status.Storaged.Workload = &v1alpha1.WorkloadStatus{}
 		return utilerrors.ReconcileErrorf("waiting for storaged cluster [%s/%s] running", namespace, componentName)
 	}
 

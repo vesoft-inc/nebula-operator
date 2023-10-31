@@ -83,6 +83,15 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
+	needSuspend, err := suspendComponent(c.clientSet.Workload(), nc.GraphdComponent(), oldWorkload)
+	if err != nil {
+		return fmt.Errorf("suspend graphd cluster %s failed: %v", componentName, err)
+	}
+	if needSuspend {
+		klog.Infof("graphd cluster %s is suspended, skip reconciling", componentName)
+		return nil
+	}
+
 	cm, cmHash, err := c.syncGraphdConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
@@ -101,7 +110,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if err := c.syncNebulaClusterStatus(nc, newWorkload, oldWorkload); err != nil {
-		return fmt.Errorf("sync graphd cluster status status failed: %v", err)
+		return fmt.Errorf("sync graphd cluster status failed: %v", err)
 	}
 
 	if notExist {
@@ -116,7 +125,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		if err := c.clientSet.Workload().CreateWorkload(newWorkload); err != nil {
 			return err
 		}
-		nc.Status.Graphd.Workload = v1alpha1.WorkloadStatus{}
+		nc.Status.Graphd.Workload = &v1alpha1.WorkloadStatus{}
 		return utilerrors.ReconcileErrorf("waiting for graphd cluster %s running", newWorkload.GetName())
 	}
 

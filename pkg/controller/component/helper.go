@@ -234,7 +234,7 @@ func updateDynamicFlags(endpoints []string, newAnnotations map[string]string) er
 	if len(newFlags) == 0 {
 		return nil
 	}
-	klog.Infof("dynamic flags: %v", newFlags)
+	klog.V(1).Infof("dynamic flags: %v", newFlags)
 	str, err := codec.Encode(newFlags)
 	if err != nil {
 		return err
@@ -245,8 +245,6 @@ func updateDynamicFlags(endpoints []string, newAnnotations map[string]string) er
 			return err
 		}
 	}
-	klog.Info("update dynamic flags successfully")
-
 	return nil
 }
 
@@ -542,7 +540,7 @@ func suspendComponent(
 			component.SetPhase(v1alpha1.RunningPhase)
 			return true, nil
 		}
-		klog.Infof("component %s is not needed to be suspended", component.GetName())
+		klog.V(4).Infof("component %s is not needed to be suspended", component.GetName())
 		return false, nil
 	}
 	if !suspending {

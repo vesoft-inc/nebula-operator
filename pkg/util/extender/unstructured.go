@@ -18,6 +18,7 @@ package extender
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -218,6 +219,10 @@ func UpdateWorkload(
 		if ok {
 			annotations[annotation.AnnLastSyncTimestampKey] = v
 		}
+		r, ok := oldUnstruct.GetAnnotations()[annotation.AnnLastReplicas]
+		if ok {
+			annotations[annotation.AnnLastReplicas] = r
+		}
 		w.SetAnnotations(annotations)
 		var updateStrategy interface{}
 		newSpec := GetSpec(newUnstruct)
@@ -244,6 +249,29 @@ func UpdateWorkload(
 			return err
 		}
 	}
+	return nil
+}
+
+func SetLastReplicasAnnotation(obj *unstructured.Unstructured) error {
+	var lastReplicas int32
+	val, ok := obj.GetAnnotations()[annotation.AnnLastReplicas]
+	if ok {
+		v, err := strconv.Atoi(val)
+		if err != nil {
+			return err
+		}
+		lastReplicas = int32(v)
+	}
+	replicas := pointer.Int32Deref(GetReplicas(obj), 0)
+	if replicas == lastReplicas {
+		return nil
+	}
+	annotations := make(map[string]string)
+	for k, v := range obj.GetAnnotations() {
+		annotations[k] = v
+	}
+	annotations[annotation.AnnLastReplicas] = strconv.Itoa(int(replicas))
+	obj.SetAnnotations(annotations)
 	return nil
 }
 

@@ -26,6 +26,8 @@ const (
 	AnnLastSyncTimestampKey = "nebula-graph.io/sync-timestamp"
 	// AnnHaModeKey is annotation key to indicate whether in HA mode
 	AnnHaModeKey = "nebula-graph.io/ha-mode"
+	// AnnLastReplicas is annotation key to indicate the last replicas
+	AnnLastReplicas = "nebula-graph.io/last-replicas"
 	// AnnLastAppliedDynamicFlagsKey is annotation key to indicate the last applied custom dynamic flags
 	AnnLastAppliedDynamicFlagsKey = "nebula-graph.io/last-applied-dynamic-flags"
 	// AnnLastAppliedStaticFlagsKey is annotation key to indicate the last applied custom static flags

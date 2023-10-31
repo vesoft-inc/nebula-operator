@@ -18,6 +18,7 @@ package component
 
 import (
 	"fmt"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -148,6 +149,9 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if equal && nc.GraphdComponent().IsReady() {
+		if err := extender.SetLastReplicasAnnotation(oldWorkload); err != nil {
+			return err
+		}
 		endpoints := nc.GetGraphdEndpoints(v1alpha1.GraphdPortNameHTTP)
 		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update graphd cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
@@ -173,19 +177,27 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		return err
 	}
 
+	var lastReplicas int32
+	val, ok := oldWorkload.GetAnnotations()[annotation.AnnLastReplicas]
+	if ok {
+		v, err := strconv.Atoi(val)
+		if err != nil {
+			return err
+		}
+		lastReplicas = int32(v)
+	}
+
 	if updating &&
 		nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
 		nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
-	} else if *newReplicas < *oldReplicas ||
-		nc.Status.Graphd.Workload.Replicas < nc.Status.Graphd.Workload.ReadyReplicas {
+	} else if *newReplicas < *oldReplicas || (ok && *newReplicas < lastReplicas) {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleInPhase
 		if nc.Spec.Graphd.LogVolumeClaim != nil {
 			if err := PVCMark(c.clientSet.PVC(), nc.GraphdComponent(), *oldReplicas, *newReplicas); err != nil {
 				return err
 			}
 		}
-	} else if *newReplicas > *oldReplicas ||
-		nc.Status.Graphd.Workload.Replicas > nc.Status.Graphd.Workload.ReadyReplicas {
+	} else if *newReplicas > *oldReplicas || (ok && *newReplicas > lastReplicas) {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleOutPhase
 	} else {
 		nc.Status.Graphd.Phase = v1alpha1.RunningPhase

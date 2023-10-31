@@ -53,7 +53,7 @@ type graphdComponent struct {
 }
 
 func (c *graphdComponent) GetUpdateRevision() string {
-	if c.nc.Status.Storaged.Workload == nil {
+	if c.nc.Status.Graphd.Workload == nil {
 		return ""
 	}
 	return c.nc.Status.Graphd.Workload.UpdateRevision

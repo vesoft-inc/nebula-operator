@@ -92,6 +92,15 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	notExist := apierrors.IsNotFound(err)
 	oldWorkload := oldWorkloadTemp.DeepCopy()
 
+	needSuspend, err := suspendComponent(c.clientSet.Workload(), nc.MetadComponent(), oldWorkload)
+	if err != nil {
+		return fmt.Errorf("suspend metad cluster %s failed: %v", componentName, err)
+	}
+	if needSuspend {
+		klog.Infof("metad cluster %s is suspended, skip reconciling", componentName)
+		return nil
+	}
+
 	cm, cmHash, err := c.syncMetadConfigMap(nc.DeepCopy())
 	if err != nil {
 		return err
@@ -120,7 +129,7 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		if err := c.clientSet.Workload().CreateWorkload(newWorkload); err != nil {
 			return err
 		}
-		nc.Status.Metad.Workload = v1alpha1.WorkloadStatus{}
+		nc.Status.Metad.Workload = &v1alpha1.WorkloadStatus{}
 		return utilerrors.ReconcileErrorf("waiting for metad cluster %s running", newWorkload.GetName())
 	}
 

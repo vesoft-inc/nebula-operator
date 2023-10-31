@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +37,7 @@ type Workload interface {
 	GetWorkload(namespace string, name string, gvk schema.GroupVersionKind) (*unstructured.Unstructured, error)
 	CreateWorkload(obj *unstructured.Unstructured) error
 	UpdateWorkload(obj *unstructured.Unstructured) error
+	DeleteWorkload(obj *unstructured.Unstructured) error
 }
 
 type workloadClient struct {
@@ -122,6 +124,14 @@ func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
 		}
 		return updateErr
 	})
+}
+
+func (w *workloadClient) DeleteWorkload(obj *unstructured.Unstructured) error {
+	policy := metav1.DeletePropagationBackground
+	options := &client.DeleteOptions{
+		PropagationPolicy: &policy,
+	}
+	return w.kubecli.Delete(context.TODO(), obj, options)
 }
 
 func getSpec(obj *unstructured.Unstructured) map[string]interface{} {

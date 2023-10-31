@@ -63,7 +63,7 @@ type NebulaClusterSpec struct {
 	Reference WorkloadReference `json:"reference,omitempty"`
 
 	// +optional
-	Suspend bool `json:"suspend,omitempty"`
+	Suspend *bool `json:"suspend,omitempty"`
 
 	// +kubebuilder:default=default-scheduler
 	// +optional
@@ -127,9 +127,9 @@ type NebulaClusterStatus struct {
 
 // ComponentStatus is the status and version of a nebula component.
 type ComponentStatus struct {
-	Version  string         `json:"version,omitempty"`
-	Phase    ComponentPhase `json:"phase,omitempty"`
-	Workload WorkloadStatus `json:"workload,omitempty"`
+	Version  string          `json:"version,omitempty"`
+	Phase    ComponentPhase  `json:"phase,omitempty"`
+	Workload *WorkloadStatus `json:"workload,omitempty"`
 }
 
 // StoragedStatus describes the status and version of nebula storaged.

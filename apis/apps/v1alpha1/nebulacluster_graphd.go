@@ -53,6 +53,9 @@ type graphdComponent struct {
 }
 
 func (c *graphdComponent) GetUpdateRevision() string {
+	if c.nc.Status.Storaged.Workload == nil {
+		return ""
+	}
 	return c.nc.Status.Graphd.Workload.UpdateRevision
 }
 
@@ -129,6 +132,9 @@ func (c *graphdComponent) GetEndpoints(portName string) []string {
 }
 
 func (c *graphdComponent) IsReady() bool {
+	if c.nc.Status.Graphd.Workload == nil {
+		return false
+	}
 	return *c.nc.Spec.Graphd.Replicas == c.nc.Status.Graphd.Workload.ReadyReplicas &&
 		rollingUpdateDone(c.nc.Status.Graphd.Workload)
 }
@@ -313,4 +319,30 @@ func (c *graphdComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *graphdComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Graphd = *status
+}
+
+func (c *graphdComponent) SetWorkloadStatus(status *WorkloadStatus) {
+	c.nc.Status.Graphd.Workload = status
+}
+
+func (c *graphdComponent) GetPhase() ComponentPhase {
+	return c.nc.Status.Graphd.Phase
+}
+
+func (c *graphdComponent) SetPhase(phase ComponentPhase) {
+	c.nc.Status.Graphd.Phase = phase
+}
+
+func (c *graphdComponent) IsSuspending() bool {
+	return c.nc.Status.Graphd.Phase == SuspendPhase
+}
+
+func (c *graphdComponent) IsSuspended() bool {
+	if !c.IsSuspending() {
+		return false
+	}
+	if c.nc.IsSuspendEnabled() && c.nc.Status.Graphd.Workload != nil {
+		return false
+	}
+	return true
 }

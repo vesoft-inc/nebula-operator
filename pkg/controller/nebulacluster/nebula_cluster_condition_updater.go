@@ -47,9 +47,9 @@ func allWorkloadsAreUpToDate(nc *v1alpha1.NebulaCluster) bool {
 		return status.CurrentRevision == status.UpdateRevision
 	}
 
-	updated := (isUpToDate(&nc.Status.Metad.Workload, false)) &&
-		(isUpToDate(&nc.Status.Storaged.Workload, false)) &&
-		(isUpToDate(&nc.Status.Graphd.Workload, false))
+	updated := (isUpToDate(nc.Status.Metad.Workload, false)) &&
+		(isUpToDate(nc.Status.Storaged.Workload, false)) &&
+		(isUpToDate(nc.Status.Graphd.Workload, false))
 
 	return updated
 }

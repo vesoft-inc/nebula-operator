@@ -53,6 +53,9 @@ type metadComponent struct {
 }
 
 func (c *metadComponent) GetUpdateRevision() string {
+	if c.nc.Status.Metad.Workload == nil {
+		return ""
+	}
 	return c.nc.Status.Metad.Workload.UpdateRevision
 }
 
@@ -146,6 +149,9 @@ func (c *metadComponent) GetEndpoints(portName string) []string {
 }
 
 func (c *metadComponent) IsReady() bool {
+	if c.nc.Status.Metad.Workload == nil {
+		return false
+	}
 	return *c.nc.Spec.Metad.Replicas == c.nc.Status.Metad.Workload.ReadyReplicas &&
 		rollingUpdateDone(c.nc.Status.Metad.Workload)
 }
@@ -391,4 +397,30 @@ func (c *metadComponent) GenerateConfigMap() *corev1.ConfigMap {
 
 func (c *metadComponent) UpdateComponentStatus(status *ComponentStatus) {
 	c.nc.Status.Metad = *status
+}
+
+func (c *metadComponent) SetWorkloadStatus(status *WorkloadStatus) {
+	c.nc.Status.Metad.Workload = status
+}
+
+func (c *metadComponent) GetPhase() ComponentPhase {
+	return c.nc.Status.Metad.Phase
+}
+
+func (c *metadComponent) SetPhase(phase ComponentPhase) {
+	c.nc.Status.Metad.Phase = phase
+}
+
+func (c *metadComponent) IsSuspending() bool {
+	return c.nc.Status.Metad.Phase == SuspendPhase
+}
+
+func (c *metadComponent) IsSuspended() bool {
+	if !c.IsSuspending() {
+		return false
+	}
+	if c.nc.IsSuspendEnabled() && c.nc.Status.Metad.Workload != nil {
+		return false
+	}
+	return true
 }

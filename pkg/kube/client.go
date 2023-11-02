@@ -29,12 +29,14 @@ type ClientSet interface {
 	PV() PersistentVolume
 	PVC() PersistentVolumeClaim
 	Pod() Pod
+	Job() Job
 	Service() Service
 	Ingress() Ingress
 	Workload() Workload
 	Deployment() Deployment
 	NebulaCluster() NebulaCluster
 	NebulaRestore() NebulaRestore
+	NebulaBackup() NebulaBackup
 	NebulaAutoscaler() NebulaAutoscaler
 }
 
@@ -45,12 +47,14 @@ type clientSet struct {
 	pvClient         PersistentVolume
 	pvcClient        PersistentVolumeClaim
 	podClient        Pod
+	jobClient        Job
 	svcClient        Service
 	ingressClient    Ingress
 	workloadClient   Workload
 	deployClient     Deployment
 	nebulaClient     NebulaCluster
 	restoreClient    NebulaRestore
+	backupClient     NebulaBackup
 	autoscalerClient NebulaAutoscaler
 }
 
@@ -66,12 +70,14 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		pvClient:         NewPV(cli),
 		pvcClient:        NewPVC(cli),
 		podClient:        NewPod(cli),
+		jobClient:        NewJob(cli),
 		svcClient:        NewService(cli),
 		ingressClient:    NewIngress(cli),
 		workloadClient:   NewWorkload(cli),
 		deployClient:     NewDeployment(cli),
 		nebulaClient:     NewNebulaCluster(cli),
 		restoreClient:    NewNebulaRestore(cli),
+		backupClient:     NewNebulaBackup(cli),
 		autoscalerClient: NewNebulaAutoscaler(cli),
 	}, nil
 }
@@ -100,6 +106,10 @@ func (c *clientSet) Pod() Pod {
 	return c.podClient
 }
 
+func (c *clientSet) Job() Job {
+	return c.jobClient
+}
+
 func (c *clientSet) Service() Service {
 	return c.svcClient
 }
@@ -122,6 +132,10 @@ func (c *clientSet) NebulaCluster() NebulaCluster {
 
 func (c *clientSet) NebulaRestore() NebulaRestore {
 	return c.restoreClient
+}
+
+func (c *clientSet) NebulaBackup() NebulaBackup {
+	return c.backupClient
 }
 
 func (c *clientSet) NebulaAutoscaler() NebulaAutoscaler {

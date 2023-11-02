@@ -71,6 +71,10 @@ type Options struct {
 	// allowed to sync concurrently.
 	ConcurrentNebulaRestoreSyncs int
 
+	// ConcurrentNebulaBackupSyncs is the number of NebulaBackup objects that are
+	// allowed to sync concurrently.
+	ConcurrentNebulaBackupSyncs int
+
 	// EnableAdmissionWebhook enable admission webhook for controller manager.
 	EnableAdmissionWebhook bool
 
@@ -115,6 +119,7 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&o.HealthProbeBindAddress, "health-probe-bind-address", ":8081", "The TCP address that the controller should bind to for serving health probes.(e.g. 127.0.0.1:8081, :8081). It can be set to \"0\" to disable the health probe serving.")
 	flags.IntVar(&o.ConcurrentNebulaClusterSyncs, "concurrent-nebulacluster-syncs", 5, "The number of NebulaCluster objects that are allowed to sync concurrently.")
 	flags.IntVar(&o.ConcurrentNebulaRestoreSyncs, "concurrent-nebularestore-syncs", 5, "The number of NebulaRestore objects that are allowed to sync concurrently.")
+	flags.IntVar(&o.ConcurrentNebulaBackupSyncs, "concurrent-nebulabackup-syncs", 5, "The number of NebulaBackup objects that are allowed to sync concurrently.")
 	flags.BoolVar(&o.EnableAdmissionWebhook, "enable-admission-webhook", false, "If set to ture enable admission webhook for controller manager.")
 	flags.BoolVar(&o.EnableKruiseScheme, "enable-kruise-scheme", false, "If set to ture enable openkruise scheme for controller manager.")
 

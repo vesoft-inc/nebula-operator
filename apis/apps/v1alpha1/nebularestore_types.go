@@ -86,11 +86,14 @@ type RestoreCondition struct {
 }
 
 type BRConfig struct {
+	// TODO: support TLS
+
 	// ClusterName of restore cluster
 	ClusterName string `json:"clusterName"`
 	// ClusterNamespace of restore cluster
 	ClusterNamespace *string `json:"clusterNamespace,omitempty"`
 	// The name of the backup file.
+	// +optional
 	BackupName string `json:"backupName"`
 	// Concurrency is used to control the number of concurrent file downloads during data restoration.
 	Concurrency int32 `json:"concurrency,omitempty"`

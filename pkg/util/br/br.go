@@ -1,8 +1,9 @@
 package br
 
 import (
-	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 )
 
 const (

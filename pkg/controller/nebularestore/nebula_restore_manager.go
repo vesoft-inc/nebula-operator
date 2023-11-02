@@ -19,7 +19,6 @@ package nebularestore
 import (
 	"context"
 	"fmt"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/br"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +39,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/br"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	rtutil "github.com/vesoft-inc/nebula-operator/pkg/util/restore"

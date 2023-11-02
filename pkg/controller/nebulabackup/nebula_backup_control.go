@@ -17,12 +17,12 @@ limitations under the License.
 package nebulabackup
 
 import (
-	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 type ControlInterface interface {

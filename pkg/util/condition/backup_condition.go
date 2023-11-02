@@ -1,9 +1,10 @@
 package condition
 
 import (
-	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 )
 
 func UpdateNebulaBackupCondition(status *v1alpha1.BackupStatus, condition *v1alpha1.BackupCondition) bool {

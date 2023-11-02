@@ -18,17 +18,19 @@ package nebulabackup
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/br"
-	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"time"
+
+	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/br"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 const (

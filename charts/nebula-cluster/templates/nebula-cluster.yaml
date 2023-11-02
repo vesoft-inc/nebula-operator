@@ -11,20 +11,34 @@ spec:
     resources: {{ toYaml .Values.nebula.graphd.resources | nindent 6 }}
     image: {{ .Values.nebula.graphd.image }}
     version: {{ .Values.nebula.version }}
-    env: {{ toYaml .Values.nebula.graphd.env | nindent 6 }}
-    config: {{ toYaml .Values.nebula.graphd.config | nindent 6 }}
+    {{- with .Values.nebula.graphd.env }}
+    env:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.config }}
+    config:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     service:
       type: {{ .Values.nebula.graphd.serviceType }}
       externalTrafficPolicy: Local
+    {{- if .Values.nebula.graphd.logVolume.enable }}
     logVolumeClaim:
       resources:
         requests:
-          storage: {{ .Values.nebula.graphd.logStorage }}
+          storage: {{ .Values.nebula.graphd.logVolume.storage }}
       {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
-    labels: {{ toYaml .Values.nebula.graphd.podLabels | nindent 6 }}
-    annotations: {{ toYaml .Values.nebula.graphd.podAnnotations | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.podLabels }}
+    labels:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.graphd.podAnnotations }}
+    annotations:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.graphd.nodeSelector }}
     nodeSelector:
     {{- toYaml . | nindent 6 }}
@@ -66,25 +80,39 @@ spec:
     resources: {{ toYaml .Values.nebula.metad.resources | nindent 6 }}
     image: {{ .Values.nebula.metad.image }}
     version: {{ .Values.nebula.version }}
+    {{- if .Values.nebula.metad.licenseManagerURL }}
     licenseManagerURL: {{ .Values.nebula.metad.licenseManagerURL }}
-    env: {{ toYaml .Values.nebula.metad.env | nindent 6 }}
-    config: {{ toYaml .Values.nebula.metad.config | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.env }}
+    env:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.config }}
+    config:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     logVolumeClaim:
       resources:
         requests:
-          storage: {{ .Values.nebula.metad.logStorage }}
+          storage: {{ .Values.nebula.metad.logVolume.storage }}
       {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
     dataVolumeClaim:
       resources:
         requests:
-          storage: {{ .Values.nebula.metad.dataStorage }}
+          storage: {{ .Values.nebula.metad.dataVolume.storage }}
       {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
-    labels: {{ toYaml .Values.nebula.metad.podLabels | nindent 6 }}
-    annotations: {{ toYaml .Values.nebula.metad.podAnnotations | nindent 6 }}
+    {{- with .Values.nebula.metad.podLabels }}
+    labels:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.podAnnotations }}
+    annotations:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.metad.license }}
     license:
     {{- toYaml . | nindent 6 }}
@@ -132,24 +160,40 @@ spec:
     version: {{ .Values.nebula.version }}
     enableAutoBalance: {{ .Values.nebula.storaged.enableAutoBalance }}
     enableForceUpdate: {{ .Values.nebula.enableForceUpdate }}
-    env: {{ toYaml .Values.nebula.storaged.env | nindent 6 }}
-    config: {{ toYaml .Values.nebula.storaged.config | nindent 6 }}
+    {{- with .Values.nebula.storaged.env }}
+    env:
+    {{ toYaml | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.config }}
+    config:
+    {{ toYaml | nindent 6 }}
+    {{- end }}
+    {{- if .Values.nebula.storaged.logVolume.enable }}
     logVolumeClaim:
       resources:
         requests:
-          storage: {{ .Values.nebula.storaged.logStorage }}
+          storage: {{ .Values.nebula.storaged.logVolume.storage }}
       {{- if .Values.nebula.storageClassName }}
       storageClassName: {{ .Values.nebula.storageClassName }}
       {{- end }}
+    {{- end }}
     dataVolumeClaims:
+    {{- range $volume := .Values.nebula.storaged.dataVolumes }}
     - resources:
         requests:
-          storage: {{ .Values.nebula.storaged.dataStorage }}
-      {{- if .Values.nebula.storageClassName }}
-      storageClassName: {{ .Values.nebula.storageClassName }}
+          storage: {{ $volume.storage }}
+      {{- if $.Values.nebula.storageClassName }}
+      storageClassName: {{ $.Values.nebula.storageClassName }}
       {{- end }}
-    labels: {{ toYaml .Values.nebula.storaged.podLabels | nindent 6 }}
-    annotations: {{ toYaml .Values.nebula.storaged.podAnnotations | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.podLabels }}
+    labels:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.storaged.podAnnotations }}
+    annotations:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.storaged.nodeSelector }}
     nodeSelector:
     {{- toYaml . | nindent 6 }}
@@ -191,9 +235,18 @@ spec:
     resources: {{ toYaml .Values.nebula.exporter.resources | nindent 6 }}
     image: {{ .Values.nebula.exporter.image }}
     version: {{ .Values.nebula.exporter.version }}
-    env: {{ toYaml .Values.nebula.exporter.env | nindent 6 }}
-    labels: {{ toYaml .Values.nebula.exporter.podLabels | nindent 6 }}
-    annotations: {{ toYaml .Values.nebula.exporter.podAnnotations | nindent 6 }}
+    {{- with .Values.nebula.exporter.env }}
+    env:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.podLabels }}
+    labels:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.podAnnotations }}
+    annotations:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.exporter.nodeSelector }}
     nodeSelector:
     {{- toYaml . | nindent 6 }}
@@ -235,17 +288,28 @@ spec:
     image: {{ .Values.nebula.agent.image }}
     version: {{ .Values.nebula.agent.version }}
     resources: {{ toYaml .Values.nebula.agent.resources | nindent 6 }}
+  console:
+    username: {{ .Values.nebula.console.username }}
+    password: {{ .Values.nebula.console.password }}
+    image: {{ .Values.nebula.console.image }}
+    version: {{ .Values.nebula.console.version }}
+    {{- with .Values.nebula.console.nodeSelector }}
+    nodeSelector:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
   reference: {{ toYaml .Values.nebula.reference | nindent 4 }}
   imagePullPolicy: {{ .Values.nebula.imagePullPolicy }}
-  {{- if .Values.imagePullSecrets }}
-  imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 4 }}
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+  {{ toYaml . | nindent 4 }}
   {{- end }}
   schedulerName: {{ .Values.nebula.schedulerName }}
   topologySpreadConstraints: {{ toYaml .Values.nebula.topologySpreadConstraints | nindent 4 }}
   enablePVReclaim: {{ .Values.nebula.enablePVReclaim }}
   enableBR: {{ .Values.nebula.enableBR }}
-  {{- if .Values.nebula.logRotate }}
-  logRotate: {{ toYaml .Values.nebula.logRotate | nindent 4 }}
+  {{- with .Values.nebula.logRotate }}
+  logRotate:
+  {{ toYaml . | nindent 4 }}
   {{- end }}
   {{- if .Values.nebula.alpineImage }}
   alpineImage: {{ .Values.nebula.alpineImage }}

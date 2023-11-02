@@ -19,8 +19,6 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/vesoft-inc/nebula-go/v3/nebula"
 )
 
 // +genclient
@@ -110,16 +108,10 @@ type BackupStatus struct {
 	// TimeCompleted is the time at which the backup was completed.
 	// +nullable
 	TimeCompleted metav1.Time `json:"timeCompleted,omitempty"`
-	// ClusterName is the name of backupd nebula cluster.
-	ClusterName string `json:"clusterName,omitempty"`
 	// Phase is a user readable state inferred from the underlying Backup conditions
 	Phase BackupConditionType `json:"phase,omitempty"`
 	// +nullable
 	Conditions []BackupCondition `json:"conditions,omitempty"`
-	// +nullable
-	Partitions map[string][]*nebula.HostAddr `json:"partitions,omitempty"`
-	// +nullable
-	Checkpoints map[string]map[string]string `json:"checkpoints,omitempty"`
 }
 
 func init() {

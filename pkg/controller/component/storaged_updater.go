@@ -126,6 +126,64 @@ func (s *storagedUpdater) Update(
 	return s.updateRunningPhase(mc, nc, spaces)
 }
 
+func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error {
+	namespace := nc.GetNamespace()
+	updatePodName := nc.StoragedComponent().GetPodName(ordinal)
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
+	if err != nil {
+		return err
+	}
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	mc, err := nebula.NewMetaClient(endpoints, options...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := mc.Disconnect(); err != nil {
+			klog.Errorf("meta client disconnect failed: %v", err)
+		}
+	}()
+
+	spaces, err := mc.ListSpaces()
+	if err != nil {
+		return err
+	}
+	empty := len(spaces) == 0
+
+	if empty || nc.IsForceUpdateEnabled() {
+		return s.clientSet.Pod().DeletePod(namespace, updatePodName)
+	}
+
+	updatePod, err := s.clientSet.Pod().GetPod(namespace, updatePodName)
+	if err != nil {
+		klog.Errorf("get pod failed: %v", namespace, updatePodName, err)
+		return err
+	}
+	_, ok := updatePod.Annotations[TransLeaderBeginTime]
+	if !ok {
+		if updatePod.Annotations == nil {
+			updatePod.Annotations = make(map[string]string, 0)
+		}
+		now := time.Now().Format(time.RFC3339)
+		updatePod.Annotations[TransLeaderBeginTime] = now
+		if err := s.clientSet.Pod().UpdatePod(updatePod); err != nil {
+			return err
+		}
+		klog.Infof("set pod %s annotation %v successfully", updatePod.Name, TransLeaderBeginTime)
+	}
+
+	host := nc.StoragedComponent().GetPodFQDN(ordinal)
+	if s.readyToUpdate(mc, host, updatePod) {
+		return s.clientSet.Pod().DeletePod(namespace, updatePodName)
+	}
+
+	if err := s.transLeaderIfNecessary(nc, mc, ordinal); err != nil {
+		return &utilerrors.ReconcileError{Msg: fmt.Sprintf("%v", err)}
+	}
+
+	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("storaged pod %s is transferring leader", updatePodName)}
+}
+
 // nolint: revive
 func (s *storagedUpdater) updateStoragedPod(
 	mc nebula.MetaInterface,

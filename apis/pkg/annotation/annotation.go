@@ -34,12 +34,15 @@ const (
 	AnnLastAppliedStaticFlagsKey = "nebula-graph.io/last-applied-static-flags"
 	// AnnLastAppliedConfigKey is annotation key to indicate the last applied configuration
 	AnnLastAppliedConfigKey = "nebula-graph.io/last-applied-configuration"
-	// AnnPodSchedulingKey is pod scheduling annotation key, it represents whether the pod is scheduling
-	AnnPodSchedulingKey = "nebula-graph.io/pod-scheduling"
 	// AnnPodConfigMapHash is pod configmap hash key to update configuration dynamically
 	AnnPodConfigMapHash = "nebula-graph.io/cm-hash"
 	// AnnPvReclaimKey is annotation key that indicate whether reclaim persistent volume
 	AnnPvReclaimKey = "nebula-graph.io/enable-pv-reclaim"
+
+	// AnnRestartTimestamp is annotation key to indicate the timestamp that operator restart the workload
+	AnnRestartTimestamp = "nebula-graph.io/restart-timestamp"
+	// AnnRestartPodOrdinal is the annotation key to indicate which Pod will be restarted
+	AnnRestartPodOrdinal = "nebula-graph.io/restart-ordinal"
 
 	// AnnRestoreNameKey is restore name annotation key used for creating new nebula cluster with backup data
 	AnnRestoreNameKey = "nebula-graph.io/restore-name"

@@ -76,6 +76,10 @@ func (m *metadUpdater) Update(
 	return nil
 }
 
+func (m *metadUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error {
+	return nil
+}
+
 func (m *metadUpdater) updateMetadPod(ordinal int32, newUnstruct *unstructured.Unstructured, advanced bool) error {
 	return setPartition(newUnstruct, int64(ordinal), advanced)
 }

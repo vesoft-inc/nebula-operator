@@ -40,4 +40,7 @@ type ScaleManager interface {
 type UpdateManager interface {
 	// Update updates the cluster
 	Update(nc *v1alpha1.NebulaCluster, old, new *unstructured.Unstructured, gvk schema.GroupVersionKind) error
+
+	// RestartPod restart the specified Pod
+	RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error
 }

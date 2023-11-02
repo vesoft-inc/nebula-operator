@@ -118,11 +118,22 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
+	timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
+	if ok {
+		if err := extender.SetTemplateAnnotations(newWorkload,
+			map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
+			return err
+		}
+	}
+
 	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
 		return fmt.Errorf("sync metad cluster status failed: %v", err)
 	}
 
 	if notExist {
+		if err := extender.SetRestartTimestamp(newWorkload); err != nil {
+			return err
+		}
 		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
 		}

@@ -475,7 +475,7 @@ func podEqual(newPod, oldPod *corev1.Pod) bool {
 	return false
 }
 
-func updatePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error {
+func updateSinglePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error {
 	isOrphan := metav1.GetControllerOf(oldPod) == nil
 	if podEqual(newPod, oldPod) && !isOrphan {
 		return nil

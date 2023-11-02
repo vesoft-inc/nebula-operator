@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -223,6 +224,10 @@ func UpdateWorkload(
 		if ok {
 			annotations[annotation.AnnLastReplicas] = r
 		}
+		t, ok := oldUnstruct.GetAnnotations()[annotation.AnnRestartTimestamp]
+		if ok {
+			annotations[annotation.AnnRestartTimestamp] = t
+		}
 		w.SetAnnotations(annotations)
 		var updateStrategy interface{}
 		newSpec := GetSpec(newUnstruct)
@@ -286,6 +291,16 @@ func SetLastAppliedConfigAnnotation(obj *unstructured.Unstructured) error {
 		annotations[k] = v
 	}
 	annotations[annotation.AnnLastAppliedConfigKey] = apply
+	obj.SetAnnotations(annotations)
+	return nil
+}
+
+func SetRestartTimestamp(obj *unstructured.Unstructured) error {
+	annotations := make(map[string]string)
+	for k, v := range obj.GetAnnotations() {
+		annotations[k] = v
+	}
+	annotations[annotation.AnnRestartTimestamp] = time.Now().Format(time.RFC3339)
 	obj.SetAnnotations(annotations)
 	return nil
 }

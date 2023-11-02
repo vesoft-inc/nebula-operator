@@ -81,6 +81,10 @@ func (g *graphUpdater) Update(
 	return nil
 }
 
+func (g *graphUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error {
+	return nil
+}
+
 func (g *graphUpdater) updateGraphdPod(ordinal int32, newUnstruct *unstructured.Unstructured, advanced bool) error {
 	return setPartition(newUnstruct, int64(ordinal), advanced)
 }

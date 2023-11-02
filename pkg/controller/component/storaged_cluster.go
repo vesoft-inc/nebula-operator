@@ -18,6 +18,7 @@ package component
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	corev1 "k8s.io/api/core/v1"
@@ -123,6 +124,14 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		return err
 	}
 
+	timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
+	if ok {
+		if err := extender.SetTemplateAnnotations(newWorkload,
+			map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
+			return err
+		}
+	}
+
 	if err := c.syncNebulaClusterStatus(nc, oldWorkload); err != nil {
 		return fmt.Errorf("sync storaged cluster status failed: %v", err)
 	}
@@ -132,6 +141,9 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 			if err := syncZoneConfigMap(nc.StoragedComponent(), c.clientSet.ConfigMap()); err != nil {
 				return err
 			}
+		}
+		if err := extender.SetRestartTimestamp(newWorkload); err != nil {
+			return err
 		}
 		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
@@ -182,6 +194,17 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 			return fmt.Errorf("update storage data volume claims is not supported")
 		}
 		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
+			return err
+		}
+	}
+
+	oVal, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartPodOrdinal]
+	if ok {
+		ordinal, err := strconv.Atoi(oVal)
+		if err != nil {
+			return err
+		}
+		if err := c.updateManager.RestartPod(nc, int32(ordinal)); err != nil {
 			return err
 		}
 	}

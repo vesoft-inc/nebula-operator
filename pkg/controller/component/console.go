@@ -68,7 +68,7 @@ func (c *nebulaConsole) syncConsolePod(nc *v1alpha1.NebulaCluster) error {
 		}
 		return c.clientSet.Pod().CreatePod(newPod)
 	}
-	return updatePod(c.clientSet, newPod, oldPod)
+	return updateSinglePod(c.clientSet, newPod, oldPod)
 }
 
 func (c *nebulaConsole) generatePod(nc *v1alpha1.NebulaCluster) *corev1.Pod {

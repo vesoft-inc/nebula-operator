@@ -110,6 +110,15 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
+	// TODO: validate the timestamp format
+	timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
+	if ok {
+		if err := extender.SetTemplateAnnotations(newWorkload,
+			map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
+			return err
+		}
+	}
+
 	if err := c.syncNebulaClusterStatus(nc, newWorkload, oldWorkload); err != nil {
 		return fmt.Errorf("sync graphd cluster status failed: %v", err)
 	}
@@ -119,6 +128,9 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 			if err := syncZoneConfigMap(nc.GraphdComponent(), c.clientSet.ConfigMap()); err != nil {
 				return err
 			}
+		}
+		if err := extender.SetRestartTimestamp(newWorkload); err != nil {
+			return err
 		}
 		if err := extender.SetLastAppliedConfigAnnotation(newWorkload); err != nil {
 			return err
@@ -187,8 +199,7 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		lastReplicas = int32(v)
 	}
 
-	if updating &&
-		nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
+	if updating && nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
 		nc.Status.Graphd.Phase = v1alpha1.UpdatePhase
 	} else if *newReplicas < *oldReplicas || (ok && *newReplicas < lastReplicas) {
 		nc.Status.Graphd.Phase = v1alpha1.ScaleInPhase

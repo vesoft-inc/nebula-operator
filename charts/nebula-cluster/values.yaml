@@ -26,9 +26,12 @@ nebula:
       limits:
         cpu: "1"
         memory: "500Mi"
-    logStorage: "500Mi"
+    logVolume:
+      enable: true
+      storage: "500Mi"
     podLabels: {}
     podAnnotations: {}
+    securityContext: {}
     nodeSelector: {}
     tolerations: []
     affinity: {}
@@ -51,12 +54,16 @@ nebula:
       limits:
         cpu: "1"
         memory: "1Gi"
-    logStorage: "500Mi"
-    dataStorage: "2Gi"
+    logVolume:
+      enable: true
+      storage: "500Mi"
+    dataVolume:
+      storage: "2Gi"
     licenseManagerURL: ""
     license: {}
     podLabels: {}
     podAnnotations: {}
+    securityContext: {}
     nodeSelector: {}
     tolerations: []
     affinity: {}
@@ -79,11 +86,15 @@ nebula:
       limits:
         cpu: "1"
         memory: "1Gi"
-    logStorage: "500Mi"
-    dataStorage: "10Gi"
+    logVolume:
+      enable: true
+      storage: "500Mi"
+    dataVolumes:
+    - storage: "10Gi"
     enableAutoBalance: false
     podLabels: {}
     podAnnotations: {}
+    securityContext: {}
     nodeSelector: {}
     tolerations: []
     affinity: {}
@@ -108,6 +119,7 @@ nebula:
         memory: "256Mi"
     podLabels: {}
     podAnnotations: {}
+    securityContext: {}
     nodeSelector: {}
     tolerations: []
     affinity: {}
@@ -129,6 +141,14 @@ nebula:
       limits:
         cpu: "200m"
         memory: "256Mi"
+
+  console:
+    username: root
+    password: nebula
+    image: vesoft/nebula-console
+    version: latest
+    nodeSelector: {}
+
   alpineImage: ""
 
 imagePullSecrets: []

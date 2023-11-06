@@ -45,7 +45,10 @@ func (g *graphUpdater) Update(
 		return nil
 	}
 
-	if nc.Status.Metad.Phase == v1alpha1.UpdatePhase {
+	if nc.Status.Metad.Phase == v1alpha1.UpdatePhase ||
+		nc.Status.Storaged.Phase == v1alpha1.UpdatePhase ||
+		nc.Status.Storaged.Phase == v1alpha1.ScaleInPhase ||
+		nc.Status.Storaged.Phase == v1alpha1.ScaleOutPhase {
 		return setLastConfig(oldUnstruct, newUnstruct)
 	}
 

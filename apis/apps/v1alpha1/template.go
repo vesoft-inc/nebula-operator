@@ -41,8 +41,6 @@ var DynamicFlags = map[string]string{
 	"rebuild_index_part_rate_limit":               "4194304",
 	"prioritize_intra_zone_reading":               "false",
 	"stick_to_intra_zone_on_failure":              "false",
-	"sync_meta_when_use_space":                    "false",
-	"validate_session_timestamp":                  "true",
 }
 
 const (

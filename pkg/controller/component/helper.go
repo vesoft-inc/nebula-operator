@@ -199,8 +199,8 @@ func syncConfigMap(
 	if cfg != nil {
 		namespace := component.GetNamespace()
 		clusterName := component.GetClusterName()
-		flags := staticFlags(cfg)
-		klog.V(3).Infof("cluster [%s/%s] sync %s configmap with custom static configs %v", namespace, clusterName,
+		flags := staticOrStartupFlags(cfg)
+		klog.V(3).Infof("cluster [%s/%s] sync %s configmap with custom static or startup configs %v", namespace, clusterName,
 			component.ComponentType().String(), flags)
 		customConf := config.AppendCustomConfig(template, flags)
 		cm.Data[cmKey] = customConf
@@ -213,7 +213,7 @@ func syncConfigMap(
 	return cm, cmHash, nil
 }
 
-func staticFlags(config map[string]string) map[string]string {
+func staticOrStartupFlags(config map[string]string) map[string]string {
 	static := make(map[string]string)
 	for k, v := range config {
 		if _, ok := v1alpha1.DynamicFlags[k]; !ok {

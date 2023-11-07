@@ -634,18 +634,21 @@ var testCaseK8sReadinessProbe = []ncTestCase{
 						helm.WithArgs(
 							"--set", "nebula.graphd.readinessProbe.httpGet.path=/status",
 							"--set", "nebula.graphd.readinessProbe.httpGet.port=19669",
+							"--set", "nebula.graphd.readinessProbe.httpGet.scheme=HTTP",
 							"--set", "nebula.graphd.readinessProbe.failureThreshold=3",
 							"--set", "nebula.graphd.readinessProbe.periodSeconds=10",
 							"--set", "nebula.graphd.readinessProbe.timeoutSeconds=1",
 							"--set", "nebula.graphd.readinessProbe.successThreshold=1",
 							"--set", "nebula.storaged.readinessProbe.httpGet.path=/status",
 							"--set", "nebula.storaged.readinessProbe.httpGet.port=19779",
+							"--set", "nebula.storaged.readinessProbe.httpGet.scheme=HTTP",
 							"--set", "nebula.storaged.readinessProbe.failureThreshold=3",
 							"--set", "nebula.storaged.readinessProbe.periodSeconds=10",
 							"--set", "nebula.storaged.readinessProbe.timeoutSeconds=1",
 							"--set", "nebula.storaged.readinessProbe.successThreshold=1",
 							"--set", "nebula.metad.readinessProbe.httpGet.path=/status",
 							"--set", "nebula.metad.readinessProbe.httpGet.port=19559",
+							"--set", "nebula.metad.readinessProbe.httpGet.scheme=HTTP",
 							"--set", "nebula.metad.readinessProbe.failureThreshold=3",
 							"--set", "nebula.metad.readinessProbe.periodSeconds=10",
 							"--set", "nebula.metad.readinessProbe.timeoutSeconds=1",
@@ -661,8 +664,9 @@ var testCaseK8sReadinessProbe = []ncTestCase{
 									"ReadinessProbe": e2ematcher.DeepEqual(corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/status",
-												Port: intstr.FromInt(19669),
+												Path:   "/status",
+												Port:   intstr.FromInt(19669),
+												Scheme: "HTTP",
 											},
 										},
 										FailureThreshold: int32(3),
@@ -675,8 +679,9 @@ var testCaseK8sReadinessProbe = []ncTestCase{
 									"ReadinessProbe": e2ematcher.DeepEqual(corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/status",
-												Port: intstr.FromInt(19779),
+												Path:   "/status",
+												Port:   intstr.FromInt(19779),
+												Scheme: "HTTP",
 											},
 										},
 										FailureThreshold: int32(3),
@@ -689,8 +694,9 @@ var testCaseK8sReadinessProbe = []ncTestCase{
 									"ReadinessProbe": e2ematcher.DeepEqual(corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/status",
-												Port: intstr.FromInt(19559),
+												Path:   "/status",
+												Port:   intstr.FromInt(19559),
+												Scheme: "HTTP",
 											},
 										},
 										FailureThreshold: int32(3),
@@ -729,18 +735,21 @@ var testCaseK8sLivenessProbe = []ncTestCase{
 						helm.WithArgs(
 							"--set", "nebula.graphd.livenessProbe.httpGet.path=/status",
 							"--set", "nebula.graphd.livenessProbe.httpGet.port=19669",
+							"--set", "nebula.graphd.livenessProbe.httpGet.scheme=HTTP",
 							"--set", "nebula.graphd.livenessProbe.failureThreshold=3",
 							"--set", "nebula.graphd.livenessProbe.periodSeconds=10",
 							"--set", "nebula.graphd.livenessProbe.timeoutSeconds=1",
 							"--set", "nebula.graphd.livenessProbe.successThreshold=1",
 							"--set", "nebula.storaged.livenessProbe.httpGet.path=/status",
 							"--set", "nebula.storaged.livenessProbe.httpGet.port=19779",
+							"--set", "nebula.storaged.livenessProbe.httpGet.scheme=HTTP",
 							"--set", "nebula.storaged.livenessProbe.failureThreshold=3",
 							"--set", "nebula.storaged.livenessProbe.periodSeconds=10",
 							"--set", "nebula.storaged.livenessProbe.timeoutSeconds=1",
 							"--set", "nebula.storaged.livenessProbe.successThreshold=1",
 							"--set", "nebula.metad.livenessProbe.httpGet.path=/status",
 							"--set", "nebula.metad.livenessProbe.httpGet.port=19559",
+							"--set", "nebula.metad.livenessProbe.httpGet.scheme=HTTP",
 							"--set", "nebula.metad.livenessProbe.failureThreshold=3",
 							"--set", "nebula.metad.livenessProbe.periodSeconds=10",
 							"--set", "nebula.metad.livenessProbe.timeoutSeconds=1",
@@ -756,8 +765,9 @@ var testCaseK8sLivenessProbe = []ncTestCase{
 									"LivenessProbe": e2ematcher.DeepEqual(corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/status",
-												Port: intstr.FromInt(19669),
+												Path:   "/status",
+												Port:   intstr.FromInt(19669),
+												Scheme: "HTTP",
 											},
 										},
 										FailureThreshold: int32(3),
@@ -770,8 +780,9 @@ var testCaseK8sLivenessProbe = []ncTestCase{
 									"LivenessProbe": e2ematcher.DeepEqual(corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/status",
-												Port: intstr.FromInt(19779),
+												Path:   "/status",
+												Port:   intstr.FromInt(19779),
+												Scheme: "HTTP",
 											},
 										},
 										FailureThreshold: int32(3),
@@ -784,8 +795,9 @@ var testCaseK8sLivenessProbe = []ncTestCase{
 									"LivenessProbe": e2ematcher.DeepEqual(corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/status",
-												Port: intstr.FromInt(19559),
+												Path:   "/status",
+												Port:   intstr.FromInt(19559),
+												Scheme: "HTTP",
 											},
 										},
 										FailureThreshold: int32(3),

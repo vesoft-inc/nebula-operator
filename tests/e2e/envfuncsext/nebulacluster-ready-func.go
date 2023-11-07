@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"io"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"math"
 	"net/http"
 	"regexp"
@@ -584,6 +585,24 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 		nodeSelector = nil
 	}
 
+	readinessProbe := component.ComponentSpec().ReadinessProbe()
+	if readinessProbe == nil {
+		readinessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status",
+					Port:   intstr.FromInt(int(component.GetPort("http"))),
+					Scheme: "HTTP",
+				},
+			},
+			FailureThreshold:    int32(3),
+			PeriodSeconds:       int32(10),
+			TimeoutSeconds:      int32(5),
+			SuccessThreshold:    int32(1),
+			InitialDelaySeconds: int32(10),
+		}
+	}
+
 	if err := e2ematcher.Struct(
 		sts,
 		map[string]any{
@@ -601,13 +620,15 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 					"Spec": map[string]any{
 						"Containers": map[string]any{
 							fmt.Sprint(componentContainerIdx): map[string]any{
-								"Image":     e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
-								"Resources": e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
-								"Env":       e2ematcher.DeepEqual(env),
+								"Image":          e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
+								"Resources":      e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
+								"Env":            e2ematcher.DeepEqual(env),
+								"ReadinessProbe": e2ematcher.DeepEqual(*readinessProbe),
+								"LivenessProbe":  e2ematcher.DeepEqual(probeOrNil(component.ComponentSpec().LivenessProbe())),
 							},
 						},
 						"NodeSelector": e2ematcher.DeepEqual(nodeSelector),
-						"Affinity":     e2ematcher.DeepEqual(affinityPtrOrNil(component.ComponentSpec().Affinity())),
+						"Affinity":     e2ematcher.DeepEqual(affinityOrNil(component.ComponentSpec().Affinity())),
 						"Tolerations":  e2ematcher.DeepEqual(component.ComponentSpec().Tolerations()),
 					},
 				},
@@ -826,9 +847,16 @@ func extractComponentConfig(r io.Reader, paramValuePattern *regexp.Regexp) (map[
 	return componentConfig, nil
 }
 
-func affinityPtrOrNil(affinity *corev1.Affinity) any {
+func affinityOrNil(affinity *corev1.Affinity) any {
 	if affinity == nil {
 		return affinity
 	}
 	return *affinity
+}
+
+func probeOrNil(probe *corev1.Probe) any {
+	if probe == nil {
+		return probe
+	}
+	return *probe
 }

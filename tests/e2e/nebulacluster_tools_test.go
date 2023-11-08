@@ -28,6 +28,15 @@ var testCasesToolsExporter = []ncTestCase{
 			LabelKeyCategory: LabelTools,
 			LabelKeyGroup:    LabelToolsExporter,
 		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
+		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
 				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{

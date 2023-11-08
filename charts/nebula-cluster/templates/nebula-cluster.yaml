@@ -162,11 +162,11 @@ spec:
     enableForceUpdate: {{ .Values.nebula.enableForceUpdate }}
     {{- with .Values.nebula.storaged.env }}
     env:
-    {{ toYaml | nindent 6 }}
+    {{ toYaml . | nindent 6 }}
     {{- end }}
     {{- with .Values.nebula.storaged.config }}
     config:
-    {{ toYaml | nindent 6 }}
+    {{ toYaml . | nindent 6 }}
     {{- end }}
     {{- if .Values.nebula.storaged.logVolume.enable }}
     logVolumeClaim:

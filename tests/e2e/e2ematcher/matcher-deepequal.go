@@ -14,3 +14,14 @@ func DeepEqual(v any) Matcher {
 		return nil
 	})
 }
+
+func DeepEqualIgnorePtr(v any) Matcher {
+	v = unwrapPtr(v)
+	return MatcherFunc(func(val any) error {
+		val = unwrapPtr(val)
+		if diff := cmp.Diff(val, v); diff != "" {
+			return fmt.Errorf("DeepEqualIgnorePtr failed %s", diff)
+		}
+		return nil
+	})
+}

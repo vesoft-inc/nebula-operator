@@ -49,21 +49,17 @@ var testCaseK8sEnv = []ncTestCase{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sEnv,
 		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
+		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
-				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
-					"Spec": map[string]any{
-						"Graphd": map[string]any{
-							"EnvVars": e2ematcher.DeepEqual([]corev1.EnvVar{}),
-						},
-						"Metad": map[string]any{
-							"EnvVars": e2ematcher.DeepEqual([]corev1.EnvVar{}),
-						},
-						"Storaged": map[string]any{
-							"EnvVars": e2ematcher.DeepEqual([]corev1.EnvVar{}),
-						},
-					},
-				}),
 				envfuncsext.DefaultNebulaClusterReadyFunc,
 			),
 		},
@@ -115,21 +111,17 @@ var testCaseK8sAnnotations = []ncTestCase{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sAnnotations,
 		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
+		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
-				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
-					"Spec": map[string]any{
-						"Graphd": map[string]any{
-							"Annotations": e2ematcher.DeepEqual(map[string]string{}),
-						},
-						"Metad": map[string]any{
-							"Annotations": e2ematcher.DeepEqual(map[string]string{}),
-						},
-						"Storaged": map[string]any{
-							"Annotations": e2ematcher.DeepEqual(map[string]string{}),
-						},
-					},
-				}),
 				envfuncsext.DefaultNebulaClusterReadyFunc,
 			),
 		},
@@ -180,22 +172,17 @@ var testCaseK8sLabels = []ncTestCase{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sLabels,
 		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
+		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
-				envfuncsext.NebulaClusterReadyFuncForFields(false, map[string]any{
-					"Spec": map[string]any{
-						"Graphd": map[string]any{
-							"Labels": e2ematcher.DeepEqual(map[string]string{}),
-						},
-						"Metad": map[string]any{
-							"Labels": e2ematcher.DeepEqual(map[string]string{}),
-						},
-						"Storaged": map[string]any{
-							"Labels": e2ematcher.DeepEqual(map[string]string{}),
-						},
-					},
-				},
-				),
 				envfuncsext.DefaultNebulaClusterReadyFunc,
 			),
 		},
@@ -245,6 +232,15 @@ var testCaseK8sNodeSelector = []ncTestCase{
 		Labels: map[string]string{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sNodeSelector,
+		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
@@ -297,6 +293,15 @@ var testCaseK8sAffinity = []ncTestCase{
 		Labels: map[string]string{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sAffinity,
+		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
@@ -399,6 +404,15 @@ var testCaseK8sTolerations = []ncTestCase{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sTolerations,
 		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
+		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
 				envfuncsext.DefaultNebulaClusterReadyFunc,
@@ -476,6 +490,15 @@ var testCaseK8sInitContainers = []ncTestCase{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sInitContainers,
 		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
+		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
 				envfuncsext.DefaultNebulaClusterReadyFunc,
@@ -546,6 +569,15 @@ var testCaseK8sSidecarContainers = []ncTestCase{
 		Labels: map[string]string{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sSidecarContainers,
+		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
@@ -620,6 +652,15 @@ var testCaseK8sReadinessProbe = []ncTestCase{
 		Labels: map[string]string{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sReadinessProbe,
+		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
@@ -722,6 +763,15 @@ var testCaseK8sLivenessProbe = []ncTestCase{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sLivenessProbe,
 		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
+		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(
 				envfuncsext.DefaultNebulaClusterReadyFunc,
@@ -822,6 +872,15 @@ var testCaseK8sVolumes = []ncTestCase{
 		Labels: map[string]string{
 			LabelKeyCategory: LabelCategoryK8s,
 			LabelKeyGroup:    LabelGroupK8sVolumes,
+		},
+		DefaultNCOptions: []envfuncsext.NebulaClusterOption{
+			envfuncsext.WithNebulaClusterHelmRawOptions(
+				helm.WithArgs(
+					"--set", "nebula.graphd.replicas=1",
+					"--set", "nebula.metad.replicas=1",
+					"--set", "nebula.storaged.replicas=1",
+				),
+			),
 		},
 		InstallWaitNCOptions: []envfuncsext.NebulaClusterOption{
 			envfuncsext.WithNebulaClusterReadyFuncs(

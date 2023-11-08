@@ -493,7 +493,7 @@ func defaultNebulaClusterReadyFuncForExporter(ctx context.Context, cfg *envconf.
 			"namespace", deploy.Namespace,
 			"name", deploy.Name,
 		)
-		return false, err
+		return false, nil // do not return err, will check again
 	}
 
 	return true, nil
@@ -678,11 +678,11 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 								"Resources":      e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
 								"Env":            e2ematcher.DeepEqual(env),
 								"ReadinessProbe": e2ematcher.DeepEqual(*readinessProbe),
-								"LivenessProbe":  e2ematcher.DeepEqual(probeOrNil(component.ComponentSpec().LivenessProbe())),
+								"LivenessProbe":  e2ematcher.DeepEqualIgnorePtr(component.ComponentSpec().LivenessProbe()),
 							},
 						},
 						"NodeSelector": e2ematcher.DeepEqual(nodeSelector),
-						"Affinity":     e2ematcher.DeepEqual(affinityOrNil(component.ComponentSpec().Affinity())),
+						"Affinity":     e2ematcher.DeepEqualIgnorePtr(component.ComponentSpec().Affinity()),
 						"Tolerations":  e2ematcher.DeepEqual(component.ComponentSpec().Tolerations()),
 					},
 				},
@@ -872,18 +872,4 @@ func extractComponentConfig(r io.Reader, paramValuePattern *regexp.Regexp) (map[
 		return nil, err
 	}
 	return componentConfig, nil
-}
-
-func affinityOrNil(affinity *corev1.Affinity) any {
-	if affinity == nil {
-		return affinity
-	}
-	return *affinity
-}
-
-func probeOrNil(probe *corev1.Probe) any {
-	if probe == nil {
-		return probe
-	}
-	return *probe
 }

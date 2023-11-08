@@ -14,10 +14,7 @@ func Struct(actual any, matchers map[string]any) (retErr error) {
 }
 
 func structImpl(preFields []string, actual any, matchers map[string]any) (retErr error) {
-	originalActualVal := reflect.ValueOf(actual)
-	for originalActualVal.Kind() == reflect.Ptr {
-		originalActualVal = originalActualVal.Elem()
-	}
+	originalActualVal := unwrapValuePtr(reflect.ValueOf(actual))
 
 	for field, matcher := range matchers {
 		actualVal := originalActualVal
@@ -37,13 +34,7 @@ func structImpl(preFields []string, actual any, matchers map[string]any) (retErr
 		klog.V(6).InfoS("e2ematcher struct impl on fields", "fields", currFields)
 
 		if m, ok := matcher.(Matcher); ok {
-			for actualVal.Kind() == reflect.Ptr {
-				if actualVal.IsNil() {
-					break
-				}
-				actualVal = actualVal.Elem()
-			}
-			val := actualVal.Interface()
+			val := unwrapValuePtr(actualVal).Interface()
 			if err = m.Match(val); err != nil {
 				retErr = multierror.Append(retErr, fmt.Errorf("fields %q(%v) does not match %w", currFields, val, err))
 			}
@@ -95,4 +86,15 @@ func extractValue(val reflect.Value, field string) (reflect.Value, error) {
 		return val.Index(int(idx)), nil
 	}
 	return reflect.Value{}, fmt.Errorf("unsupported value type %q", val.Type())
+}
+
+func unwrapValuePtr(value reflect.Value) reflect.Value {
+	for value.Kind() == reflect.Ptr && !value.IsNil() {
+		value = value.Elem()
+	}
+	return value
+}
+
+func unwrapPtr(v any) any {
+	return unwrapValuePtr(reflect.ValueOf(v)).Interface()
 }

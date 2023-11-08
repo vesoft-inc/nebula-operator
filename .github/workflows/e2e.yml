@@ -1,0 +1,52 @@
+name: e2e
+
+on:
+  schedule:
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Acceptable content: branch/tag/commit ID."
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  package:
+    name: build package
+    runs-on:
+      - self-hosted
+      - nebula
+    container:
+      image: reg.vesoft-inc.com/ci/ubuntu:20.04-docker
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+    steps:
+      - uses: webiny/action-post-run@3.0.0
+        with:
+          run: sh -c "find . -mindepth 1 -delete"
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.ref }}
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20
+      - uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.HARBOR_REGISTRY }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+      - name: e2e
+        run: |
+          export E2E_DOCKER_CONFIG_JSON_SECRET=`cat ~/.docker/config.json| base64 -w 0`
+          make e2e  E2EARGS="-labels category=tools -v=5"
+        env:
+          E2E_OPERATOR_IMAGE: reg.vesoft-inc.com/cloud-dev/nebula-operator:snap-1.25
+          E2E_OPERATOR_INSTALL: "false"
+          E2E_NC_VERSION: v3.6.0
+          E2E_NC_GRAPHD_IMAGE: reg.vesoft-inc.com/vesoft-ent/nebula-graphd-ent
+          E2E_NC_METAD_IMAGE: reg.vesoft-inc.com/vesoft-ent/nebula-metad-ent
+          E2E_NC_STORAGED_IMAGE: reg.vesoft-inc.com/vesoft-ent/nebula-storaged-ent
+          E2E_NC_LICENSE_MANAGER_URL: license.vesoft-inc.com:9119

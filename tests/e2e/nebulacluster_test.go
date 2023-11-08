@@ -61,6 +61,7 @@ func TestNebulaCluster(t *testing.T) {
 	ncTestCases = append(ncTestCases, testCasesTools...)
 	ncTestCases = append(ncTestCases, testCasesZone...)
 	ncTestCases = append(ncTestCases, testCasesPV...)
+	ncTestCases = append(ncTestCases, testCasesK8s...)
 
 	defaultNebulaClusterHelmArgs := getDefaultNebulaClusterHelmArgs()
 

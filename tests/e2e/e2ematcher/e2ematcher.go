@@ -38,6 +38,9 @@ func structImpl(preFields []string, actual any, matchers map[string]any) (retErr
 
 		if m, ok := matcher.(Matcher); ok {
 			for actualVal.Kind() == reflect.Ptr {
+				if actualVal.IsNil() {
+					break
+				}
 				actualVal = actualVal.Elem()
 			}
 			val := actualVal.Interface()

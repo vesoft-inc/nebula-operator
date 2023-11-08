@@ -27,10 +27,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	nebulago "github.com/vesoft-inc/nebula-go/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -567,6 +569,94 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 		return false
 	}
 
+	klog.InfoS("Check Component Resource find container in StatefulSet",
+		"namespace", sts.Namespace,
+		"name", sts.Name,
+		"container", component.ComponentType().String(),
+		"index", componentContainerIdx,
+	)
+
+	env := component.ComponentSpec().PodEnvVars()
+	if len(env) == 0 {
+		env = nil
+	}
+	nodeSelector := component.ComponentSpec().NodeSelector()
+	if len(nodeSelector) == 0 {
+		nodeSelector = nil
+	}
+
+	readinessProbe := component.ComponentSpec().ReadinessProbe()
+	if readinessProbe == nil {
+		readinessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status",
+					Port:   intstr.FromInt(int(component.GetPort("http"))),
+					Scheme: "HTTP",
+				},
+			},
+			FailureThreshold:    int32(3),
+			PeriodSeconds:       int32(10),
+			TimeoutSeconds:      int32(5),
+			SuccessThreshold:    int32(1),
+			InitialDelaySeconds: int32(10),
+		}
+	}
+
+	for _, sVolume := range component.ComponentSpec().Volumes() {
+		found := false
+		for _, volume := range sts.Spec.Template.Spec.Volumes {
+			if volume.Name == sVolume.Name {
+				if diff := cmp.Diff(volume, sVolume); diff != "" {
+					klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but StatefulSet volume not expected",
+						"namespace", sts.Namespace,
+						"name", sts.Name,
+						"volume", sVolume.Name,
+						"diff", fmt.Errorf("DeepEqual failed %s", diff),
+					)
+					return false
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but StatefulSet volume not found",
+				"namespace", sts.Namespace,
+				"name", sts.Name,
+				"volume", sVolume.Name,
+			)
+			return false
+		}
+	}
+
+	for _, sVolumeMount := range component.ComponentSpec().VolumeMounts() {
+		found := false
+		for _, volumeMount := range sts.Spec.Template.Spec.Containers[componentContainerIdx].VolumeMounts {
+			if volumeMount.Name == sVolumeMount.Name {
+				if diff := cmp.Diff(volumeMount, sVolumeMount); diff != "" {
+					klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but StatefulSet volumeMount not expected",
+						"namespace", sts.Namespace,
+						"name", sts.Name,
+						"volumeMount", sVolumeMount.Name,
+						"diff", fmt.Errorf("DeepEqual failed %s", diff),
+					)
+					return false
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			klog.ErrorS(nil, "Waiting for NebulaCluster to be ready but StatefulSet volumeMount not found",
+				"namespace", sts.Namespace,
+				"name", sts.Name,
+				"volumeMount", sVolumeMount.Name,
+			)
+			return false
+		}
+	}
+
 	if err := e2ematcher.Struct(
 		sts,
 		map[string]any{
@@ -577,13 +667,23 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 			"Spec": map[string]any{
 				"Replicas": e2ematcher.ValidatorEq(component.ComponentSpec().Replicas()),
 				"Template": map[string]any{
+					"ObjectMeta": map[string]any{
+						"Annotations": e2ematcher.MapContainsMatchers(component.ComponentSpec().PodAnnotations()),
+						"Labels":      e2ematcher.MapContainsMatchers(component.ComponentSpec().PodLabels()),
+					},
 					"Spec": map[string]any{
 						"Containers": map[string]any{
 							fmt.Sprint(componentContainerIdx): map[string]any{
-								"Image":     e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
-								"Resources": e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
+								"Image":          e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
+								"Resources":      e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
+								"Env":            e2ematcher.DeepEqual(env),
+								"ReadinessProbe": e2ematcher.DeepEqual(*readinessProbe),
+								"LivenessProbe":  e2ematcher.DeepEqual(probeOrNil(component.ComponentSpec().LivenessProbe())),
 							},
 						},
+						"NodeSelector": e2ematcher.DeepEqual(nodeSelector),
+						"Affinity":     e2ematcher.DeepEqual(affinityOrNil(component.ComponentSpec().Affinity())),
+						"Tolerations":  e2ematcher.DeepEqual(component.ComponentSpec().Tolerations()),
 					},
 				},
 			},
@@ -772,4 +872,18 @@ func extractComponentConfig(r io.Reader, paramValuePattern *regexp.Regexp) (map[
 		return nil, err
 	}
 	return componentConfig, nil
+}
+
+func affinityOrNil(affinity *corev1.Affinity) any {
+	if affinity == nil {
+		return affinity
+	}
+	return *affinity
+}
+
+func probeOrNil(probe *corev1.Probe) any {
+	if probe == nil {
+		return probe
+	}
+	return *probe
 }

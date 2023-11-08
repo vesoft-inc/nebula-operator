@@ -40,6 +40,7 @@ type (
 	ncTestCase struct {
 		Name                 string
 		Labels               map[string]string
+		DefaultNCOptions     []envfuncsext.NebulaClusterOption
 		InstallNCOptions     []envfuncsext.NebulaClusterOption
 		InstallWaitNCOptions []envfuncsext.NebulaClusterOption
 		LoadLDBC             bool
@@ -110,7 +111,8 @@ func TestNebulaCluster(t *testing.T) {
 				klog.V(4).InfoS("Install NebulaCluster", "namespace", namespace, "name", name)
 
 				var err error
-				ctx, err = envfuncsext.InstallNebulaCluster(append([]envfuncsext.NebulaClusterOption{
+
+				opts := []envfuncsext.NebulaClusterOption{
 					envfuncsext.WithNebulaClusterHelmRawOptions(
 						helm.WithChart(config.C.NebulaGraph.ChartPath),
 						helm.WithNamespace(namespace),
@@ -118,7 +120,11 @@ func TestNebulaCluster(t *testing.T) {
 						helm.WithArgs(defaultNebulaClusterHelmArgs...),
 						helm.WithArgs("--set", fmt.Sprintf("nameOverride=%s", name)),
 					),
-				}, tc.InstallNCOptions...)...)(ctx, cfg)
+				}
+				opts = append(opts, tc.DefaultNCOptions...)
+				opts = append(opts, tc.InstallNCOptions...)
+
+				ctx, err = envfuncsext.InstallNebulaCluster(opts...)(ctx, cfg)
 				if err != nil {
 					t.Errorf("failed to install NebulaCluster %v", err)
 				}
@@ -182,7 +188,8 @@ func TestNebulaCluster(t *testing.T) {
 					klog.V(4).InfoS("Upgrade NebulaCluster", "namespace", namespace, "name", name)
 
 					var err error
-					ctx, err = envfuncsext.UpgradeNebulaCluster(append([]envfuncsext.NebulaClusterOption{
+
+					opts := []envfuncsext.NebulaClusterOption{
 						envfuncsext.WithNebulaClusterHelmRawOptions(
 							helm.WithChart(config.C.NebulaGraph.ChartPath),
 							helm.WithNamespace(namespace),
@@ -190,7 +197,11 @@ func TestNebulaCluster(t *testing.T) {
 							helm.WithArgs(defaultNebulaClusterHelmArgs...),
 							helm.WithArgs("--set", fmt.Sprintf("nameOverride=%s", name)),
 						),
-					}, upgradeCase.UpgradeNCOptions...)...)(ctx, cfg)
+					}
+					opts = append(opts, tc.DefaultNCOptions...)
+					opts = append(opts, upgradeCase.UpgradeNCOptions...)
+
+					ctx, err = envfuncsext.UpgradeNebulaCluster(opts...)(ctx, cfg)
 					if err != nil {
 						t.Errorf("failed to upgrade NebulaCluster %v", err)
 					}

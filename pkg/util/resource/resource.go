@@ -17,7 +17,7 @@ limitations under the License.
 package resource
 
 import (
-	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,13 +31,10 @@ type GVRFunc func() schema.GroupVersionResource
 var (
 	NebulaClusterKind       = v1alpha1.SchemeGroupVersion.WithKind("NebulaCluster")
 	StatefulSetKind         = appsv1.SchemeGroupVersion.WithKind("StatefulSet")
-	AdvancedStatefulSetKind = kruisev1alpha1.SchemeGroupVersion.WithKind("StatefulSet")
-	UnitedDeploymentKind    = kruisev1alpha1.SchemeGroupVersion.WithKind("UnitedDeployment")
+	AdvancedStatefulSetKind = kruisev1beta1.SchemeGroupVersion.WithKind("StatefulSet")
 
 	GroupVersionResources = map[string]GVRFunc{
-		StatefulSetKind.String():         GetStatefulSetGVR,
-		AdvancedStatefulSetKind.String(): GetAdvancedStatefulSetGVR,
-		UnitedDeploymentKind.String():    GetUniteDeploymentGVR,
+		StatefulSetKind.String(): GetStatefulSetGVR,
 	}
 )
 
@@ -52,7 +49,7 @@ func GetStatefulSetGVR() schema.GroupVersionResource {
 func GetAdvancedStatefulSetGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{
 		Group:    "apps.kruise.io",
-		Version:  "v1alpha1",
+		Version:  "v1beta1",
 		Resource: "statefulsets",
 	}
 }

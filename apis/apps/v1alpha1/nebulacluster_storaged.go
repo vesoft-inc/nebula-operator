@@ -404,6 +404,18 @@ func (c *storagedComponent) IsSuspended() bool {
 	return true
 }
 
+func (c *storagedComponent) IsAutoFailovering() bool {
+	if len(c.nc.Status.Storaged.FailureHosts) == 0 {
+		return false
+	}
+	for _, failureHost := range c.nc.Status.Storaged.FailureHosts {
+		if !failureHost.ConfirmationTime.IsZero() {
+			return true
+		}
+	}
+	return false
+}
+
 func storageDataVolumeClaims(storageClaims []StorageClaim, componentType string) ([]corev1.PersistentVolumeClaim, error) {
 	var pvcs []corev1.PersistentVolumeClaim
 	for i := range storageClaims {

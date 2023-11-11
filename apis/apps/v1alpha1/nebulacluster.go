@@ -110,6 +110,10 @@ func (nc *NebulaCluster) ConcurrentTransfer() bool {
 	return pointer.BoolDeref(nc.Spec.Storaged.ConcurrentTransfer, false)
 }
 
+func (nc *NebulaCluster) IsAutoFailoverEnabled() bool {
+	return pointer.BoolDeref(nc.Spec.EnableAutoFailover, false)
+}
+
 func (nc *NebulaCluster) IsBREnabled() bool {
 	return pointer.BoolDeref(nc.Spec.EnableBR, false)
 }

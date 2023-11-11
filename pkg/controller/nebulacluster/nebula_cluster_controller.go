@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,10 +59,11 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 		return nil, err
 	}
 
-	sm := component.NewStorageScaler(mgr.GetClient(), clientSet)
+	sm := component.NewStorageScaler(clientSet)
 	graphdUpdater := component.NewGraphdUpdater(clientSet.Pod())
 	metadUpdater := component.NewMetadUpdater(clientSet.Pod())
-	storagedUpdater := component.NewStoragedUpdater(mgr.GetClient(), clientSet)
+	storagedUpdater := component.NewStoragedUpdater(clientSet)
+	storagedFailover := component.NewStoragedFailover(mgr.GetClient(), clientSet)
 
 	dm, err := discutil.New(mgr.GetConfig())
 	if err != nil {
@@ -73,12 +74,12 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 		return nil, fmt.Errorf("create apiserver info failed: %v", err)
 	}
 
-	evenPodsSpread, err := kube.EnableEvenPodsSpread(info)
+	valid, err := kube.ValidVersion(info)
 	if err != nil {
-		return nil, fmt.Errorf("get feature failed: %v", err)
+		return nil, fmt.Errorf("get server version failed: %v", err)
 	}
-	if !evenPodsSpread {
-		return nil, fmt.Errorf("EvenPodsSpread feauture not supported")
+	if !valid {
+		return nil, fmt.Errorf("server version not supported")
 	}
 
 	return &ClusterReconciler{
@@ -97,7 +98,8 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 				clientSet,
 				dm,
 				sm,
-				storagedUpdater),
+				storagedUpdater,
+				storagedFailover),
 			component.NewNebulaExporter(clientSet),
 			component.NewNebulaConsole(clientSet),
 			reclaimer.NewMetaReconciler(clientSet),
@@ -162,7 +164,6 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, fmt.Errorf("openkruise scheme not registered")
 	}
 
-	// TODO: check lm license key valid
 	if err := r.syncNebulaCluster(nebulaCluster.DeepCopy()); err != nil {
 		isReconcileError := func(err error) (b bool) {
 			defer func() {
@@ -197,7 +198,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			Owns(&corev1.ConfigMap{}).
 			Owns(&corev1.Service{}).
 			Owns(&appsv1.StatefulSet{}).
-			Owns(&kruisev1alpha1.StatefulSet{}).
+			Owns(&kruisev1beta1.StatefulSet{}).
 			Owns(&appsv1.Deployment{}).
 			Complete(r)
 	}

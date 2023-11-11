@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog/v2"
+	podutils "k8s.io/kubernetes/pkg/api/v1/pod"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
@@ -485,15 +486,11 @@ func updateSinglePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error
 		return err
 	}
 
-	if err := clientSet.Pod().DeletePod(oldPod.Namespace, oldPod.Name); err != nil {
+	if err := clientSet.Pod().DeletePod(oldPod.Namespace, oldPod.Name, false); err != nil {
 		return err
 	}
 
 	return clientSet.Pod().CreatePod(newPod)
-}
-
-func isPending(pod *corev1.Pod) bool {
-	return pod.Status.Phase == corev1.PodPending
 }
 
 func syncPVC(
@@ -578,4 +575,34 @@ func canSuspendComponent(component v1alpha1.NebulaClusterComponent) (bool, strin
 		}
 	}
 	return true, ""
+}
+
+func isPodPending(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodPending
+}
+
+func isPodHealthy(pod *corev1.Pod) bool {
+	return isPodRunningAndReady(pod) && !isPodTerminating(pod)
+}
+
+func isPodRunningAndReady(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodRunning && podutils.IsPodReady(pod)
+}
+
+func isPodTerminating(pod *corev1.Pod) bool {
+	return pod.DeletionTimestamp != nil
+}
+
+func isPodConditionScheduledTrue(conditions []corev1.PodCondition) bool {
+	podSchCond := getPodConditionFromList(conditions, corev1.PodScheduled)
+	return podSchCond != nil && podSchCond.Status == corev1.ConditionTrue
+}
+
+func getPodConditionFromList(conditions []corev1.PodCondition, conditionType corev1.PodConditionType) *corev1.PodCondition {
+	for i := range conditions {
+		if conditions[i].Type == conditionType {
+			return &conditions[i]
+		}
+	}
+	return nil
 }

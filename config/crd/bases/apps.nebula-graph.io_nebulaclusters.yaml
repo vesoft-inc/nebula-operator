@@ -482,6 +482,8 @@ spec:
                   version:
                     type: string
                 type: object
+              enableAutoFailover:
+                type: boolean
               enableBR:
                 type: boolean
               enablePVReclaim:
@@ -3184,6 +3186,8 @@ spec:
                 required:
                 - image
                 type: object
+              failoverPeriod:
+                type: string
               graphd:
                 properties:
                   affinity:
@@ -11718,11 +11722,41 @@ spec:
                 type: integer
               storaged:
                 properties:
+                  balancedAfterFailover:
+                    type: boolean
                   balancedSpaces:
                     items:
                       format: int32
                       type: integer
                     type: array
+                  failureHosts:
+                    additionalProperties:
+                      properties:
+                        confirmationTime:
+                          format: date-time
+                          type: string
+                        creationTime:
+                          format: date-time
+                          type: string
+                        deletionTime:
+                          format: date-time
+                          type: string
+                        host:
+                          type: string
+                        hostDeleted:
+                          type: boolean
+                        nodeDown:
+                          type: boolean
+                        podRebuilt:
+                          type: boolean
+                        podRestarted:
+                          type: boolean
+                        pvcSet:
+                          additionalProperties:
+                            type: object
+                          type: object
+                      type: object
+                    type: object
                   hostsAdded:
                     type: boolean
                   lastBalanceJob:

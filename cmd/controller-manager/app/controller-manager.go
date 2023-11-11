@@ -21,7 +21,7 @@ import (
 	"flag"
 	"net/http"
 
-	kruiseapi "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -92,7 +92,8 @@ func Run(ctx context.Context, opts *options.Options) error {
 	profileflag.ListenAndServe(opts.ProfileOpts)
 
 	if opts.EnableKruiseScheme {
-		utilruntime.Must(kruiseapi.AddToScheme(scheme))
+		utilruntime.Must(kruisev1beta1.AddToScheme(clientgoscheme.Scheme))
+		utilruntime.Must(kruisev1beta1.AddToScheme(scheme))
 		klog.Info("register openkruise scheme")
 	}
 

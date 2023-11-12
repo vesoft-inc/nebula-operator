@@ -1,10 +1,26 @@
 FROM alpine:3.18.2
 
 ARG TARGETPLATFORM
+ARG TARGETARCH
 
 RUN addgroup -S -g 65532 ng-user && \
     adduser -S -D -H -u 65532 \
     -s /sbin/nologin -G ng-user -g ng-user ng-user
+
+RUN apk update \
+  && apk upgrade \
+  && apk add --no-cache \
+    curl \
+  && rm -rf /var/cache/apk/*
+
+RUN mkdir -p /tmp/nebula-operator
+RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/${TARGETARCH}/kubectl
+RUN chmod +x ./kubectl
+RUN mv ./kubectl /usr/local/bin
+
+ADD charts/nebula-operator/crds/nebulaautoscalers.yaml /tmp/nebula-operator/nebulaautoscalers.yaml
+ADD charts/nebula-operator/crds/nebulaclusters.yaml /tmp/nebula-operator/nebulaclusters.yaml
+ADD charts/nebula-operator/crds/nebularestores.yaml /tmp/nebula-operator/nebularestores.yaml
 
 ADD bin/${TARGETPLATFORM}/controller-manager /usr/local/bin/controller-manager
 ADD bin/${TARGETPLATFORM}/autoscaler /usr/local/bin/autoscaler

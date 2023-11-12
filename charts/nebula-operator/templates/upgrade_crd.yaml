@@ -1,0 +1,36 @@
+{{- if .Values.upgradeCRD }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nebula-operator-upgrade-crd
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+  labels:
+    {{- include "nebula-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "nebula-operator"
+spec:
+  template:
+    metadata:
+      name: nebula-operator-upgrade-crd
+      labels:
+        {{- include "nebula-operator.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "nebula-operator"
+    spec:
+      serviceAccountName: {{ template "controller-manager.name" . }}-sa
+      {{- include "nebula-operator.imagePullSecrets" . | indent 6 }}
+      containers:
+      - name: upgrade-crd
+        image: {{ .Values.image.nebulaOperator.image }}
+        imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - >
+          kubectl apply -f /tmp/nebula-operator/nebulaautoscalers.yaml;
+          kubectl apply -f /tmp/nebula-operator/nebulaclusters.yaml;
+          kubectl apply -f /tmp/nebula-operator/nebularestores.yaml;
+      restartPolicy: OnFailure
+{{- end }}

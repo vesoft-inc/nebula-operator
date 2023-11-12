@@ -40,6 +40,9 @@ scheduler:
     enabled: ["NodeZone"]
     disabled: [] # only in-tree plugins need to be defined here
 
+# upgrade CRD on chart upgrade
+upgradeCRD: true
+
 # Enable openkruise scheme for controller manager. (default false)
 enableKruiseScheme: false
 

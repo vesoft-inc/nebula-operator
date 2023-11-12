@@ -36,7 +36,7 @@ type Pod interface {
 	GetPod(namespace string, name string) (*corev1.Pod, error)
 	CreatePod(pod *corev1.Pod) error
 	UpdatePod(pod *corev1.Pod) error
-	DeletePod(namespace string, name string) error
+	DeletePod(namespace string, name string, nonGraceful bool) error
 	ListPods(namespace string, selector labels.Selector) ([]corev1.Pod, error)
 }
 
@@ -96,7 +96,7 @@ func (pd *podClient) UpdatePod(pod *corev1.Pod) error {
 	})
 }
 
-func (pd *podClient) DeletePod(namespace, name string) error {
+func (pd *podClient) DeletePod(namespace, name string, nonGraceful bool) error {
 	pod := &corev1.Pod{}
 	if err := pd.kubecli.Get(context.TODO(), types.NamespacedName{
 		Namespace: namespace,
@@ -105,11 +105,15 @@ func (pd *podClient) DeletePod(namespace, name string) error {
 		return err
 	}
 
-	policy := metav1.DeletePropagationBackground
-	options := &client.DeleteOptions{
-		PropagationPolicy: &policy,
+	preconditions := metav1.Preconditions{UID: &pod.UID, ResourceVersion: &pod.ResourceVersion}
+	deleteOptions := &client.DeleteOptions{Preconditions: &preconditions}
+	if nonGraceful {
+		gracePeriod := int64(0)
+		propagationPolicy := metav1.DeletePropagationBackground
+		deleteOptions.GracePeriodSeconds = &gracePeriod
+		deleteOptions.PropagationPolicy = &propagationPolicy
 	}
-	return pd.kubecli.Delete(context.TODO(), pod, options)
+	return pd.kubecli.Delete(context.TODO(), pod, deleteOptions)
 }
 
 func (pd *podClient) ListPods(namespace string, selector labels.Selector) ([]corev1.Pod, error) {

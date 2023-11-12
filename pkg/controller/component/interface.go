@@ -44,3 +44,8 @@ type UpdateManager interface {
 	// RestartPod restart the specified Pod
 	RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error
 }
+
+type FailoverManager interface {
+	Failover(nc *v1alpha1.NebulaCluster) error
+	Recovery(nc *v1alpha1.NebulaCluster) error
+}

@@ -118,11 +118,13 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
-	if ok {
-		if err := extender.SetTemplateAnnotations(newWorkload,
-			map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
-			return err
+	if !notExist {
+		timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
+		if ok {
+			if err := extender.SetTemplateAnnotations(newWorkload,
+				map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
+				return err
+			}
 		}
 	}
 

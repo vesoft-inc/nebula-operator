@@ -209,6 +209,7 @@ type NebulaClusterComponent interface {
 	GetPhase() ComponentPhase
 	IsSuspending() bool
 	IsSuspended() bool
+	IsAutoFailovering() bool
 	SetWorkloadStatus(status *WorkloadStatus)
 	UpdateComponentStatus(status *ComponentStatus)
 }

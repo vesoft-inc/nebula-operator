@@ -19,15 +19,19 @@ package component
 import (
 	"fmt"
 	"strconv"
+	"strings"
+	"time"
 
+	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
 
-	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
@@ -39,10 +43,11 @@ import (
 )
 
 type storagedCluster struct {
-	clientSet     kube.ClientSet
-	dm            discovery.Interface
-	scaleManager  ScaleManager
-	updateManager UpdateManager
+	clientSet       kube.ClientSet
+	dm              discovery.Interface
+	scaleManager    ScaleManager
+	updateManager   UpdateManager
+	failoverManager FailoverManager
 }
 
 func NewStoragedCluster(
@@ -50,12 +55,14 @@ func NewStoragedCluster(
 	dm discovery.Interface,
 	sm ScaleManager,
 	um UpdateManager,
+	fm FailoverManager,
 ) ReconcileManager {
 	return &storagedCluster{
-		clientSet:     clientSet,
-		dm:            dm,
-		scaleManager:  sm,
-		updateManager: um,
+		clientSet:       clientSet,
+		dm:              dm,
+		scaleManager:    sm,
+		updateManager:   um,
+		failoverManager: fm,
 	}
 }
 
@@ -124,11 +131,13 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		return err
 	}
 
-	timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
-	if ok {
-		if err := extender.SetTemplateAnnotations(newWorkload,
-			map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
-			return err
+	if !notExist {
+		timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
+		if ok {
+			if err := extender.SetTemplateAnnotations(newWorkload,
+				map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -178,6 +187,22 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	if nc.IsZoneEnabled() && !nc.StoragedComponent().IsReady() {
 		if err := c.addStorageHostsToZone(nc, *newReplicas); err != nil {
 			return err
+		}
+	}
+
+	if nc.IsAutoFailoverEnabled() {
+		r, err := c.shouldRecover(nc)
+		if err != nil {
+			return err
+		}
+		if r {
+			if err := c.failoverManager.Recovery(nc); err != nil {
+				return err
+			}
+		} else if nc.StoragedComponent().IsAutoFailovering() {
+			if err := c.failoverManager.Failover(nc); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -250,7 +275,67 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 		nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
 	}
 
-	// TODO: show storaged hosts state with storaged peers
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
+	if err != nil {
+		return err
+	}
+	hosts := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(hosts, options...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = metaClient.Disconnect()
+	}()
+
+	hostItems, err := metaClient.ListHosts(meta.ListHostType_STORAGE)
+	if err != nil {
+		return err
+	}
+	thriftPort := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
+	for i := range hostItems {
+		host := hostItems[i]
+		if host.Status == meta.HostStatus_OFFLINE && host.HostAddr.Port == thriftPort {
+			podName := strings.Split(host.HostAddr.Host, ".")[0]
+			if nc.Status.Storaged.FailureHosts == nil {
+				nc.Status.Storaged.FailureHosts = make(map[string]v1alpha1.StoragedFailureHost)
+			}
+			fh, exits := nc.Status.Storaged.FailureHosts[podName]
+			if exits {
+				deadline := fh.CreationTime.Add(nc.Spec.FailoverPeriod.Duration)
+				if time.Now().After(deadline) {
+					if fh.ConfirmationTime.IsZero() {
+						fh.ConfirmationTime = metav1.Time{Time: time.Now()}
+						pvcs, err := getPodPvcs(c.clientSet, nc, podName)
+						if err != nil {
+							return err
+						}
+						pvcSet := make(map[types.UID]v1alpha1.EmptyStruct)
+						for _, pvc := range pvcs {
+							pvcSet[pvc.UID] = v1alpha1.EmptyStruct{}
+						}
+						fh.PVCSet = pvcSet
+						nc.Status.Storaged.FailureHosts[podName] = fh
+						if err := c.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
+							return err
+						}
+						klog.Infof("storaged pod [%s/%s] failover period exceeds %s", nc.Namespace, podName, nc.Spec.FailoverPeriod.Duration.String())
+					}
+				}
+				continue
+			}
+			failureHost := v1alpha1.StoragedFailureHost{
+				Host:         host.HostAddr.Host,
+				CreationTime: metav1.Time{Time: time.Now()},
+			}
+			nc.Status.Storaged.FailureHosts[podName] = failureHost
+			if err := c.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
+				return err
+			}
+			klog.Infof("failure storage host %s found", host.HostAddr.Host)
+		}
+	}
+
 	return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
 }
 
@@ -408,6 +493,57 @@ func (c *storagedCluster) updateZoneMappings(nc *v1alpha1.NebulaCluster, newRepl
 		return err
 	}
 	return nil
+}
+
+func (c *storagedCluster) shouldRecover(nc *v1alpha1.NebulaCluster) (bool, error) {
+	if nc.Status.Storaged.FailureHosts == nil {
+		return false, nil
+	}
+
+	fhSet := sets.New[string]()
+	for podName, fh := range nc.Status.Storaged.FailureHosts {
+		pod, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
+		if err != nil {
+			klog.Errorf("storaged pod [%s/%s] does not exist: %v", nc.Namespace, podName, err)
+			return false, err
+		}
+		if !isPodHealthy(pod) {
+			return false, nil
+		}
+		fhSet.Insert(fh.Host)
+	}
+
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
+	if err != nil {
+		return false, err
+	}
+	hosts := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(hosts, options...)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		_ = metaClient.Disconnect()
+	}()
+
+	hostItems, err := metaClient.ListHosts(meta.ListHostType_STORAGE)
+	if err != nil {
+		return false, err
+	}
+	thriftPort := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
+	for _, host := range hostItems {
+		if fhSet.Has(host.HostAddr.Host) &&
+			host.Status != meta.HostStatus_ONLINE &&
+			host.HostAddr.Port == thriftPort {
+			return false, nil
+		}
+	}
+
+	if nc.Status.Storaged.BalancedAfterFailover != nil && !*nc.Status.Storaged.BalancedAfterFailover {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 type FakeStoragedCluster struct {

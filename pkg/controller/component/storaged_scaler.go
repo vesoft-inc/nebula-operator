@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -34,12 +33,11 @@ import (
 )
 
 type storageScaler struct {
-	client.Client
 	clientSet kube.ClientSet
 }
 
-func NewStorageScaler(cli client.Client, clientSet kube.ClientSet) ScaleManager {
-	return &storageScaler{Client: cli, clientSet: clientSet}
+func NewStorageScaler(clientSet kube.ClientSet) ScaleManager {
+	return &storageScaler{clientSet: clientSet}
 }
 
 func (ss *storageScaler) Scale(nc *v1alpha1.NebulaCluster, oldUnstruct, newUnstruct *unstructured.Unstructured) error {
@@ -106,7 +104,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
 			continue
 		}
-		if err := ss.balanceSpace(metaClient, nc, *space.Id.SpaceID); err != nil {
+		if err := balanceSpace(ss.clientSet, metaClient, nc, *space.Id.SpaceID); err != nil {
 			return err
 		}
 	}
@@ -168,7 +166,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 				}
 				return err
 			}
-			if isPending(pod) {
+			if isPodPending(pod) {
 				klog.Infof("skip  host for pod [%s/%s] status is Pending", pod.Namespace, pod.Name)
 				continue
 			}
@@ -183,7 +181,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 			if contains(nc.Status.Storaged.RemovedSpaces, *space.Id.SpaceID) {
 				continue
 			}
-			if err := ss.removeHost(metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
+			if err := removeHost(ss.clientSet, metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
 				klog.Errorf("remove hosts %v failed: %v", hosts, err)
 				return err
 			}
@@ -233,119 +231,5 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	nc.Status.Storaged.RemovedSpaces = nil
 	nc.Status.Storaged.LastBalanceJob = nil
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
-	return nil
-}
-
-func (ss *storageScaler) balanceSpace(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaceID nebulago.GraphSpaceID) error {
-	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
-		if err := mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
-			if err == nebula.ErrJobStatusFailed {
-				klog.Infof("space %d balance job %d will be recovered", nc.Status.Storaged.LastBalanceJob.SpaceID, nc.Status.Storaged.LastBalanceJob.JobID)
-				if nc.IsZoneEnabled() {
-					return mc.RecoverInZoneBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
-				}
-				return mc.RecoverDataBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
-			}
-			return err
-		}
-		if err := mc.BalanceLeader(nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
-			return err
-		}
-		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, nc.Status.Storaged.LastBalanceJob.SpaceID)
-		return ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
-	}
-
-	namespace := nc.GetNamespace()
-	componentName := nc.StoragedComponent().GetName()
-	if nc.IsZoneEnabled() {
-		jobID, err := mc.BalanceDataInZone(spaceID)
-		if err != nil {
-			klog.Errorf("storaged cluster [%s/%s] balance data in zone error: %v", namespace, componentName, err)
-			if jobID > 0 {
-				nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-					SpaceID: spaceID,
-					JobID:   jobID,
-				}
-				if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
-					return err
-				}
-			}
-			return err
-		}
-		return nil
-	}
-
-	jobID, err := mc.BalanceData(spaceID)
-	if err != nil {
-		klog.Errorf("storaged cluster [%s/%s] balance data across zone error: %v", namespace, componentName, err)
-		if jobID > 0 {
-			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-				SpaceID: spaceID,
-				JobID:   jobID,
-			}
-			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
-				return err
-			}
-		}
-		return err
-	}
-	return nil
-}
-
-func (ss *storageScaler) removeHost(
-	mc nebula.MetaInterface,
-	nc *v1alpha1.NebulaCluster,
-	spaceID nebulago.GraphSpaceID,
-	hosts []*nebulago.HostAddr,
-) error {
-	if nc.Status.Storaged.LastBalanceJob != nil && nc.Status.Storaged.LastBalanceJob.SpaceID == spaceID {
-		if err := mc.BalanceStatus(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID); err != nil {
-			if err == nebula.ErrJobStatusFailed {
-				klog.Infof("space %d balance job %d will be recovered", nc.Status.Storaged.LastBalanceJob.SpaceID, nc.Status.Storaged.LastBalanceJob.JobID)
-				if nc.IsZoneEnabled() {
-					return mc.RecoverInZoneBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
-				}
-				return mc.RecoverDataBalanceJob(nc.Status.Storaged.LastBalanceJob.JobID, nc.Status.Storaged.LastBalanceJob.SpaceID)
-			}
-			return err
-		}
-		nc.Status.Storaged.RemovedSpaces = append(nc.Status.Storaged.RemovedSpaces, nc.Status.Storaged.LastBalanceJob.SpaceID)
-		return ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
-	}
-
-	namespace := nc.GetNamespace()
-	componentName := nc.StoragedComponent().GetName()
-	if nc.IsZoneEnabled() {
-		jobID, err := mc.RemoveHostInZone(spaceID, hosts)
-		klog.Errorf("storaged cluster [%s/%s] remove host in zone error: %v", namespace, componentName, err)
-		if err != nil {
-			if jobID > 0 {
-				nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-					SpaceID: spaceID,
-					JobID:   jobID,
-				}
-				if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
-					return err
-				}
-			}
-			return err
-		}
-		return nil
-	}
-
-	jobID, err := mc.RemoveHost(spaceID, hosts)
-	if err != nil {
-		klog.Errorf("storaged cluster [%s/%s] remove host across zone error: %v", namespace, componentName, err)
-		if jobID > 0 {
-			nc.Status.Storaged.LastBalanceJob = &v1alpha1.BalanceJob{
-				SpaceID: spaceID,
-				JobID:   jobID,
-			}
-			if err := ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
-				return err
-			}
-		}
-		return err
-	}
 	return nil
 }

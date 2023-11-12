@@ -424,3 +424,8 @@ func (c *metadComponent) IsSuspended() bool {
 	}
 	return true
 }
+
+func (c *metadComponent) IsAutoFailovering() bool {
+	//TODO implement me
+	return false
+}

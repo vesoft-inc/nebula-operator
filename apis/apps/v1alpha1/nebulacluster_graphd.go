@@ -346,3 +346,8 @@ func (c *graphdComponent) IsSuspended() bool {
 	}
 	return true
 }
+
+func (c *graphdComponent) IsAutoFailovering() bool {
+	//TODO implement me
+	return false
+}

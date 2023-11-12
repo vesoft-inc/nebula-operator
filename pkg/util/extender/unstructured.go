@@ -183,9 +183,12 @@ func PodTemplateEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool 
 func ObjectEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
 	annotations := map[string]string{}
 	for k, v := range oldUnstruct.GetAnnotations() {
-		if k != annotation.AnnLastAppliedConfigKey {
-			annotations[k] = v
+		if k == annotation.AnnLastAppliedConfigKey ||
+			k == annotation.AnnRestartTimestamp ||
+			k == annotation.AnnLastReplicas {
+			continue
 		}
+		annotations[k] = v
 	}
 	if !apiequality.Semantic.DeepEqual(newUnstruct.GetAnnotations(), annotations) {
 		return false
@@ -317,15 +320,15 @@ func SetUpdatePartition(
 	if err := SetSpecField(obj, upgradeOrdinal, "updateStrategy", "rollingUpdate", "partition"); err != nil {
 		return err
 	}
-	if advanced {
-		if err := SetSpecField(obj, "InPlaceIfPossible", "updateStrategy", "rollingUpdate", "podUpdatePolicy"); err != nil {
-			return err
-		}
-		if err := SetSpecField(obj, gracePeriod,
-			"updateStrategy", "rollingUpdate", "inPlaceUpdateStrategy", "gracePeriodSeconds"); err != nil {
-			return err
-		}
-	}
+	//if advanced {
+	//	if err := SetSpecField(obj, "InPlaceIfPossible", "updateStrategy", "rollingUpdate", "podUpdatePolicy"); err != nil {
+	//		return err
+	//	}
+	//	if err := SetSpecField(obj, gracePeriod,
+	//		"updateStrategy", "rollingUpdate", "inPlaceUpdateStrategy", "gracePeriodSeconds"); err != nil {
+	//		return err
+	//	}
+	//}
 	return nil
 }
 

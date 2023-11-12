@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
@@ -50,12 +49,11 @@ const (
 )
 
 type storagedUpdater struct {
-	client.Client
 	clientSet kube.ClientSet
 }
 
-func NewStoragedUpdater(cli client.Client, clientSet kube.ClientSet) UpdateManager {
-	return &storagedUpdater{Client: cli, clientSet: clientSet}
+func NewStoragedUpdater(clientSet kube.ClientSet) UpdateManager {
+	return &storagedUpdater{clientSet: clientSet}
 }
 
 func (s *storagedUpdater) Update(
@@ -151,7 +149,7 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 	empty := len(spaces) == 0
 
 	if empty || nc.IsForceUpdateEnabled() {
-		return s.clientSet.Pod().DeletePod(namespace, updatePodName)
+		return s.clientSet.Pod().DeletePod(namespace, updatePodName, false)
 	}
 
 	updatePod, err := s.clientSet.Pod().GetPod(namespace, updatePodName)
@@ -174,7 +172,7 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 
 	host := nc.StoragedComponent().GetPodFQDN(ordinal)
 	if s.readyToUpdate(mc, host, updatePod) {
-		return s.clientSet.Pod().DeletePod(namespace, updatePodName)
+		return s.clientSet.Pod().DeletePod(namespace, updatePodName, false)
 	}
 
 	if err := s.transLeaderIfNecessary(nc, mc, ordinal); err != nil {

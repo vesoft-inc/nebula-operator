@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // NebulaClusterConditionType represents a nebula cluster condition value.
@@ -95,6 +96,13 @@ type NebulaClusterSpec struct {
 	// +optional
 	EnableBR *bool `json:"enableBR,omitempty"`
 
+	// Flag to enable/disable auto fail over in use local PV scenario, default false.
+	// +optional
+	EnableAutoFailover *bool `json:"enableAutoFailover,omitempty"`
+
+	// +optional
+	FailoverPeriod metav1.Duration `json:"failoverPeriod,omitempty"`
+
 	// +optional
 	LogRotate *LogRotate `json:"logRotate,omitempty"`
 
@@ -134,17 +142,34 @@ type ComponentStatus struct {
 
 // StoragedStatus describes the status and version of nebula storaged.
 type StoragedStatus struct {
-	ComponentStatus `json:",inline"`
-	HostsAdded      bool        `json:"hostsAdded,omitempty"`
-	RemovedSpaces   []int32     `json:"removedSpaces,omitempty"`
-	BalancedSpaces  []int32     `json:"balancedSpaces,omitempty"`
-	LastBalanceJob  *BalanceJob `json:"lastBalanceJob,omitempty"`
+	ComponentStatus       `json:",inline"`
+	HostsAdded            bool                           `json:"hostsAdded,omitempty"`
+	RemovedSpaces         []int32                        `json:"removedSpaces,omitempty"`
+	BalancedSpaces        []int32                        `json:"balancedSpaces,omitempty"`
+	LastBalanceJob        *BalanceJob                    `json:"lastBalanceJob,omitempty"`
+	BalancedAfterFailover *bool                          `json:"balancedAfterFailover,omitempty"`
+	FailureHosts          map[string]StoragedFailureHost `json:"failureHosts,omitempty"`
 }
 
 // BalanceJob describes the admin job for balance data.
 type BalanceJob struct {
 	SpaceID int32 `json:"spaceID,omitempty"`
 	JobID   int32 `json:"jobID,omitempty"`
+}
+
+type EmptyStruct struct{}
+
+// StoragedFailureHost is the storaged failure host information.
+type StoragedFailureHost struct {
+	Host             string                    `json:"host,omitempty"`
+	PVCSet           map[types.UID]EmptyStruct `json:"pvcSet,omitempty"`
+	HostDeleted      bool                      `json:"hostDeleted,omitempty"`
+	PodRestarted     bool                      `json:"podRestarted,omitempty"`
+	PodRebuilt       bool                      `json:"podRebuilt,omitempty"`
+	NodeDown         bool                      `json:"nodeDown,omitempty"`
+	CreationTime     metav1.Time               `json:"creationTime,omitempty"`
+	ConfirmationTime metav1.Time               `json:"confirmationTime,omitempty"`
+	DeletionTime     metav1.Time               `json:"deletionTime,omitempty"`
 }
 
 // WorkloadStatus describes the status of a specified workload.

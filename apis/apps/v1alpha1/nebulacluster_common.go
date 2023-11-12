@@ -23,8 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	kruisepub "github.com/openkruise/kruise-api/apps/pub"
-	kruisev1alpha1 "github.com/openkruise/kruise-api/apps/v1alpha1"
+	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -201,23 +200,23 @@ func rollingUpdateDone(workloadStatus *WorkloadStatus) bool {
 		workloadStatus.CurrentRevision == workloadStatus.UpdateRevision
 }
 
-func upgradeStatefulSet(sts *appsv1.StatefulSet) (*kruisev1alpha1.StatefulSet, error) {
+func upgradeStatefulSet(sts *appsv1.StatefulSet) (*kruisev1beta1.StatefulSet, error) {
 	data, err := json.Marshal(sts)
 	if err != nil {
 		return nil, err
 	}
-	newSts := &kruisev1alpha1.StatefulSet{}
+	newSts := &kruisev1beta1.StatefulSet{}
 	if err := json.Unmarshal(data, newSts); err != nil {
 		return nil, err
 	}
 
-	newSts.TypeMeta.APIVersion = kruisev1alpha1.SchemeGroupVersion.String()
-	newSts.Spec.Template.Spec.ReadinessGates = []corev1.PodReadinessGate{
-		{
-			ConditionType: kruisepub.InPlaceUpdateReady,
-		},
-	}
-	newSts.Spec.UpdateStrategy.RollingUpdate.PodUpdatePolicy = kruisev1alpha1.InPlaceIfPossiblePodUpdateStrategyType
+	newSts.TypeMeta.APIVersion = kruisev1beta1.SchemeGroupVersion.String()
+	//newSts.Spec.Template.Spec.ReadinessGates = []corev1.PodReadinessGate{
+	//	{
+	//		ConditionType: kruisepub.InPlaceUpdateReady,
+	//	},
+	//}
+	newSts.Spec.UpdateStrategy.RollingUpdate.PodUpdatePolicy = kruisev1beta1.RecreatePodUpdateStrategyType
 
 	return newSts, nil
 }
@@ -417,7 +416,7 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
 	}
 
-	return corev1.Container{
+	container := corev1.Container{
 		Name:    "node-labels",
 		Image:   image,
 		Command: []string{"/bin/sh", "-c"},
@@ -451,6 +450,12 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 			},
 		},
 	}
+
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
+	return container
 }
 
 func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
@@ -705,7 +710,7 @@ func generateWorkload(
 		if err != nil {
 			return nil, err
 		}
-	case kruisev1alpha1.SchemeGroupVersion.WithKind("StatefulSet").String():
+	case kruisev1beta1.SchemeGroupVersion.WithKind("StatefulSet").String():
 		var set *appsv1.StatefulSet
 		set, err = generateStatefulSet(c, cm)
 		if err != nil {

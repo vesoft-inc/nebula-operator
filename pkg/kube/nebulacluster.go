@@ -19,6 +19,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -79,16 +80,22 @@ func (c *nebulaClusterClient) UpdateNebulaCluster(nc *v1alpha1.NebulaCluster) er
 
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		// Update the set with the latest resource version for the next poll
-		if updated, err := c.GetNebulaCluster(ns, ncName); err == nil {
-			nc = updated.DeepCopy()
-			nc.Spec = *ncSpec
-			nc.SetLabels(labels)
-			nc.SetAnnotations(annotations)
-		} else {
+		ncClone, err := c.GetNebulaCluster(ns, ncName)
+		if err != nil {
 			utilruntime.HandleError(fmt.Errorf("get NebulaCluster %s/%s failed: %v", ns, ncName, err))
 			return err
 		}
 
+		if reflect.DeepEqual(ncSpec, ncClone.Spec) &&
+			reflect.DeepEqual(labels, ncClone.Labels) &&
+			reflect.DeepEqual(annotations, ncClone.Annotations) {
+			return nil
+		}
+
+		nc = ncClone.DeepCopy()
+		nc.Spec = *ncSpec
+		nc.SetLabels(labels)
+		nc.SetAnnotations(annotations)
 		updateErr := c.client.Update(context.TODO(), nc)
 		if updateErr == nil {
 			klog.Infof("NebulaCluster %s/%s updated successfully", ns, ncName)
@@ -105,18 +112,21 @@ func (c *nebulaClusterClient) UpdateNebulaClusterStatus(nc *v1alpha1.NebulaClust
 	status := nc.Status.DeepCopy()
 
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if updated, err := c.GetNebulaCluster(ns, ncName); err == nil {
-			// make a copy, so we don't mutate the shared cache
-			nc = updated.DeepCopy()
-			nc.Status = *status
-		} else {
+		ncClone, err := c.GetNebulaCluster(ns, ncName)
+		if err != nil {
 			utilruntime.HandleError(fmt.Errorf("get NebulaCluster [%s/%s] failed: %v", ns, ncName, err))
 			return err
 		}
 
+		if reflect.DeepEqual(status, ncClone.Status) {
+			return nil
+		}
+
+		nc = ncClone.DeepCopy()
+		nc.Status = *status
 		updateErr := c.client.Status().Update(context.TODO(), nc)
 		if updateErr == nil {
-			klog.Infof("NebulaCluster [%s/%s] updated successfully", ns, ncName)
+			klog.Infof("NebulaCluster [%s/%s] status updated successfully", ns, ncName)
 			return nil
 		}
 		klog.Errorf("update NebulaCluster [%s/%s] status failed: %v", ns, ncName, updateErr)

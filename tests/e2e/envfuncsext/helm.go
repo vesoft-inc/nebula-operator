@@ -36,6 +36,7 @@ func (o *HelmOptions) WithOptions(opts ...HelmOption) *HelmOptions {
 	}
 	return o
 }
+
 func (o *HelmOptions) RawHelmOpts() *helm.Opts {
 	option := &helm.Opts{}
 	for _, op := range o.HelmOptions {

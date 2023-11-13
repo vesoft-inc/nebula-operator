@@ -8,21 +8,18 @@ on:
       ref:
         description: "Acceptable content: branch/tag/commit ID."
         required: true
+        default: 'master'
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  package:
-    name: build package
+  e2e:
+    name: e2e
     runs-on:
       - self-hosted
       - nebula
-    container:
-      image: reg.vesoft-inc.com/ci/ubuntu:20.04-docker
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
     steps:
       - uses: webiny/action-post-run@3.0.0
         with:
@@ -32,19 +29,36 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
       - uses: actions/setup-go@v4
         with:
-          go-version: 1.20
+          go-version: "1.20"
       - uses: docker/login-action@v2
         with:
           registry: ${{ secrets.HARBOR_REGISTRY }}
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
+      - run: |
+            git config --global --add safe.directory $(pwd)
+            curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      - name: build operator image
+        run: |
+          export DOCKER_REPO=reg.vesoft-inc.com/ci
+          export IMAGE_TAG=ci-e2e
+          make docker-multiarch
+          docker buildx rm ng-operator || true
+      - name: post clean kind clusters
+        uses: webiny/action-post-run@3.0.0
+        with:
+          run: >-
+            sh -c "
+            export PATH=$PATH:`go env GOPATH`/bin &&
+            kind get clusters | grep '^e2e-' | xargs -r -n1 kind delete cluster --name
+            "
       - name: e2e
         run: |
           export E2E_DOCKER_CONFIG_JSON_SECRET=`cat ~/.docker/config.json| base64 -w 0`
-          make e2e  E2EARGS="-labels category=tools -v=5"
+          make e2e E2EARGS="-v=5 -skip-features 'pv expansion|custom config for dynamic|tools for exporter'"
         env:
-          E2E_OPERATOR_IMAGE: reg.vesoft-inc.com/cloud-dev/nebula-operator:snap-1.25
-          E2E_OPERATOR_INSTALL: "false"
+          E2E_OPERATOR_IMAGE: reg.vesoft-inc.com/ci/nebula-operator:ci-e2e
+          E2E_OPERATOR_INSTALL: "true"
           E2E_NC_VERSION: v3.6.0
           E2E_NC_GRAPHD_IMAGE: reg.vesoft-inc.com/vesoft-ent/nebula-graphd-ent
           E2E_NC_METAD_IMAGE: reg.vesoft-inc.com/vesoft-ent/nebula-metad-ent

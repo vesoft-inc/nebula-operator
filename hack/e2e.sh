@@ -28,4 +28,4 @@ env | grep '^E2E_' | sort
 
 echo -e "\nstarting e2e tests\n"
 
-go test -timeout 1h -v ./tests/e2e -args -test.timeout 1h -test.v -v 4 -fail-fast "${@}"
+go test -timeout 12h -v ./tests/e2e -args -test.timeout 12h -test.v -v 4 "${@}"

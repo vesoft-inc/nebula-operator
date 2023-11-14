@@ -133,7 +133,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	if !notExist {
 		timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
-		if ok {
+		if ok && timestamp != "" {
 			if err := extender.SetTemplateAnnotations(newWorkload,
 				map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
 				return err
@@ -287,6 +287,10 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 	defer func() {
 		_ = metaClient.Disconnect()
 	}()
+
+	if !nc.IsAutoFailoverEnabled() {
+		return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
+	}
 
 	hostItems, err := metaClient.ListHosts(meta.ListHostType_STORAGE)
 	if err != nil {

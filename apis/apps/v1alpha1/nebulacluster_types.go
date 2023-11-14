@@ -100,6 +100,7 @@ type NebulaClusterSpec struct {
 	// +optional
 	EnableAutoFailover *bool `json:"enableAutoFailover,omitempty"`
 
+	// +kubebuilder:default="5m"
 	// +optional
 	FailoverPeriod metav1.Duration `json:"failoverPeriod,omitempty"`
 

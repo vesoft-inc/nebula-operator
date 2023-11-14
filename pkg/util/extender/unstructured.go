@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
-	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -303,7 +302,7 @@ func SetRestartTimestamp(obj *unstructured.Unstructured) error {
 	for k, v := range obj.GetAnnotations() {
 		annotations[k] = v
 	}
-	annotations[annotation.AnnRestartTimestamp] = time.Now().Format(time.RFC3339)
+	annotations[annotation.AnnRestartTimestamp] = ""
 	obj.SetAnnotations(annotations)
 	return nil
 }

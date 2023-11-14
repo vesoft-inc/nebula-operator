@@ -113,7 +113,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	if !notExist {
 		// TODO: validate the timestamp format
 		timestamp, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartTimestamp]
-		if ok {
+		if ok && timestamp != "" {
 			if err := extender.SetTemplateAnnotations(newWorkload,
 				map[string]string{annotation.AnnRestartTimestamp: timestamp}); err != nil {
 				return err

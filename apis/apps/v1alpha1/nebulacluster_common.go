@@ -312,24 +312,25 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		}
 	}
 
-	agentImage := defaultAgentImage
+	container := corev1.Container{
+		Name:    AgentSidecarContainerName,
+		Image:   defaultAgentImage,
+		Command: cmd,
+	}
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
 	if nc.Spec.Agent != nil {
+		var agentImage string
 		if nc.Spec.Agent.Image != "" {
 			agentImage = nc.Spec.Agent.Image
 		}
 		if nc.Spec.Agent.Version != "" {
 			agentImage = fmt.Sprintf("%s:%s", agentImage, nc.Spec.Agent.Version)
 		}
-	}
-	container := corev1.Container{
-		Name:      AgentSidecarContainerName,
-		Image:     agentImage,
-		Command:   cmd,
-		Resources: nc.Spec.Agent.Resources,
-	}
-	imagePullPolicy := nc.Spec.ImagePullPolicy
-	if imagePullPolicy != nil {
-		container.ImagePullPolicy = *imagePullPolicy
+		container.Image = agentImage
+		container.Resources = nc.Spec.Agent.Resources
 	}
 
 	if nc.IsBREnabled() {

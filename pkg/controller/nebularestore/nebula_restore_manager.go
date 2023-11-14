@@ -112,6 +112,10 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 	if rt.Spec.BR.ClusterNamespace != nil {
 		ns = *rt.Spec.BR.ClusterNamespace
 	}
+	original, err := rm.clientSet.NebulaCluster().GetNebulaCluster(ns, originalName)
+	if err != nil {
+		return err
+	}
 
 	restoredName, err := rm.getRestoredName(rt)
 	if err != nil {
@@ -125,6 +129,7 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 		}
 		nc.Annotations = nil
 		nc.Spec.Storaged.EnableForceUpdate = nil
+		nc.Spec.EnableAutoFailover = original.Spec.EnableAutoFailover
 		if err := rm.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
 			return fmt.Errorf("remove cluster [%s/%s] annotations failed: %v", ns, restoredName, err)
 		}
@@ -139,11 +144,6 @@ func (rm *restoreManager) syncRestoreProcess(rt *v1alpha1.NebulaRestore) error {
 				Partitions:    nil,
 				Checkpoints:   nil,
 			})
-	}
-
-	original, err := rm.clientSet.NebulaCluster().GetNebulaCluster(ns, originalName)
-	if err != nil {
-		return err
 	}
 
 	options, err := nebula.ClientOptions(original, nebula.SetIsMeta(true))
@@ -343,6 +343,7 @@ func (rm *restoreManager) genNebulaCluster(restoredName string, rt *v1alpha1.Neb
 	nc.Spec.Storaged.InitContainers = append(nc.Spec.Storaged.InitContainers, v1alpha1.GenerateInitAgentContainer(nc.StoragedComponent()))
 
 	nc.Spec.Storaged.EnableForceUpdate = pointer.Bool(true)
+	nc.Spec.EnableAutoFailover = nil
 	if rt.Spec.NodeSelector != nil {
 		nc.Spec.NodeSelector = rt.Spec.NodeSelector
 	}

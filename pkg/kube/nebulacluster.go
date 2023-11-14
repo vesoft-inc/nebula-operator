@@ -118,7 +118,7 @@ func (c *nebulaClusterClient) UpdateNebulaClusterStatus(nc *v1alpha1.NebulaClust
 			return err
 		}
 
-		if reflect.DeepEqual(status, ncClone.Status) {
+		if reflect.DeepEqual(*status, ncClone.Status) {
 			return nil
 		}
 

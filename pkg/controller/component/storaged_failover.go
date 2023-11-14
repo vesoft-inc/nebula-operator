@@ -41,7 +41,7 @@ import (
 
 const (
 	PVCProtectionFinalizer = "kubernetes.io/pvc-protection"
-	RestartTolerancePeriod = time.Minute * 1
+	RestartTolerancePeriod = time.Minute * 2
 )
 
 var (

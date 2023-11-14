@@ -86,14 +86,13 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 	}
 
 	c.conditionUpdater.Update(nc)
-
-	if apiequality.Semantic.DeepEqual(&nc.Status, oldStatus) && nc.IsConditionReady() {
-		return errorutils.NewAggregate(errs)
-	}
-
 	nc.Status.ObservedGeneration = nc.Generation
 	if err := c.nebulaClient.UpdateNebulaClusterStatus(nc.DeepCopy()); err != nil {
 		errs = append(errs, err)
+	}
+
+	if apiequality.Semantic.DeepEqual(&nc.Status, oldStatus) && nc.IsReady() {
+		return errorutils.NewAggregate(errs)
 	}
 
 	if !nc.IsConditionReady() {

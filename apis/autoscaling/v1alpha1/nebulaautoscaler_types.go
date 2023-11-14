@@ -10,7 +10,7 @@ import (
 
 var (
 	// DefaultPollingPeriod is the default period between 2 autoscaling API polls.
-	DefaultPollingPeriod = 15 * time.Second
+	DefaultPollingPeriod = 30 * time.Second
 )
 
 type NebulaAutoscalerConditionType string

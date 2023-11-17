@@ -37,6 +37,7 @@ type ComponentAccessor interface {
 	NodeSelector() map[string]string
 	Affinity() *corev1.Affinity
 	Tolerations() []corev1.Toleration
+	TopologySpreadConstraints(labels map[string]string) []corev1.TopologySpreadConstraint
 	SecurityContext() *corev1.SecurityContext
 	InitContainers() []corev1.Container
 	SidecarContainers() []corev1.Container
@@ -50,10 +51,11 @@ var _ ComponentAccessor = &componentAccessor{}
 
 // +k8s:deepcopy-gen=false
 type componentAccessor struct {
-	nodeSelector  map[string]string
-	affinity      *corev1.Affinity
-	tolerations   []corev1.Toleration
-	componentSpec *ComponentSpec
+	nodeSelector              map[string]string
+	affinity                  *corev1.Affinity
+	tolerations               []corev1.Toleration
+	topologySpreadConstraints []TopologySpreadConstraint
+	componentSpec             *ComponentSpec
 }
 
 func (a *componentAccessor) Replicas() int32 {
@@ -123,6 +125,17 @@ func (a *componentAccessor) Tolerations() []corev1.Toleration {
 		return a.tolerations
 	}
 	return a.componentSpec.Tolerations
+}
+
+func (a *componentAccessor) TopologySpreadConstraints(labels map[string]string) []corev1.TopologySpreadConstraint {
+	tscs := a.topologySpreadConstraints
+	if a.componentSpec != nil && len(a.componentSpec.TopologySpreadConstraints) > 0 {
+		tscs = a.componentSpec.TopologySpreadConstraints
+	}
+	if len(tscs) == 0 {
+		return nil
+	}
+	return getTopologySpreadConstraints(tscs, labels)
 }
 
 func (a *componentAccessor) SecurityContext() *corev1.SecurityContext {
@@ -301,9 +314,10 @@ func (c *baseComponent) GenerateOwnerReferences() []metav1.OwnerReference {
 
 func buildComponentAccessor(nc *NebulaCluster, componentSpec *ComponentSpec) ComponentAccessor {
 	return &componentAccessor{
-		nodeSelector:  nc.Spec.NodeSelector,
-		affinity:      nc.Spec.Affinity,
-		tolerations:   nc.Spec.Tolerations,
-		componentSpec: componentSpec,
+		nodeSelector:              nc.Spec.NodeSelector,
+		affinity:                  nc.Spec.Affinity,
+		tolerations:               nc.Spec.Tolerations,
+		topologySpreadConstraints: nc.Spec.TopologySpreadConstraints,
+		componentSpec:             componentSpec,
 	}
 }

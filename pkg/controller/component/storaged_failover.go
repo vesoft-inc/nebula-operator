@@ -290,12 +290,12 @@ func (s *storagedFailover) checkPendingPod(nc *v1alpha1.NebulaCluster) error {
 				}
 			}
 		}
-		if isPodConditionScheduledTrue(pod.Status.Conditions) && isPodPending(pod) {
+		if isPodConditionScheduledTrue(pod.Status.Conditions) && isPodPending(pod) && time.Now().After(pod.CreationTimestamp.Add(time.Minute*1)) {
 			klog.Infof("storagd pod [%s/%s] conditions %v", nc.Namespace, podName, pod.Status.Conditions)
 			if err := s.clientSet.Pod().DeletePod(nc.Namespace, podName, true); err != nil {
 				return err
 			}
-			return utilerrors.ReconcileErrorf("waiting for pending storaged pod [%s/%s] deleted", nc.Namespace, podName)
+			return utilerrors.ReconcileErrorf("pending storaged pod [%s/%s] deleted, reschedule", nc.Namespace, podName)
 		}
 	}
 	return nil

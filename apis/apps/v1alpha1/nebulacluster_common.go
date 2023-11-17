@@ -632,7 +632,7 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		ServiceAccountName: NebulaServiceAccountName,
 	}
 
-	podSpec.TopologySpreadConstraints = getTopologySpreadConstraints(nc.Spec.TopologySpreadConstraints, componentLabel)
+	podSpec.TopologySpreadConstraints = c.ComponentSpec().TopologySpreadConstraints(componentLabel)
 
 	volumeClaim, err := c.GenerateVolumeClaim()
 	if err != nil {

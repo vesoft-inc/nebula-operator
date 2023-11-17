@@ -490,6 +490,9 @@ type ComponentSpec struct {
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
 	// +optional
+	TopologySpreadConstraints []TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 
 	// +optional

@@ -2449,6 +2449,18 @@ spec:
                           type: string
                       type: object
                     type: array
+                  topologySpreadConstraints:
+                    items:
+                      properties:
+                        topologyKey:
+                          type: string
+                        whenUnsatisfiable:
+                          type: string
+                      required:
+                      - topologyKey
+                      - whenUnsatisfiable
+                      type: object
+                    type: array
                   version:
                     default: latest
                     type: string
@@ -5197,6 +5209,18 @@ spec:
                           type: integer
                         value:
                           type: string
+                      type: object
+                    type: array
+                  topologySpreadConstraints:
+                    items:
+                      properties:
+                        topologyKey:
+                          type: string
+                        whenUnsatisfiable:
+                          type: string
+                      required:
+                      - topologyKey
+                      - whenUnsatisfiable
                       type: object
                     type: array
                   version:
@@ -8006,6 +8030,18 @@ spec:
                           type: integer
                         value:
                           type: string
+                      type: object
+                    type: array
+                  topologySpreadConstraints:
+                    items:
+                      properties:
+                        topologyKey:
+                          type: string
+                        whenUnsatisfiable:
+                          type: string
+                      required:
+                      - topologyKey
+                      - whenUnsatisfiable
                       type: object
                     type: array
                   version:
@@ -10842,6 +10878,18 @@ spec:
                           type: integer
                         value:
                           type: string
+                      type: object
+                    type: array
+                  topologySpreadConstraints:
+                    items:
+                      properties:
+                        topologyKey:
+                          type: string
+                        whenUnsatisfiable:
+                          type: string
+                      required:
+                      - topologyKey
+                      - whenUnsatisfiable
                       type: object
                     type: array
                   version:

@@ -112,6 +112,12 @@ type BackupStatus struct {
 	Phase BackupConditionType `json:"phase,omitempty"`
 	// +nullable
 	Conditions []BackupCondition `json:"conditions,omitempty"`
+
+	// BackupName is the dir name of the backup
+	BackupName string `json:"backupName,omitempty"`
+
+	// JobName is the name of the backup job
+	JobName string `json:"jobName,omitempty"`
 }
 
 func init() {

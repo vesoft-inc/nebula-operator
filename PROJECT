@@ -40,4 +40,13 @@ resources:
   kind: NebulaBackup
   path: github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: nebula-cloud.io
+  group: apps
+  kind: BackupSchedule
+  path: github.com/vesoft-inc/nebula-cloud-platform/platform-controller/api/v1alpha1
+  version: v1alpha1
 version: "3"

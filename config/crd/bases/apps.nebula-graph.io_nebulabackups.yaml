@@ -90,6 +90,8 @@ spec:
             type: object
           status:
             properties:
+              backupName:
+                type: string
               conditions:
                 items:
                   properties:
@@ -113,6 +115,8 @@ spec:
                   type: object
                 nullable: true
                 type: array
+              jobName:
+                type: string
               phase:
                 type: string
               timeCompleted:

@@ -39,14 +39,10 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/br"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	rtutil "github.com/vesoft-inc/nebula-operator/pkg/util/restore"
-)
-
-const (
-	S3AccessKey = "access-key"
-	S3SecretKey = "secret-key"
 )
 
 type RestoreAgent struct {
@@ -358,7 +354,7 @@ func initRestoreAgent(clientSet kube.ClientSet, restore *v1alpha1.NebulaRestore)
 	}
 	backend.GetS3().Region = restore.Spec.BR.S3.Region
 	backend.GetS3().Endpoint = restore.Spec.BR.S3.Endpoint
-	accessKey, secretKey, err := getS3Key(clientSet, restore.Namespace, restore.Spec.BR.S3.SecretName)
+	accessKey, secretKey, err := br.GetS3Key(clientSet, restore.Namespace, restore.Spec.BR.S3.SecretName)
 	if err != nil {
 		return nil, fmt.Errorf("get S3 key failed: %v", err)
 	}
@@ -794,18 +790,6 @@ func (rm *restoreManager) getRestoredName(rt *v1alpha1.NebulaRestore) (string, e
 	}
 
 	return rt.Status.ClusterName, nil
-}
-
-func getS3Key(clientSet kube.ClientSet, namespace, secretName string) (accessKey string, secretKey string, err error) {
-	var secret *corev1.Secret
-	secret, err = clientSet.Secret().GetSecret(namespace, secretName)
-	if err != nil {
-		return
-	}
-	accessKey = string(secret.Data[S3AccessKey])
-	secretKey = string(secret.Data[S3SecretKey])
-
-	return
 }
 
 func isReady(conditions []v1alpha1.NebulaClusterCondition) bool {

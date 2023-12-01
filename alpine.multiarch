@@ -1,9 +1,9 @@
 FROM alpine:3.18.2
 
-ARG TARGETPLATFORM
+ARG TARGETARCH
 
 RUN apk update \
   && apk upgrade \
   && apk add --no-cache \
-    curl jq \
+    curl jq util-linux bash xfsprogs \
   && rm -rf /var/cache/apk/*

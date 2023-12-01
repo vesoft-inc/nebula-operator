@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-pv-storage
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-pv-provisioner-sa
+  namespace: local-pv-storage
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: local-pv-provisioner-role
+  namespace: local-pv-storage
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-pv-provisioner-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: local-pv-provisioner-bind
+  namespace: local-pv-storage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: local-pv-provisioner-role
+subjects:
+  - kind: ServiceAccount
+    name: local-pv-provisioner-sa
+    namespace: local-pv-storage
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-pv-provisioner-bind
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: local-pv-provisioner-role
+subjects:
+  - kind: ServiceAccount
+    name: local-pv-provisioner-sa
+    namespace: local-pv-storage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-pv-provisioner
+  namespace: local-pv-storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-pv-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-pv-provisioner
+    spec:
+      serviceAccountName: local-pv-provisioner-sa
+      containers:
+        - name: local-pv-provisioner
+          image: reg.vesoft-inc.com/cloud-dev/local-pv-provisioner
+          imagePullPolicy: IfNotPresent
+          command:
+            - local-pv-provisioner
+          volumeMounts:
+            - name: config-volume
+              mountPath: /tmp
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      volumes:
+      - name: config-volume
+        configMap:
+          name: local-pv-config
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-pv
+provisioner: nebula-cloud.io/local-pv
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: local-pv-config
+  namespace: local-pv-storage
+data:
+  setup: |-
+    #!/bin/bash
+    
+    set -exo pipefail
+    
+    function errorExit {
+      echo "$@"
+      exit 1
+    }
+    
+    if [ -z ${LOCAL_PV_FILESYSTEM+x} ]
+    then
+      errorExit "Environment variable LOCAL_PV_FILESYSTEM has not been set"
+    fi
+
+    if [ -d "$LOCAL_PV_FILESYSTEM" ]; then
+      if [ "$(ls -A "$LOCAL_PV_FILESYSTEM")" ]; then
+        errorExit "$LOCAL_PV_FILESYSTEM  is not empty"
+      fi
+    else
+      errorExit "$LOCAL_PV_FILESYSTEM is not a filesystem directory."
+    fi
+
+  teardown: |-
+    #!/bin/bash
+    
+    set -exo pipefail
+    
+    function errorExit {
+      echo "$@"
+      exit 1
+    }
+    
+    if [ -z ${LOCAL_PV_FILESYSTEM+x} ]
+    then
+      errorExit "Environment variable LOCAL_PV_FILESYSTEM has not been set"
+    fi
+    
+    if [ ! -d "$LOCAL_PV_FILESYSTEM" ]
+    then
+      errorExit "$LOCAL_PV_FILESYSTEM is not a filesystem directory."
+    fi
+    
+    ionice -c 3 find "$LOCAL_PV_FILESYSTEM" -mindepth 1 -maxdepth 1 -print0 | xargs -0 ionice -c 3 rm -rf
+
+

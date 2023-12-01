@@ -26,6 +26,7 @@ require (
 	k8s.io/client-go v0.27.4
 	k8s.io/code-generator v0.27.4
 	k8s.io/component-base v0.27.4
+	k8s.io/component-helpers v0.27.4
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/kube-controller-manager v0.27.4
 	k8s.io/kubectl v0.27.4
@@ -34,6 +35,7 @@ require (
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	sigs.k8s.io/controller-runtime v0.15.2
 	sigs.k8s.io/e2e-framework v0.3.0
+	sigs.k8s.io/sig-storage-lib-external-provisioner/v9 v9.0.3
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -106,6 +108,7 @@ require (
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+	github.com/miekg/dns v1.1.29 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
@@ -169,7 +172,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.27.2 // indirect
 	k8s.io/apiserver v0.27.4 // indirect
 	k8s.io/cloud-provider v0.27.4 // indirect
-	k8s.io/component-helpers v0.27.4 // indirect
 	k8s.io/controller-manager v0.27.4 // indirect
 	k8s.io/csi-translation-lib v0.0.0 // indirect
 	k8s.io/dynamic-resource-allocation v0.0.0 // indirect

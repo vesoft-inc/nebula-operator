@@ -75,6 +75,7 @@ build: ## Build binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/controller-manager cmd/controller-manager/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/autoscaler cmd/autoscaler/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/scheduler cmd/scheduler/main.go
+	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/provisioner cmd/provisioner/main.go
 
 helm-charts: ## Build helm charts.
 	helm package charts/nebula-operator --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)

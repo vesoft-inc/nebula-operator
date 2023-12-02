@@ -1,4 +1,4 @@
-# Configure custom flags
+## Configure custom flags
 
 ### Apply custom flags
 
@@ -27,7 +27,7 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: vesoft/nebula-graphd
-    version: v3.5.0
+    version: v3.6.0
     storageClaim:
       resources:
         requests:
@@ -73,5 +73,3 @@ This a dynamic runtime flags table, the pod rolling update will not be triggered
 | `rebuild_index_part_rate_limit`                | The rate limit in bytes when leader synchronizes rebuilding index                                        | `4194304`  |
 | `prioritize_intra_zone_reading`                | Prioritize to send read queries to storaged in the same zone                                             | `false`    |
 | `stick_to_intra_zone_on_failure`               | Stick to intra zone routing if unable to find the storaged hosting the requested part in the same zone.  | `false`    |
-| `sync_meta_when_use_space`                     | Whether to sync session to meta when use space                                                           | `false`    |
-| `validate_session_timestamp`                   | whether validate the timestamp when update session                                                       | `true`     |

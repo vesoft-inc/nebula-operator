@@ -30,5 +30,5 @@ spec:
       storageClassName: local-path
     replicas: 1
     image: vesoft/nebula-graphd
-    version: v3.5.0
+    version: v3.6.0
 ```

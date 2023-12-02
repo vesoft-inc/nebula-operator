@@ -1,4 +1,4 @@
-# PV Reclaim
+## PV Reclaim
 
 Nebula Operator uses [PV (Persistent Volume)](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to store
 persistent data. If you accidentally delete a NebulaGraph cluster, the PV objects and data are still retained to ensure

@@ -1,4 +1,4 @@
-# nebula-autoscaler
+## nebula-autoscaler
 
 The nebula-autoscaler is fully compatible with K8S HPA, and you can use it according to the operating mechanism of HPA.
 Currently, the nebula-autoscaler only supports automatic scaling of Graphd.

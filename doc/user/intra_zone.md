@@ -38,7 +38,7 @@ spec:
       storageClassName: local-path
     replicas: 1
     image: reg.vesoft-inc.com/nebula-graphd-ent
-    version: v3.5.0
+    version: v3.6.0
   metad:
     config:
       # A list of zones (e.g., AZ) split by comma
@@ -53,7 +53,7 @@ spec:
         memory: "1Gi"
     replicas: 1
     image: reg.vesoft-inc.com/nebula-metad-ent
-    version: v3.5.0
+    version: v3.6.0
     dataVolumeClaim:
       resources:
         requests:

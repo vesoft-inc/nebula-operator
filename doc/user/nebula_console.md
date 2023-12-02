@@ -14,7 +14,7 @@ spec:
   console:
     image: vesoft/nebula-console
     version: nightly
-    user: "demo"
+    username: "demo"
     password: "test"
 ```
 

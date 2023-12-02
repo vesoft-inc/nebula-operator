@@ -1,5 +1,5 @@
+## ngctl
 
-# Overview
 ngctl is a terminal cmd tool for NebulaGraph managed by nebula-operator, it has the following commands:
 - [ngctl use](#ngctl-use)
 - [ngctl console](#ngctl-console)
@@ -7,7 +7,7 @@ ngctl is a terminal cmd tool for NebulaGraph managed by nebula-operator, it has 
 - [ngctl check](#ngctl-check)
 - [ngctl info](#ngctl-info)
 
-## ngctl use
+### ngctl use
 `ngctl use` specify a nebula cluster to use. By using a certain cluster, you may omit --nebulacluster option in many control commands.
 
 ```
@@ -18,7 +18,7 @@ Examples:
   # specify the cluster name and namespace
   ngctl use demo-cluster -n test-system
 ```
-## ngctl console
+### ngctl console
 `ngctl console` create a nebula-console pod and connect to the specified nebula cluster.
 
 ```
@@ -29,7 +29,7 @@ Examples:
   # Open console to the specified nebula cluster
   ngctl console --nebulacluster=nebula
 ```
-## ngctl list
+### ngctl list
 `ngctl list` list nebula clusters or there sub resources. Its usage is the same as `kubectl get`, but only resources related to nbuela cluster are displayed.
 ```
 Examples:
@@ -52,7 +52,7 @@ Examples:
   ngctl list -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,IMAGE:.spec.graphd.image
 ```
 
-## ngctl check
+### ngctl check
 `ngctl check` check whether the specified nebula cluster resources are ready. Command will print the error message from nebula cluster resource conditions, help you locate the reason quickly.
 
 ```
@@ -64,7 +64,7 @@ Examples:
   ngctl check pods --nebulacluster=nebula
 ```
 
-## ngctl info
+### ngctl info
 `ngctl info` get current nebula cluster information, the cluster is set by 'ngctl use' command or use `--nebulacluster` flag.
 
 ```Examples:
@@ -74,7 +74,7 @@ Examples:
   # get current nebula cluster information, which is set by '--nebulacluster' flag
   ngctl info --nebulacluster=nebula
 ```
-## ngctl version
+### ngctl version
 `nfgctl version` print the cli and nebula operator version
 
 ```bash

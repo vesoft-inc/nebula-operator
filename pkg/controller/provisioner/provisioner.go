@@ -366,24 +366,32 @@ func saveHelperPodLogs(c clientset.Interface, pod *corev1.Pod) error {
 	if err != nil {
 		return fmt.Errorf("faild to open stream: %v", err)
 	}
+	defer readCloser.Close()
 
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, readCloser)
+	logs, err := flushStream(readCloser)
 	if err != nil {
-		return fmt.Errorf("failed to copy buffer: %v", err)
+		return err
 	}
-	readCloser.Close()
 
 	klog.Infof("Start of %s logs", pod.Name)
-	bufferStr := buf.String()
-	if len(bufferStr) > 0 {
-		podLogs := strings.Split(strings.Trim(bufferStr, "\n"), "\n")
+	if len(logs) > 0 {
+		podLogs := strings.Split(strings.Trim(logs, "\n"), "\n")
 		for _, log := range podLogs {
 			klog.Info(log)
 		}
 	}
 	klog.Infof("End of %s logs", pod.Name)
 	return nil
+}
+
+func flushStream(rc io.ReadCloser) (string, error) {
+	var buf = &bytes.Buffer{}
+	_, err := io.Copy(buf, rc)
+	if err != nil {
+		return "", fmt.Errorf("failed to copy buffer: %v", err)
+	}
+	logContent := buf.String()
+	return logContent, nil
 }
 
 func getHelperPodName(action ActionType, pvName string) string {

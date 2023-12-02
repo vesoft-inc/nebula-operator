@@ -1,4 +1,4 @@
-# Install Guide
+## Install Guide
 
 Instead of manually installing, scaling, upgrading, and uninstalling NebulaGraph in a production environment, you can
 use the Nebula [operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) to manage NebulaGraph automatically.

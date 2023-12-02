@@ -1,6 +1,6 @@
 ## Scale storage nodes and balance
 
-Scaling out Storage is divided into two stages. 
+Scaling out Storaged is divided into two stages. 
 
 * In the first stage, you need to wait for the status of all newly created Pods to be Ready. 
 
@@ -12,10 +12,10 @@ Such an implementation can effectively reduce the impact of data migration on on
 
 ## Storage leaders transfer
 
-When NebulaGraph starts to provide services, there will be multiple partition leaders on each storage node, 
+When NebulaGraph starts to provide services, there will be multiple partition leaders on each Storaged node, 
 in the rolling update scenario, in order to minimize the impact on client reads and writes, 
 so it is necessary to transfer the leader to other nodes until the number of leaders on a storage node is 0, this process is relatively long.
 
-To make rolling updates more convenient for DBA, we provide a field `enableForceUpdate` for storage service, 
+To make rolling updates more convenient for DBA, we provide a field `enableForceUpdate` for Storaged service, 
 which can directly roll update storage when it is determined that there is no external access traffic, 
 without waiting for the partition leader to be transferred before it can operate.

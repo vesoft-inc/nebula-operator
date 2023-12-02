@@ -1,4 +1,4 @@
-# Installing Add-ons
+## Installing Add-ons
 
 **Caution:**
 This section links to third party projects that provide functionality required by nebula-operator. The nebula-operator

@@ -1,4 +1,4 @@
-# nebula client service
+## nebula client service
 
 For every nebula cluster created, the nebula operator will create a graphd service in the same namespace with the name `<cluster-name>-graphd-svc`.
 
@@ -15,7 +15,7 @@ The client service is of type `ClusterIP` and accessible only from within the Ku
 For example, access the service from a pod in the cluster:
 
 ```shell script
-$ kubectl run --rm -ti --image vesoft/nebula-console:v3.5.0 --restart=Never -- /bin/sh
+$ kubectl run --rm -ti --image vesoft/nebula-console:v3.6.0 --restart=Never -- /bin/sh
 / # nebula-console -u user -p password --address=nebula-graphd-svc --port=9669
 2021/04/12 08:16:30 [INFO] connection pool is initialized successfully
 

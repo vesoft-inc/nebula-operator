@@ -1,4 +1,4 @@
-### Nebula port configurable
+## Nebula port configurable
 
 We provide the fields `config` in CRD to define the port settings for each component in NebulaGraph.
 Here is the configuration file for NebulaCluster which have a custom port and http port:

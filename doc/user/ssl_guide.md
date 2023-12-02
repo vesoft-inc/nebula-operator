@@ -1,4 +1,4 @@
-### SSL encryption
+## SSL encryption
 
 NebulaGraph supports data transmission with SSL encryption between clients, the Graph service,
 the Meta service, and the Storage service. This topic describes how to enable SSL encryption.

@@ -1,4 +1,4 @@
-### Log rotation
+## Log rotation
 
 We use the sidecar container to clean NebulaGraph logs and run logs archiving tasks every hour.
 
@@ -53,7 +53,7 @@ spec:
     service:
       externalTrafficPolicy: Local
       type: NodePort
-    version: v3.5.0
+    version: v3.6.0
   imagePullPolicy: Always
   metad:
     config:
@@ -71,7 +71,7 @@ spec:
       requests:
         cpu: 500m
         memory: 500Mi
-    version: v3.5.0
+    version: v3.6.0
   reference:
     name: statefulsets.apps
     version: v1
@@ -94,6 +94,6 @@ spec:
       requests:
         cpu: 500m
         memory: 500Mi
-    version: v3.5.0
+    version: v3.6.0
   unsatisfiableAction: ScheduleAnyway
 ```

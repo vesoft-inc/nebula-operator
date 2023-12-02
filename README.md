@@ -16,7 +16,7 @@ database.
 
 ### install nebula operator
 
-See [install/uninstall nebula operator](doc/user/install_guide.md) .
+See [install/uninstall nebula operator](doc/user/operator_guide.md) .
 
 ### Create and destroy a nebula cluster
 
@@ -140,7 +140,7 @@ nebula-storaged-1   1/1     Running   0          10m
 nebula-storaged-2   1/1     Running   0          10m
 ```
 
-In addition, you can [Install Nebula Cluster with helm](doc/user/nebula_cluster_helm_guide.md).
+In addition, you can [Install Nebula Cluster with helm](doc/user/nebula_cluster_guide.md).
 
 ### Upgrade a nebula cluster
 

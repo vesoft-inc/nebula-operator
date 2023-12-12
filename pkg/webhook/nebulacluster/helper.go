@@ -202,3 +202,19 @@ func validateNebulaClusterUpdate(nc, oldNC *v1alpha1.NebulaCluster) (allErrs fie
 
 	return allErrs
 }
+
+// validateNebulaClusterDelete validates a NebulaCluster on Delete.
+func validateNebulaClusterDelete(nc *v1alpha1.NebulaCluster) (allErrs field.ErrorList) {
+	name := nc.Name
+	namespace := nc.Namespace
+
+	klog.Infof("receive admission with resource [%s/%s], GVK %s, operation %s", namespace, name,
+		nc.GroupVersionKind().String(), admissionv1.Delete)
+
+	if annotation.ISDeleteProtected(nc.Annotations) {
+		fldPath := field.NewPath("metadata")
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("annotations").Key(annotation.AnnDeleteProtection),
+			"protected cluster cannot be deleted"))
+	}
+	return allErrs
+}

@@ -6,6 +6,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
@@ -16,7 +17,8 @@ import (
 type Deployment interface {
 	CreateDeployment(deploy *appsv1.Deployment) error
 	GetDeployment(namespace string, name string) (*appsv1.Deployment, error)
-	UpdateDeployment(*appsv1.Deployment) error
+	UpdateDeployment(deploy *appsv1.Deployment) error
+	DeleteDeployment(deploy *appsv1.Deployment) error
 }
 
 type deployClient struct {
@@ -76,4 +78,14 @@ func (d *deployClient) UpdateDeployment(deploy *appsv1.Deployment) error {
 		}
 		return updateErr
 	})
+}
+
+func (d *deployClient) DeleteDeployment(deploy *appsv1.Deployment) error {
+	preconditions := metav1.Preconditions{UID: &deploy.UID, ResourceVersion: &deploy.ResourceVersion}
+	policy := metav1.DeletePropagationForeground
+	options := &client.DeleteOptions{
+		PropagationPolicy: &policy,
+		Preconditions:     &preconditions,
+	}
+	return d.kubecli.Delete(context.TODO(), deploy, options)
 }

@@ -30,7 +30,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 )
 
-func PvcGc(cli client.Client, namespace, clusterName string) error {
+func PVCDeleter(cli client.Client, namespace, clusterName string) error {
 	selector, err := label.New().Cluster(clusterName).Selector()
 	if err != nil {
 		return fmt.Errorf("get cluster [%s/%s] label selector failed: %v", namespace, clusterName, err)

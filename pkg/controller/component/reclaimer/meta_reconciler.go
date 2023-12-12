@@ -130,6 +130,11 @@ func (m *meta) resolvePVCFromPod(pod *corev1.Pod) ([]*corev1.PersistentVolumeCla
 	return pvcs, nil
 }
 
+func (m *meta) Delete(nc *v1alpha1.NebulaCluster) error {
+	//TODO implement me
+	return nil
+}
+
 type FakeMetaReconciler struct {
 	err error
 }

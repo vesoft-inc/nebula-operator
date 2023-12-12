@@ -78,6 +78,27 @@ func (c *storagedCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	return c.syncStoragedWorkload(nc)
 }
 
+func (c *storagedCluster) Delete(nc *v1alpha1.NebulaCluster) error {
+	if nc.Spec.Storaged == nil {
+		return nil
+	}
+	namespace := nc.GetNamespace()
+	componentName := nc.StoragedComponent().GetName()
+	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
+	if err != nil {
+		return fmt.Errorf("get workload kind failed: %v", err)
+	}
+	workload, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		klog.Errorf("get storaged cluster failed: %v", err)
+		return err
+	}
+	return c.clientSet.Workload().DeleteWorkload(workload)
+}
+
 func (c *storagedCluster) syncStoragedHeadlessService(nc *v1alpha1.NebulaCluster) error {
 	newSvc := nc.StoragedComponent().GenerateHeadlessService()
 	if newSvc == nil {

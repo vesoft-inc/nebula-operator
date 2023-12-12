@@ -52,6 +52,21 @@ func (e *nebulaExporter) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	return e.syncExporterDeployment(nc)
 }
 
+func (e *nebulaExporter) Delete(nc *v1alpha1.NebulaCluster) error {
+	if nc.Spec.Exporter == nil {
+		return nil
+	}
+	deployName := getExporterDeploymentName(nc.Name)
+	deploy, err := e.clientSet.Deployment().GetDeployment(nc.Namespace, deployName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return e.clientSet.Deployment().DeleteDeployment(deploy)
+}
+
 func (e *nebulaExporter) syncExporterService(nc *v1alpha1.NebulaCluster) error {
 	newSvc := e.generateService(nc)
 
@@ -108,7 +123,7 @@ func (e *nebulaExporter) generateService(nc *v1alpha1.NebulaCluster) *corev1.Ser
 func (e *nebulaExporter) generateDeployment(nc *v1alpha1.NebulaCluster) *appsv1.Deployment {
 	namespace := nc.GetNamespace()
 	ncName := nc.GetName()
-	deployName := fmt.Sprintf("%s-exporter", nc.GetName())
+	deployName := getExporterDeploymentName(nc.Name)
 	labels := e.getExporterLabels(nc)
 	livenessProbe := nc.ExporterComponent().ComponentSpec().LivenessProbe()
 	containers := make([]corev1.Container, 0)
@@ -213,6 +228,10 @@ func (e *nebulaExporter) getExporterLabels(nc *v1alpha1.NebulaCluster) map[strin
 	podLabels := nc.Spec.Exporter.ComponentSpec.Labels
 
 	return maputil.MergeStringMaps(true, labels, podLabels)
+}
+
+func getExporterDeploymentName(clusterName string) string {
+	return clusterName + "-exporter"
 }
 
 type FakeNebulaExporter struct {

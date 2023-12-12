@@ -38,6 +38,8 @@ const (
 	AnnPodConfigMapHash = "nebula-graph.io/cm-hash"
 	// AnnPvReclaimKey is annotation key that indicate whether reclaim persistent volume
 	AnnPvReclaimKey = "nebula-graph.io/enable-pv-reclaim"
+	// AnnDeleteProtection is an annotation key used to prevent the deletion of a nebula cluster that has been annotated by this key
+	AnnDeleteProtection = "nebula-graph.io/delete-protection"
 
 	// AnnRestartTimestamp is annotation key to indicate the timestamp that operator restart the workload
 	AnnRestartTimestamp = "nebula-graph.io/restart-timestamp"
@@ -52,6 +54,9 @@ const (
 	AnnRestoreStoragedStepKey = "nebula-graph.io/restore-storaged-done"
 	// AnnRestoreStageKey is the annotation key to indicate what is the current stage
 	AnnRestoreStageKey = "restore-stage"
+
+	// AnnDeleteProtectionVal is annotation value to indicate whether nebula cluster is protected
+	AnnDeleteProtectionVal = "true"
 
 	// AnnHaModeVal is annotation value to indicate whether in HA mode
 	AnnHaModeVal = "true"
@@ -125,4 +130,14 @@ func CopyAnnotations(src map[string]string) map[string]string {
 		dst[k] = v
 	}
 	return dst
+}
+
+func ISDeleteProtected(ann map[string]string) bool {
+	if ann != nil {
+		val, ok := ann[AnnDeleteProtection]
+		if ok && val == AnnDeleteProtectionVal {
+			return true
+		}
+	}
+	return false
 }

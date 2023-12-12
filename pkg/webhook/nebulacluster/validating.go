@@ -46,15 +46,19 @@ func (h *ValidatingAdmission) Handle(_ context.Context, req admission.Request) (
 
 	obj := &v1alpha1.NebulaCluster{}
 
-	err := h.Decoder.Decode(req, obj)
-	if err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
+	if req.Operation == admissionv1.Delete {
+		if err := h.Decoder.DecodeRaw(req.OldObject, obj); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+	} else {
+		if err := h.Decoder.Decode(req, obj); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
 	}
 
 	operation := req.AdmissionRequest.Operation
 
-	// If not Create or Update, return earlier.
-	if !(operation == admissionv1.Create || operation == admissionv1.Update) {
+	if operation == admissionv1.Connect {
 		return admission.ValidationResponse(true, "")
 	}
 
@@ -70,6 +74,10 @@ func (h *ValidatingAdmission) Handle(_ context.Context, req admission.Request) (
 		}
 
 		if allErrs := validateNebulaClusterUpdate(obj, oldObj); len(allErrs) > 0 {
+			return admission.Errored(http.StatusUnprocessableEntity, allErrs.ToAggregate())
+		}
+	} else if operation == admissionv1.Delete {
+		if allErrs := validateNebulaClusterDelete(obj); len(allErrs) > 0 {
 			return admission.Errored(http.StatusUnprocessableEntity, allErrs.ToAggregate())
 		}
 	}

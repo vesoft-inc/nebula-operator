@@ -127,9 +127,13 @@ func (w *workloadClient) UpdateWorkload(obj *unstructured.Unstructured) error {
 }
 
 func (w *workloadClient) DeleteWorkload(obj *unstructured.Unstructured) error {
-	policy := metav1.DeletePropagationBackground
+	uid := obj.GetUID()
+	resourceVersion := obj.GetResourceVersion()
+	preconditions := metav1.Preconditions{UID: &uid, ResourceVersion: &resourceVersion}
+	policy := metav1.DeletePropagationForeground
 	options := &client.DeleteOptions{
 		PropagationPolicy: &policy,
+		Preconditions:     &preconditions,
 	}
 	return w.kubecli.Delete(context.TODO(), obj, options)
 }

@@ -32,8 +32,14 @@ import (
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
+const (
+	finalizer = "apps.nebula-graph.io/cluster-cleanup"
+)
+
 type ControlInterface interface {
 	UpdateNebulaCluster(cluster *v1alpha1.NebulaCluster) error
+
+	DeleteCluster(cluster *v1alpha1.NebulaCluster) error
 }
 
 var _ ControlInterface = &defaultNebulaClusterControl{}
@@ -102,7 +108,29 @@ func (c *defaultNebulaClusterControl) UpdateNebulaCluster(nc *v1alpha1.NebulaClu
 	return errorutils.NewAggregate(errs)
 }
 
+func (c *defaultNebulaClusterControl) DeleteCluster(nc *v1alpha1.NebulaCluster) error {
+	if err := c.graphdCluster.Delete(nc); err != nil {
+		return err
+	}
+	if err := c.storagedCluster.Delete(nc); err != nil {
+		return err
+	}
+	if err := c.metaReconciler.Delete(nc); err != nil {
+		return err
+	}
+	if err := component.PVCDeleter(c.client, nc.Namespace, nc.Name); err != nil {
+		return err
+	}
+	return kube.UpdateFinalizer(context.TODO(), c.client, nc, kube.RemoveFinalizerOpType, finalizer)
+}
+
 func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaCluster) error {
+	if !kube.HasFinalizer(nc, finalizer) {
+		if err := kube.UpdateFinalizer(context.TODO(), c.client, nc, kube.AddFinalizerOpType, finalizer); err != nil {
+			return err
+		}
+	}
+
 	if err := kube.CheckRBAC(context.TODO(), c.client, nc.Namespace); err != nil {
 		return err
 	}

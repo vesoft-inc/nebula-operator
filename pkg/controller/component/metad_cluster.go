@@ -65,6 +65,27 @@ func (c *metadCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	return c.syncMetadWorkload(nc)
 }
 
+func (c *metadCluster) Delete(nc *v1alpha1.NebulaCluster) error {
+	if nc.Spec.Metad == nil {
+		return nil
+	}
+	namespace := nc.GetNamespace()
+	componentName := nc.MetadComponent().GetName()
+	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
+	if err != nil {
+		return fmt.Errorf("get workload kind failed: %v", err)
+	}
+	workload, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		klog.Errorf("get metad cluster failed: %v", err)
+		return err
+	}
+	return c.clientSet.Workload().DeleteWorkload(workload)
+}
+
 func (c *metadCluster) syncMetadHeadlessService(nc *v1alpha1.NebulaCluster) error {
 	newSvc := nc.MetadComponent().GenerateHeadlessService()
 	if newSvc == nil {

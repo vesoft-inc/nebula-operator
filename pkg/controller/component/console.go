@@ -54,6 +54,21 @@ func (c *nebulaConsole) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	return c.syncConsolePod(nc)
 }
 
+func (c *nebulaConsole) Delete(nc *v1alpha1.NebulaCluster) error {
+	if nc.Spec.Console == nil {
+		return nil
+	}
+	podName := getConsolePodName(nc.Name)
+	_, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return c.clientSet.Pod().DeletePod(nc.Namespace, podName, true)
+}
+
 func (c *nebulaConsole) syncConsolePod(nc *v1alpha1.NebulaCluster) error {
 	newPod := c.generatePod(nc)
 	oldPod, err := c.clientSet.Pod().GetPod(newPod.Namespace, newPod.Name)
@@ -140,7 +155,7 @@ func (c *nebulaConsole) generatePod(nc *v1alpha1.NebulaCluster) *corev1.Pod {
 		volumes = append(volumes, certVolumes...)
 	}
 
-	podName := nc.GetName() + "-console"
+	podName := getConsolePodName(nc.Name)
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            podName,
@@ -188,6 +203,10 @@ func getConsoleImage(console *v1alpha1.ConsoleSpec) string {
 		image = fmt.Sprintf("%s:%s", image, console.Version)
 	}
 	return image
+}
+
+func getConsolePodName(clusterName string) string {
+	return clusterName + "-console"
 }
 
 type FakeNebulaConsole struct {

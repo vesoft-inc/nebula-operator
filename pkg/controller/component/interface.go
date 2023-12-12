@@ -26,6 +26,9 @@ import (
 type ReconcileManager interface {
 	// Reconcile reconciles the cluster to desired state
 	Reconcile(cluster *v1alpha1.NebulaCluster) error
+
+	// Delete deletes the cluster
+	Delete(cluster *v1alpha1.NebulaCluster) error
 }
 
 type ScaleManager interface {

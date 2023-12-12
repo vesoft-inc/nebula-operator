@@ -68,6 +68,10 @@ func UpdateFinalizer(ctx context.Context, c client.Client, object client.Object,
 	})
 }
 
+func HasFinalizer(obj client.Object, finalizer string) bool {
+	return controllerutil.ContainsFinalizer(obj, finalizer)
+}
+
 func ValidVersion(ver *version.Info) (bool, error) {
 	major, err := strconv.Atoi(ver.Major)
 	if err != nil {

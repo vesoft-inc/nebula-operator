@@ -151,9 +151,6 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	if err := r.client.Get(subCtx, req.NamespacedName, &nebulaCluster); err != nil {
 		if apierrors.IsNotFound(err) {
 			klog.Infof("Skipping because NebulaCluster [%s] has been deleted", key)
-			if err := component.PvcGc(r.client, req.Namespace, req.Name); err != nil {
-				return ctrl.Result{}, client.IgnoreNotFound(err)
-			}
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -187,6 +184,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 }
 
 func (r *ClusterReconciler) syncNebulaCluster(nc *v1alpha1.NebulaCluster) error {
+	if nc.DeletionTimestamp != nil {
+		return r.control.DeleteCluster(nc)
+	}
 	return r.control.UpdateNebulaCluster(nc)
 }
 

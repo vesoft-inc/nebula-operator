@@ -66,6 +66,27 @@ func (c *graphdCluster) Reconcile(nc *v1alpha1.NebulaCluster) error {
 	return c.syncGraphdWorkload(nc)
 }
 
+func (c *graphdCluster) Delete(nc *v1alpha1.NebulaCluster) error {
+	if nc.Spec.Graphd == nil {
+		return nil
+	}
+	namespace := nc.GetNamespace()
+	componentName := nc.GraphdComponent().GetName()
+	gvk, err := resource.GetGVKFromDefinition(c.dm, nc.Spec.Reference)
+	if err != nil {
+		return fmt.Errorf("get workload kind failed: %v", err)
+	}
+	workload, err := c.clientSet.Workload().GetWorkload(namespace, componentName, gvk)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		klog.Errorf("get graphd cluster failed: %v", err)
+		return err
+	}
+	return c.clientSet.Workload().DeleteWorkload(workload)
+}
+
 func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 	namespace := nc.GetNamespace()
 	componentName := nc.GraphdComponent().GetName()

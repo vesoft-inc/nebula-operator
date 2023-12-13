@@ -51,6 +51,9 @@ type Options struct {
 	// Default watches all namespaces
 	Namespaces []string
 
+	// NebulaSelector to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)
+	NebulaSelector string
+
 	// MetricsBindAddress is the TCP address that the controller should bind to
 	// for serving prometheus metrics.
 	// It can be set to "0" to disable the metrics serving.
@@ -111,6 +114,7 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 
 	flags.DurationVar(&o.SyncPeriod.Duration, "sync-period", 0, "Period at which the controller forces the repopulation of its local object stores.")
 	flags.StringSliceVar(&o.Namespaces, "watch-namespaces", nil, "Namespaces restricts the controller watches for updates to Kubernetes objects. If empty, all namespaces are watched. Multiple namespaces seperated by comma.(e.g. ns1,ns2,ns3).")
+	flags.StringVar(&o.NebulaSelector, "nebula-object-selector", "", "nebula object selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2).")
 	flags.StringVar(&o.MetricsBindAddress, "metrics-bind-address", ":8080", "The TCP address that the controller should bind to for serving prometheus metrics(e.g. 127.0.0.1:8080, :8080). It can be set to \"0\" to disable the metrics serving.")
 	flags.StringVar(&o.HealthProbeBindAddress, "health-probe-bind-address", ":8081", "The TCP address that the controller should bind to for serving health probes.(e.g. 127.0.0.1:8081, :8081). It can be set to \"0\" to disable the health probe serving.")
 	flags.IntVar(&o.ConcurrentNebulaClusterSyncs, "concurrent-nebulacluster-syncs", 5, "The number of NebulaCluster objects that are allowed to sync concurrently.")

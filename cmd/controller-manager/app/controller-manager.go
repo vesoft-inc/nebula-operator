@@ -23,6 +23,7 @@ import (
 
 	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -142,6 +143,16 @@ func Run(ctx context.Context, opts *options.Options) error {
 			TLSMinVersion: opts.WebhookOpts.TLSMinVersion,
 		})
 	}
+
+	if opts.NebulaSelector != "" {
+		parsedSelector, err := labels.Parse(opts.NebulaSelector)
+		if err != nil {
+			klog.Errorf("couldn't convert selector into a corresponding internal selector object: %v", err)
+			return err
+		}
+		ctrlOptions.Cache.DefaultLabelSelector = parsedSelector
+	}
+
 	mgr, err := ctrlruntime.NewManager(cfg, ctrlOptions)
 	if err != nil {
 		klog.Errorf("Failed to build controller manager: %v", err)

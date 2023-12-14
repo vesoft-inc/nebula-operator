@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
@@ -76,11 +77,12 @@ type Manager interface {
 var _ Manager = (*restoreManager)(nil)
 
 type restoreManager struct {
-	clientSet kube.ClientSet
+	clientSet     kube.ClientSet
+	eventRecorder record.EventRecorder
 }
 
-func NewRestoreManager(clientSet kube.ClientSet) Manager {
-	return &restoreManager{clientSet: clientSet}
+func NewRestoreManager(clientSet kube.ClientSet, recorder record.EventRecorder) Manager {
+	return &restoreManager{clientSet: clientSet, eventRecorder: recorder}
 }
 
 func (rm *restoreManager) Sync(restore *v1alpha1.NebulaRestore) error {

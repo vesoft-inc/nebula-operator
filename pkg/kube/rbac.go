@@ -66,17 +66,11 @@ func createClusterRole(ctx context.Context, k8sClient client.Client) error {
 			},
 		},
 	}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleName}, &rbacv1.ClusterRole{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			if err := k8sClient.Create(ctx, &role); err != nil {
-				if apierrors.IsAlreadyExists(err) {
-					return nil
-				}
-				return fmt.Errorf("failed to create ClusterRole role: %v", err)
-			}
+	if err := k8sClient.Create(ctx, &role); err != nil {
+		if apierrors.IsAlreadyExists(err) {
 			return nil
 		}
-		return err
+		return fmt.Errorf("failed to create ClusterRole: %v", err)
 	}
 	return nil
 }
@@ -93,16 +87,14 @@ func createClusterRoleBinding(ctx context.Context, k8sClient client.Client, name
 		},
 	}
 	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaRoleBindingName}, binding); err != nil {
-		if apierrors.IsNotFound(err) {
-			if err := k8sClient.Create(ctx, binding); err != nil {
-				if apierrors.IsAlreadyExists(err) {
-					return nil
-				}
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get ClusterRoleBinding: %v", err)
+		}
+		if err := k8sClient.Create(ctx, binding); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
 				return fmt.Errorf("failed to create ClusterRoleBinding: %v", err)
 			}
-			return nil
 		}
-		return err
 	}
 	if !isApplied(binding.Subjects, namespace) {
 		binding.Subjects = append(binding.Subjects, rbacv1.Subject{
@@ -126,17 +118,11 @@ func createServiceAccount(ctx context.Context, k8sClient client.Client, namespac
 			Namespace: namespace,
 		},
 	}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: v1alpha1.NebulaServiceAccountName, Namespace: namespace}, &corev1.ServiceAccount{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			if err := k8sClient.Create(ctx, &serviceAccount); err != nil {
-				if apierrors.IsAlreadyExists(err) {
-					return nil
-				}
-				return fmt.Errorf("failed to create ServiceAccount: %v", err)
-			}
+	if err := k8sClient.Create(ctx, &serviceAccount); err != nil {
+		if apierrors.IsAlreadyExists(err) {
 			return nil
 		}
-		return err
+		return fmt.Errorf("failed to create nebula ServiceAccount: %v", err)
 	}
 	return nil
 }

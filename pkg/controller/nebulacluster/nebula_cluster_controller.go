@@ -26,6 +26,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,6 +86,15 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 		return nil, fmt.Errorf("server version not supported")
 	}
 
+	kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return nil, fmt.Errorf("create kubernetes client failed: %v", err)
+	}
+	eventBroadcaster := record.NewBroadcasterWithCorrelatorOptions(record.CorrelatorOptions{QPS: 1})
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: typedv1.New(kubeClient.CoreV1().RESTClient()).Events("")})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "nebula-cluster-controller"})
+
 	return &ClusterReconciler{
 		control: NewDefaultNebulaClusterControl(
 			mgr.GetClient(),
@@ -89,17 +102,20 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 			component.NewGraphdCluster(
 				clientSet,
 				dm,
-				graphdUpdater),
+				graphdUpdater,
+				recorder),
 			component.NewMetadCluster(
 				clientSet,
 				dm,
-				metadUpdater),
+				metadUpdater,
+				recorder),
 			component.NewStoragedCluster(
 				clientSet,
 				dm,
 				sm,
 				storagedUpdater,
-				storagedFailover),
+				storagedFailover,
+				recorder),
 			component.NewNebulaExporter(clientSet),
 			component.NewNebulaConsole(clientSet),
 			reclaimer.NewMetaReconciler(clientSet),

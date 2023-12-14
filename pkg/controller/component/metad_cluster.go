@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
@@ -39,17 +40,20 @@ type metadCluster struct {
 	clientSet     kube.ClientSet
 	dm            discovery.Interface
 	updateManager UpdateManager
+	eventRecorder record.EventRecorder
 }
 
 func NewMetadCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
 	um UpdateManager,
+	recorder record.EventRecorder,
 ) ReconcileManager {
 	return &metadCluster{
 		clientSet:     clientSet,
 		dm:            dm,
 		updateManager: um,
+		eventRecorder: recorder,
 	}
 }
 

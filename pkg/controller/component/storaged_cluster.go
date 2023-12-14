@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -48,6 +49,7 @@ type storagedCluster struct {
 	scaleManager    ScaleManager
 	updateManager   UpdateManager
 	failoverManager FailoverManager
+	eventRecorder   record.EventRecorder
 }
 
 func NewStoragedCluster(
@@ -56,6 +58,7 @@ func NewStoragedCluster(
 	sm ScaleManager,
 	um UpdateManager,
 	fm FailoverManager,
+	recorder record.EventRecorder,
 ) ReconcileManager {
 	return &storagedCluster{
 		clientSet:       clientSet,
@@ -63,6 +66,7 @@ func NewStoragedCluster(
 		scaleManager:    sm,
 		updateManager:   um,
 		failoverManager: fm,
+		eventRecorder:   recorder,
 	}
 }
 

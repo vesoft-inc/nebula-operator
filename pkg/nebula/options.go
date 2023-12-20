@@ -53,15 +53,15 @@ func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error)
 
 	if nc.IsMetadSSLEnabled() && !nc.IsClusterSSLEnabled() {
 		options = append(options, SetMetaTLS(true))
-		klog.Infof("cluster [%s/%s] metad SSL enabled", nc.Namespace, nc.Name)
+		klog.V(4).Infof("cluster [%s/%s] metad SSL enabled", nc.Namespace, nc.Name)
 	}
 	if nc.IsStoragedSSLEnabled() && !nc.IsClusterSSLEnabled() {
 		options = append(options, SetStorageTLS(true))
-		klog.Infof("cluster [%s/%s] storaged SSL enabled", nc.Namespace, nc.Name)
+		klog.V(4).Infof("cluster [%s/%s] storaged SSL enabled", nc.Namespace, nc.Name)
 	}
 	if nc.IsClusterSSLEnabled() {
 		options = append(options, SetClusterTLS(true))
-		klog.Infof("cluster [%s/%s] SSL enabled", nc.Namespace, nc.Name)
+		klog.V(4).Infof("cluster [%s/%s] SSL enabled", nc.Namespace, nc.Name)
 	}
 
 	caCert, clientCert, clientKey, err := getCerts(nc.Namespace, nc.Spec.SSLCerts)

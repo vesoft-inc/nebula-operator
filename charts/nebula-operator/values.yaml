@@ -17,6 +17,48 @@ controllerManager:
     requests:
       cpu: 100m
       memory: 100Mi
+  verbosity: 0
+  ## Additional InitContainers to initialize the pod
+  # Example:
+  #  extraInitContainers:
+  #  - name: init-auth-sidecar
+  #    command:
+  #    - /bin/sh
+  #    - -c
+  #    args:
+  #    - cp -R /certs/* /credentials/
+  #    imagePullPolicy: Always
+  #    image: reg.vesoft-inc.com/nebula-certs:latest
+  #    volumeMounts:
+  #    - name: credentials
+  #      mountPath: /credentials
+  extraInitContainers: []
+
+  # sidecarContainers - add more containers to controller-manager
+  # Key/Value where Key is the sidecar `- name: <Key>`
+  # Example:
+  #   sidecarContainers:
+  #      webserver:
+  #        image: nginx
+  # OR for adding netshoot to controller manager
+  #  sidecarContainers:
+  #    netshoot:
+  #      args:
+  #      - -c
+  #      - while true; do ping localhost; sleep 60;done
+  #      command:
+  #      - /bin/bash
+  #      image: nicolaka/netshoot
+  #      imagePullPolicy: Always
+  #      name: netshoot
+  #      resources: {}
+  sidecarContainers: {}
+
+  ## Additional controller-manager Volumes
+  extraVolumes: []
+
+  ## Additional controller-manager Volume mounts
+  extraVolumeMounts: []
 
 admissionWebhook:
   create: false

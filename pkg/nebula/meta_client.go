@@ -60,7 +60,8 @@ type (
 	}
 
 	metaClient struct {
-		client *meta.MetaServiceClient
+		client  *meta.MetaServiceClient
+		options []Option
 	}
 )
 
@@ -81,7 +82,10 @@ func newMetaConnection(endpoint string, options ...Option) (*metaClient, error) 
 		return nil, err
 	}
 	metaServiceClient := meta.NewMetaServiceClientFactory(transport, pf)
-	mc := &metaClient{client: metaServiceClient}
+	mc := &metaClient{
+		client:  metaServiceClient,
+		options: options,
+	}
 	if err := mc.connect(); err != nil {
 		return nil, err
 	}
@@ -93,7 +97,7 @@ func (m *metaClient) reconnect(endpoint string) error {
 		return err
 	}
 
-	transport, pf, err := buildClientTransport(endpoint)
+	transport, pf, err := buildClientTransport(endpoint, m.options...)
 	if err != nil {
 		return err
 	}

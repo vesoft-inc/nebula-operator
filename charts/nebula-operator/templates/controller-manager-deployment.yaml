@@ -41,6 +41,7 @@ spec:
             - --enable-admission-webhook={{ .Values.admissionWebhook.create }}
             - --webhook-secure-port={{ .Values.admissionWebhook.webhookBindPort }}
             - --enable-kruise-scheme={{ .Values.enableKruiseScheme }}
+            - --v={{ .Values.controllerManager.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
             {{- if .Values.kubernetesClusterDomain }}
@@ -93,6 +94,7 @@ spec:
             - --metrics-bind-address=:8090
             - --leader-elect
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
+            - --v={{ .Values.controllerManager.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
             {{- if .Values.kubernetesClusterDomain }}

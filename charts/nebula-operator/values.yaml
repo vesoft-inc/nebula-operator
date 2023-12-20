@@ -17,7 +17,7 @@ controllerManager:
     requests:
       cpu: 100m
       memory: 100Mi
-
+  verbosity: 0
   ## Additional InitContainers to initialize the pod
   # Example:
   #  extraInitContainers:

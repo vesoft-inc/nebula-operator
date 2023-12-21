@@ -421,7 +421,7 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 		Name:    "node-labels",
 		Image:   image,
 		Command: []string{"/bin/sh", "-c"},
-		Args:    []string{`echo "$SCRIPT" > /tmp/script && sh /tmp/script`},
+		Args:    []string{`echo "$SCRIPT" > /tmp/node-zone-script && sh /tmp/node-zone-script`},
 		Env: []corev1.EnvVar{
 			{
 				Name: "NODENAME",
@@ -469,7 +469,7 @@ func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 	return containers
 }
 
-func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1.Container {
+func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dynamicFlags map[string]string) ([]corev1.Container, error) {
 	componentType := c.ComponentType().String()
 	nc := c.GetNebulaCluster()
 
@@ -562,6 +562,59 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 		baseContainer.ImagePullPolicy = *imagePullPolicy
 	}
 
+	script := `
+set -x
+
+while :
+do
+	curl -i -X PUT -H "Content-Type: application/json" -d ${POST_DATA} -s "http://${MY_IP}:${HTTP_PORT}/flags"
+	if [ $? -eq 0 ]
+	then
+		break
+	fi
+	sleep 1
+done
+
+`
+
+	dynamicVal, err := json.Marshal(dynamicFlags)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(dynamicFlags) > 0 {
+		envVars := []corev1.EnvVar{
+			{
+				Name: "MY_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "status.podIP",
+					},
+				},
+			},
+			{
+				Name:  "HTTP_PORT",
+				Value: strconv.Itoa(int(ports[1].ContainerPort)),
+			},
+			{
+				Name:  "POST_DATA",
+				Value: string(dynamicVal),
+			},
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+		}
+		baseContainer.Env = append(baseContainer.Env, envVars...)
+		baseContainer.Lifecycle = &corev1.Lifecycle{
+			PostStart: &corev1.LifecycleHandler{
+				Exec: &corev1.ExecAction{
+					Command: []string{"/bin/sh", "-c", `echo "$SCRIPT" > /tmp/post-start-script && sh /tmp/post-start-script`},
+				},
+			},
+		}
+	}
+
 	containers = append(containers, baseContainer)
 
 	if nc.IsBREnabled() || nc.IsLogRotateEnabled() {
@@ -571,7 +624,7 @@ func generateContainers(c NebulaClusterComponent, cm *corev1.ConfigMap) []corev1
 
 	containers = mergeSidecarContainers(containers, c.ComponentSpec().SidecarContainers())
 
-	return containers
+	return containers, nil
 }
 
 func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv1.StatefulSet, error) {
@@ -582,9 +635,14 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 
 	nc := c.GetNebulaCluster()
 
+	dynamicFlags, staticFlags := separateFlags(c.GetConfig())
+
 	cmKey := getCmKey(componentType)
 	initContainers := generateInitContainers(c)
-	containers := generateContainers(c, cm)
+	containers, err := generateNebulaContainers(c, cm, dynamicFlags)
+	if err != nil {
+		return nil, err
+	}
 	volumes := c.GenerateVolumes()
 	if cm != nil {
 		volumes = append(volumes, corev1.Volume{
@@ -639,12 +697,11 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		return nil, err
 	}
 
-	dynamic, static := separateFlags(c.GetConfig())
-	dynamicFlags, err := json.Marshal(dynamic)
+	dynamicVal, err := json.Marshal(dynamicFlags)
 	if err != nil {
 		return nil, err
 	}
-	staticFlags, err := json.Marshal(static)
+	staticVal, err := json.Marshal(staticFlags)
 	if err != nil {
 		return nil, err
 	}
@@ -656,8 +713,8 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 			Name:      c.GetName(),
 			Namespace: namespace,
 			Annotations: map[string]string{
-				annotation.AnnLastAppliedDynamicFlagsKey: string(dynamicFlags),
-				annotation.AnnLastAppliedStaticFlagsKey:  string(staticFlags),
+				annotation.AnnLastAppliedDynamicFlagsKey: string(dynamicVal),
+				annotation.AnnLastAppliedStaticFlagsKey:  string(staticVal),
 			},
 			Labels:          componentLabel,
 			OwnerReferences: c.GenerateOwnerReferences(),

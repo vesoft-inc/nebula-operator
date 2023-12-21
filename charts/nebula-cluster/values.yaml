@@ -151,6 +151,8 @@ nebula:
 
   alpineImage: ""
 
+  sslCerts: {}
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

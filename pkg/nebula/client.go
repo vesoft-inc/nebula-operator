@@ -19,6 +19,8 @@ package nebula
 import (
 	"math"
 
+	"k8s.io/klog/v2"
+
 	"github.com/vesoft-inc/fbthrift/thrift/lib/go/thrift"
 )
 
@@ -39,9 +41,13 @@ func buildClientTransport(endpoint string, options ...Option) (thrift.Transport,
 		(opts.EnableMetaTLS && !opts.IsStorage) ||
 		(opts.EnableStorageTLS && !opts.IsMeta)
 
+	klog.V(4).Infof("client opts: %+v", opts)
+
 	if tlsEnabled {
+		klog.V(4).Infof("new SSL socket with endpoint: %s", endpoint)
 		sock, err = thrift.NewSSLSocketTimeout(endpoint, opts.TLSConfig, opts.Timeout)
 	} else {
+		klog.V(4).Infof("new socket with endpoint: %s", endpoint)
 		sock, err = thrift.NewSocket(timeoutOption, addressOption)
 	}
 	if err != nil {

@@ -136,6 +136,16 @@ rules:
   - patch
   - update
   - watch
+- apiGroups: 
+  - ""
+  resources: 
+  - jobs
+  verbs: 
+  - create
+  - get
+  - list
+  - watch
+  - delete
 - apiGroups:
   - apps.nebula-graph.io
   resources:

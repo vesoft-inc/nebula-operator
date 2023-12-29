@@ -29,6 +29,7 @@ type ClientSet interface {
 	PV() PersistentVolume
 	PVC() PersistentVolumeClaim
 	Pod() Pod
+	CronJob() CronJob
 	Job() Job
 	Service() Service
 	Ingress() Ingress
@@ -37,25 +38,28 @@ type ClientSet interface {
 	NebulaCluster() NebulaCluster
 	NebulaRestore() NebulaRestore
 	NebulaBackup() NebulaBackup
+	NebulaScheduledBackup() NebulaScheduledBackup
 	NebulaAutoscaler() NebulaAutoscaler
 }
 
 type clientSet struct {
-	nodeClient       Node
-	secretClient     Secret
-	cmClient         ConfigMap
-	pvClient         PersistentVolume
-	pvcClient        PersistentVolumeClaim
-	podClient        Pod
-	jobClient        Job
-	svcClient        Service
-	ingressClient    Ingress
-	workloadClient   Workload
-	deployClient     Deployment
-	nebulaClient     NebulaCluster
-	restoreClient    NebulaRestore
-	backupClient     NebulaBackup
-	autoscalerClient NebulaAutoscaler
+	nodeClient            Node
+	secretClient          Secret
+	cmClient              ConfigMap
+	pvClient              PersistentVolume
+	pvcClient             PersistentVolumeClaim
+	podClient             Pod
+	cronJobClient         CronJob
+	jobClient             Job
+	svcClient             Service
+	ingressClient         Ingress
+	workloadClient        Workload
+	deployClient          Deployment
+	nebulaClient          NebulaCluster
+	restoreClient         NebulaRestore
+	backupClient          NebulaBackup
+	scheduledBackupClient NebulaScheduledBackup
+	autoscalerClient      NebulaAutoscaler
 }
 
 func NewClientSet(config *rest.Config) (ClientSet, error) {
@@ -64,21 +68,23 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		return nil, errors.Errorf("error building runtime client: %v", err)
 	}
 	return &clientSet{
-		nodeClient:       NewNode(cli),
-		secretClient:     NewSecret(cli),
-		cmClient:         NewConfigMap(cli),
-		pvClient:         NewPV(cli),
-		pvcClient:        NewPVC(cli),
-		podClient:        NewPod(cli),
-		jobClient:        NewJob(cli),
-		svcClient:        NewService(cli),
-		ingressClient:    NewIngress(cli),
-		workloadClient:   NewWorkload(cli),
-		deployClient:     NewDeployment(cli),
-		nebulaClient:     NewNebulaCluster(cli),
-		restoreClient:    NewNebulaRestore(cli),
-		backupClient:     NewNebulaBackup(cli),
-		autoscalerClient: NewNebulaAutoscaler(cli),
+		nodeClient:            NewNode(cli),
+		secretClient:          NewSecret(cli),
+		cmClient:              NewConfigMap(cli),
+		pvClient:              NewPV(cli),
+		pvcClient:             NewPVC(cli),
+		podClient:             NewPod(cli),
+		cronJobClient:         NewCronJob(cli),
+		jobClient:             NewJob(cli),
+		svcClient:             NewService(cli),
+		ingressClient:         NewIngress(cli),
+		workloadClient:        NewWorkload(cli),
+		deployClient:          NewDeployment(cli),
+		nebulaClient:          NewNebulaCluster(cli),
+		restoreClient:         NewNebulaRestore(cli),
+		backupClient:          NewNebulaBackup(cli),
+		scheduledBackupClient: NewScheduledNebulaBackup(cli),
+		autoscalerClient:      NewNebulaAutoscaler(cli),
 	}, nil
 }
 
@@ -104,6 +110,10 @@ func (c *clientSet) PVC() PersistentVolumeClaim {
 
 func (c *clientSet) Pod() Pod {
 	return c.podClient
+}
+
+func (c *clientSet) CronJob() CronJob {
+	return c.cronJobClient
 }
 
 func (c *clientSet) Job() Job {
@@ -136,6 +146,10 @@ func (c *clientSet) NebulaRestore() NebulaRestore {
 
 func (c *clientSet) NebulaBackup() NebulaBackup {
 	return c.backupClient
+}
+
+func (c *clientSet) NebulaScheduledBackup() NebulaScheduledBackup {
+	return c.scheduledBackupClient
 }
 
 func (c *clientSet) NebulaAutoscaler() NebulaAutoscaler {

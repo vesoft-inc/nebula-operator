@@ -5,19 +5,39 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: backupschedules.apps.nebula-graph.io
+  name: nebulascheduledbackup.apps.nebula-graph.io
 spec:
   group: apps.nebula-graph.io
   names:
-    kind: BackupSchedule
-    listKind: BackupScheduleList
-    plural: backupschedules
+    kind: NebulaScheduledBackup
+    listKind: NebulaScheduledBackupList
+    plural: nebulascheduledbackups
     shortNames:
-    - bs
-    singular: backupschedule
+    - nsb
+    singular: nebulascheduledbackup
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The current schedule set for the scheduled backup
+      jsonPath: .properties.schedule
+      name: Schedule
+      type: string
+    - description: The current status of the scheduled backup
+      jsonPath: .status.phase
+      name: Status
+      type: string
+    - description: The name of the last backup ran
+      jsonPath: .status.lastBackup
+      name: Last Backup Name
+      type: string
+    - description: The timestamp at which the last backup was ran
+      jsonPath: .status.timeCompleted
+      name: Last Backup Time
+      type: date
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:
@@ -93,6 +113,8 @@ spec:
                 type: string
               lastBackupTime:
                 format: date-time
+                type: string
+              phase:
                 type: string
             type: object
         type: object

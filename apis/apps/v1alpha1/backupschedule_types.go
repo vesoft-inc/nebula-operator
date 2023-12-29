@@ -20,30 +20,51 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// BackupConditionType represents a valid condition of a Backup.
+type ScheduledBackupConditionType string
+
+const (
+	// ScheduledBackupPending means the scheduled backup job is pending, waiting for creation of the backup cronjob
+	ScheduledBackupPending ScheduledBackupConditionType = "Pending"
+	// ScheduledBackupScheduled means the scheduled backup cronjob was created successfully and no active backup jobs are running
+	// if there was an active backup job, the job has executed successfully and the backup data has been loaded into the nebula cluster.
+	ScheduledBackupScheduled ScheduledBackupConditionType = "Scheduled"
+	// ScheduledBackupRunning means there's an active backup job current running.
+	ScheduledBackupRunning ScheduledBackupConditionType = "Running"
+	// ScheduledBackupPaused means the schedule backup is currently suspended
+	ScheduledBackupPaused ScheduledBackupConditionType = "Paused"
+	// ScheduledBackupJobFailed means the active backup job has failed to execute successfully
+	ScheduledBackupJobFailed ScheduledBackupConditionType = "Backup job failed"
+	// BackupFailed means the backup cron job creation has failed.
+	ScheduledBackupFailed ScheduledBackupConditionType = "Cron Creation Failed"
+	// BackupInvalid means invalid backup CR.
+	ScheduledBackupInvalid ScheduledBackupConditionType = "Invalid"
+)
+
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName="bs"
 
-type BackupSchedule struct {
+type NebulaScheduledBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BackupScheduleSpec   `json:"spec,omitempty"`
-	Status BackupScheduleStatus `json:"status,omitempty"`
+	Spec   ScheduledBackupSpec   `json:"spec,omitempty"`
+	Status ScheduledBackupStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-// BackupScheduleList contains a list of BackupSchedule.
-type BackupScheduleList struct {
+// NebulaScheduledBackupList contains a list of NebulaScheduledBackup.
+type NebulaScheduledBackupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 
-	Items []BackupSchedule `json:"items"`
+	Items []NebulaScheduledBackup `json:"items"`
 }
 
-// BackupScheduleSpec contains the specification for a backupSchedule of a nebula cluster backupSchedule.
-type BackupScheduleSpec struct {
+// ScheduledBackupSpec contains the specification for a NebulaScheduledBackup of a nebula cluster NebulaScheduledBackup.
+type ScheduledBackupSpec struct {
 	// Schedule specifies the cron string used for backup scheduling.
 	Schedule string `json:"schedule"`
 	// Pause means paused backupSchedule
@@ -60,14 +81,16 @@ type BackupScheduleSpec struct {
 	// LogBackupTemplate is the specification of the log backup structure to get scheduled.
 }
 
-// BackupScheduleStatus represents the current status of a nebula cluster backupSchedule.
-type BackupScheduleStatus struct {
+// ScheduledBackupStatus represents the current status of a nebula cluster NebulaScheduledBackup.
+type ScheduledBackupStatus struct {
 	// LastBackup represents the last backup.
 	LastBackup string `json:"lastBackup,omitempty"`
 	// LastBackupTime represents the last time the backup was successfully created.
 	LastBackupTime *metav1.Time `json:"lastBackupTime,omitempty"`
+	// Phase represents the status of the scheduled backup
+	Phase ScheduledBackupConditionType `json:"phase,omitempty"`
 }
 
 func init() {
-	SchemeBuilder.Register(&BackupSchedule{}, &BackupScheduleList{})
+	SchemeBuilder.Register(&NebulaScheduledBackup{}, &NebulaScheduledBackupList{})
 }

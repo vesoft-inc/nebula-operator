@@ -44,7 +44,12 @@ const (
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName="bs"
+// +kubebuilder:resource:shortName="nsb"
+// +kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.schedule`,description="The current schedule set for the scheduled backup"
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`,description="The current status of the scheduled backup"
+// +kubebuilder:printcolumn:name="Last Backup Time",type=date,JSONPath=`.status.lastBackupTime`,description="The timestamp at which the last backup was ran"
+// +kubebuilder:printcolumn:name="Next Backup Time",type=date,JSONPath=`.status.lastBackupTime`,description="The timestamp at which the next backup will ran"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 type NebulaScheduledBackup struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -83,10 +88,14 @@ type ScheduledBackupSpec struct {
 
 // ScheduledBackupStatus represents the current status of a nebula cluster NebulaScheduledBackup.
 type ScheduledBackupStatus struct {
-	// LastBackup represents the last backup.
-	LastBackup string `json:"lastBackup,omitempty"`
+	// LastBackup represents the last backup. Used for scheduled incremental backups. Not supported for now.
+	//LastBackup string `json:"lastBackup,omitempty"`
+	// CurrSchedule represents the current backup schedule
+	CurrSchedule string `json:"currSchedule,omitempty"`
 	// LastBackupTime represents the last time the backup was successfully created.
 	LastBackupTime *metav1.Time `json:"lastBackupTime,omitempty"`
+	// NextBackupTime represent the next time the backup will be run.
+	NextBackupTime *metav1.Time `json:"nextBackupTime,omitempty"`
 	// Phase represents the status of the scheduled backup
 	Phase ScheduledBackupConditionType `json:"phase,omitempty"`
 }

@@ -31,8 +31,11 @@ import (
 )
 
 type ScheduledBackupUpdateStatus struct {
-	LastBackup     string
+	// Used for scheduled incremental backups. Not supported for now.
+	// LastBackup     string
+	CurrSchedule   string
 	LastBackupTime *metav1.Time
+	NextBackupTime *metav1.Time
 	Phase          v1alpha1.ScheduledBackupConditionType
 }
 
@@ -94,12 +97,21 @@ func updateScheduledBackupStatus(status *v1alpha1.ScheduledBackupStatus, newStat
 	}
 
 	isUpdate := false
-	if status.LastBackup != newStatus.LastBackup {
+	// Used for scheduled incremental backups. Not supported for now.
+	/* if newStatus.LastBackup != "" {
 		status.LastBackup = newStatus.LastBackup
+		isUpdate = true
+	} */
+	if newStatus.CurrSchedule != "" {
+		status.CurrSchedule = newStatus.CurrSchedule
 		isUpdate = true
 	}
 	if newStatus.LastBackupTime != nil {
 		status.LastBackupTime = newStatus.LastBackupTime
+		isUpdate = true
+	}
+	if newStatus.NextBackupTime != nil {
+		status.LastBackupTime = newStatus.NextBackupTime
 		isUpdate = true
 	}
 	if status.Phase != newStatus.Phase {

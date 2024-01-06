@@ -29,7 +29,6 @@ type ClientSet interface {
 	PV() PersistentVolume
 	PVC() PersistentVolumeClaim
 	Pod() Pod
-	CronJob() CronJob
 	Job() Job
 	Service() Service
 	Ingress() Ingress
@@ -49,7 +48,6 @@ type clientSet struct {
 	pvClient              PersistentVolume
 	pvcClient             PersistentVolumeClaim
 	podClient             Pod
-	cronJobClient         CronJob
 	jobClient             Job
 	svcClient             Service
 	ingressClient         Ingress
@@ -74,7 +72,6 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		pvClient:              NewPV(cli),
 		pvcClient:             NewPVC(cli),
 		podClient:             NewPod(cli),
-		cronJobClient:         NewCronJob(cli),
 		jobClient:             NewJob(cli),
 		svcClient:             NewService(cli),
 		ingressClient:         NewIngress(cli),
@@ -110,10 +107,6 @@ func (c *clientSet) PVC() PersistentVolumeClaim {
 
 func (c *clientSet) Pod() Pod {
 	return c.podClient
-}
-
-func (c *clientSet) CronJob() CronJob {
-	return c.cronJobClient
 }
 
 func (c *clientSet) Job() Job {

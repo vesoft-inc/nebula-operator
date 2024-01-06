@@ -71,7 +71,7 @@ func (bm *backupManager) Create(backup *v1alpha1.NebulaBackup) error {
 		return fmt.Errorf("nebula cluster %s/%s is not ready", ns, backup.Spec.BR.ClusterName)
 	}
 
-	backupJob := generateBackupJob(backup, nc.GetMetadThriftConnAddress())
+	backupJob := generateBackupJob(backup, nc.MetadComponent().GetPodFQDN(0))
 	if err = bm.clientSet.Job().CreateJob(backupJob); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("create backup job err: %w", err)
 	}

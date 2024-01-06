@@ -42,6 +42,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulabackup"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulacluster"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebularestore"
+	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulascheduledbackup"
 	klogflag "github.com/vesoft-inc/nebula-operator/pkg/flag/klog"
 	profileflag "github.com/vesoft-inc/nebula-operator/pkg/flag/profile"
 	"github.com/vesoft-inc/nebula-operator/pkg/version"
@@ -178,6 +179,15 @@ func Run(ctx context.Context, opts *options.Options) error {
 	if err := backupReconciler.SetupWithManager(mgr); err != nil {
 		klog.Errorf("failed to set up NebulaBackup controller: %v", err)
 		return err
+	}
+
+	scheduledBackupReconciler, err := nebulascheduledbackup.NewBackupReconciler(mgr)
+	if err != nil {
+		return err
+	}
+
+	if err := scheduledBackupReconciler.SetupWithManager(mgr); err != nil {
+		klog.Errorf("failed to set up ScheduledNebulaBackup controller: %v", err)
 	}
 
 	if opts.EnableAdmissionWebhook {

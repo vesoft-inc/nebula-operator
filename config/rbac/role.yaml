@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: manager-role
+  name: nebula-operator-controller-manager-role
 rules:
 - apiGroups:
   - ""
@@ -25,6 +25,16 @@ rules:
   - create
   - list
   - patch
+- apiGroups:
+  - ""
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -136,16 +146,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups: 
-  - ""
-  resources: 
-  - jobs
-  verbs: 
-  - create
-  - get
-  - list
-  - watch
-  - delete
 - apiGroups:
   - apps.nebula-graph.io
   resources:
@@ -225,6 +225,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulascheduledbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulascheduledbackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulascheduledbackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - autoscaling.nebula-graph.io
   resources:
   - nebulaautoscalers
@@ -244,6 +270,16 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
 - apiGroups:
   - metrics.k8s.io
   resources:

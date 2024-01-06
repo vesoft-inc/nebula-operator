@@ -5,7 +5,7 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: nebulascheduledbackup.apps.nebula-graph.io
+  name: nebulascheduledbackups.apps.nebula-graph.io
 spec:
   group: apps.nebula-graph.io
   names:
@@ -19,20 +19,20 @@ spec:
   versions:
   - additionalPrinterColumns:
     - description: The current schedule set for the scheduled backup
-      jsonPath: .properties.schedule
+      jsonPath: .spec.schedule
       name: Schedule
       type: string
     - description: The current status of the scheduled backup
       jsonPath: .status.phase
       name: Status
       type: string
-    - description: The name of the last backup ran
-      jsonPath: .status.lastBackup
-      name: Last Backup Name
-      type: string
     - description: The timestamp at which the last backup was ran
-      jsonPath: .status.timeCompleted
+      jsonPath: .status.lastBackupTime
       name: Last Backup Time
+      type: date
+    - description: The timestamp at which the next backup will ran
+      jsonPath: .status.lastBackupTime
+      name: Next Backup Time
       type: date
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -109,9 +109,12 @@ spec:
             type: object
           status:
             properties:
-              lastBackup:
+              currSchedule:
                 type: string
               lastBackupTime:
+                format: date-time
+                type: string
+              nextBackupTime:
                 format: date-time
                 type: string
               phase:

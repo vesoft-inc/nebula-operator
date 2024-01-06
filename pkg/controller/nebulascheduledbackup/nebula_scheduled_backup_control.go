@@ -55,20 +55,42 @@ func (c *defaultScheduledBackupControl) SyncNebulaScheduledBackup(sbp *v1alpha1.
 		if err != nil && !errors.IsReconcileError(err) {
 			klog.Errorf("Fail to create NebulaScheduledBackup [%s/%s], %v", sbp.Namespace, sbp.Name, err)
 			if err = c.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(sbp, &kube.ScheduledBackupUpdateStatus{
-				Phase: v1alpha1.ScheduledBackupScheduled,
+				Phase: v1alpha1.ScheduledBackupFailed,
 			}); err != nil {
 				klog.Errorf("Fail to update the condition of NebulaScheduledBackup [%s/%s], %v", sbp.Namespace, sbp.Name, err)
 			}
 		}
 		return err
-	default:
-		if sbp.Spec.Pause && phase == v1alpha1.ScheduledBackupPaused {
-			break
+	case v1alpha1.ScheduledBackupPaused:
+		if !sbp.Spec.Pause {
+			klog.Infof("resume scheduled backup job %s", sbp.Name)
+			err := c.scheduledBackupManager.Resume(sbp)
+			if err != nil && !errors.IsReconcileError(err) {
+				klog.Errorf("Fail to resume NebulaScheduledBackup [%s/%s], %v", sbp.Namespace, sbp.Name, err)
+				if err = c.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(sbp, &kube.ScheduledBackupUpdateStatus{
+					Phase: v1alpha1.ScheduledBackupFailed,
+				}); err != nil {
+					klog.Errorf("Fail to update the condition of NebulaScheduledBackup [%s/%s], %v", sbp.Namespace, sbp.Name, err)
+				}
+			}
 		}
-		klog.Infof("sync backup job %s", sbp.Name)
-		err := c.scheduledBackupManager.Sync(sbp)
+	case v1alpha1.ScheduledBackupFailed:
+		klog.Infof("skipping reconciling NebulaScheduledBackup [%s/%s]. It is in %s phase", sbp.Namespace, sbp.Name, v1alpha1.ScheduledBackupFailed)
+		return nil
+	default:
+		var err error
+		var transaction string
+		if sbp.Spec.Pause {
+			transaction = "pause"
+			klog.Infof("pause scheduled backup job %s", sbp.Name)
+			err = c.scheduledBackupManager.Pause(sbp)
+		} else {
+			transaction = "sync"
+			klog.Infof("sync scheduled backup job %s", sbp.Name)
+			err = c.scheduledBackupManager.Sync(sbp)
+		}
 		if err != nil && !errors.IsReconcileError(err) {
-			klog.Errorf("Fail to sync NebulaScheduledBackup [%s/%s], %v", sbp.Namespace, sbp.Name, err)
+			klog.Errorf("Fail to %v NebulaScheduledBackup [%s/%s], %v", transaction, sbp.Namespace, sbp.Name, err)
 			if err = c.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(sbp, &kube.ScheduledBackupUpdateStatus{
 				Phase: v1alpha1.ScheduledBackupFailed,
 			}); err != nil {
@@ -78,6 +100,6 @@ func (c *defaultScheduledBackupControl) SyncNebulaScheduledBackup(sbp *v1alpha1.
 		return err
 	}
 
-	klog.Infof("sync NebulaScheduledBackup success, scheduled backup %s phase is %s", sbp.Name, phase)
+	klog.Infof("Reconcile NebulaScheduledBackup success, scheduled backup %s phase is %s", sbp.Name, phase)
 	return nil
 }

@@ -64,9 +64,9 @@ func NewBackupReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;list
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups/finalizers,verbs=update
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulascheduledbackups,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulascheduledbackups/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulascheduledbackups/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
 	key := req.NamespacedName.String()

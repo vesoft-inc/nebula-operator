@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,8 +39,10 @@ type BackupUpdateStatus struct {
 }
 
 type NebulaBackup interface {
+	CreateNebulaBackup(nb *v1alpha1.NebulaBackup) error
 	GetNebulaBackup(namespace, name string) (*v1alpha1.NebulaBackup, error)
 	UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, condition *v1alpha1.BackupCondition, newStatus *BackupUpdateStatus) error
+	DeleteNebulaBackup(namespace, name string) error
 }
 
 type backupClient struct {
@@ -48,6 +51,17 @@ type backupClient struct {
 
 func NewNebulaBackup(cli client.Client) NebulaBackup {
 	return &backupClient{cli: cli}
+}
+
+func (c *backupClient) CreateNebulaBackup(nb *v1alpha1.NebulaBackup) error {
+	if err := c.cli.Create(context.TODO(), nb); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			klog.Infof("NebulaBackup %s/%s already exists", nb.Namespace, nb.Name)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *backupClient) GetNebulaBackup(namespace, name string) (*v1alpha1.NebulaBackup, error) {
@@ -89,6 +103,21 @@ func (r *backupClient) UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, c
 		}
 		return nil
 	})
+}
+
+func (r *backupClient) DeleteNebulaBackup(namespace, name string) error {
+	nb, err := r.GetNebulaBackup(namespace, name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := r.cli.Delete(context.TODO(), nb); err != nil {
+		return err
+	}
+	klog.Infof("NebulaBackup [%s/%s] deleted successfully", namespace, name)
+	return nil
 }
 
 func updateBackupStatus(status *v1alpha1.BackupStatus, newStatus *BackupUpdateStatus) bool {

@@ -27,13 +27,15 @@ spec:
       name: Status
       type: string
     - description: The timestamp at which the last backup was ran
+      format: date-time
       jsonPath: .status.lastBackupTime
       name: Last Backup Time
-      type: date
+      type: string
     - description: The timestamp at which the next backup will ran
-      jsonPath: .status.lastBackupTime
+      format: date-time
+      jsonPath: .status.nextBackupTime
       name: Next Backup Time
-      type: date
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -87,6 +89,11 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     type: array
+                  maxBackups:
+                    format: int32
+                    type: integer
+                  maxReservedTime:
+                    type: string
                   nodeSelector:
                     additionalProperties:
                       type: string

@@ -81,6 +81,11 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+              maxBackups:
+                format: int32
+                type: integer
+              maxReservedTime:
+                type: string
               nodeSelector:
                 additionalProperties:
                   type: string

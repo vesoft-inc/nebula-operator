@@ -47,8 +47,8 @@ const (
 // +kubebuilder:resource:shortName="nsb"
 // +kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.schedule`,description="The current schedule set for the scheduled backup"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.phase`,description="The current status of the scheduled backup"
-// +kubebuilder:printcolumn:name="Last Backup Time",type=date,JSONPath=`.status.lastBackupTime`,description="The timestamp at which the last backup was ran"
-// +kubebuilder:printcolumn:name="Next Backup Time",type=date,JSONPath=`.status.lastBackupTime`,description="The timestamp at which the next backup will ran"
+// +kubebuilder:printcolumn:name="Last Backup Time",format=date-time,type=string,JSONPath=`.status.lastBackupTime`,description="The timestamp at which the last backup was ran"
+// +kubebuilder:printcolumn:name="Next Backup Time",format=date-time,type=string,JSONPath=`.status.nextBackupTime`,description="The timestamp at which the next backup will ran"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 type NebulaScheduledBackup struct {

@@ -111,10 +111,10 @@ func updateScheduledBackupStatus(status *v1alpha1.ScheduledBackupStatus, newStat
 		isUpdate = true
 	}
 	if newStatus.NextBackupTime != nil {
-		status.LastBackupTime = newStatus.NextBackupTime
+		status.NextBackupTime = newStatus.NextBackupTime
 		isUpdate = true
 	}
-	if status.Phase != newStatus.Phase {
+	if newStatus.Phase != "" && status.Phase != newStatus.Phase {
 		status.Phase = newStatus.Phase
 		isUpdate = true
 	}

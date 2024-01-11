@@ -98,6 +98,12 @@ type BackupSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	BR *BRConfig `json:"br,omitempty"`
+
+	// MaxBackups is to specify how many backups we want to keep. Used for scheduled backups only.
+	MaxBackups *int32 `json:"maxBackups,omitempty"`
+
+	// MaxReservedTime is to specify how long backups we want to keep. Used for scheduled backups only.
+	MaxReservedTime *string `json:"maxReservedTime,omitempty"`
 }
 
 // BackupStatus represents the current status of a nebula cluster backup.

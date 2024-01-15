@@ -44,10 +44,10 @@ spec:
             - --v={{ .Values.controllerManager.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
-            {{- if .Values.kubernetesClusterDomain }}
+          {{- if .Values.kubernetesClusterDomain }}
             - name: KUBERNETES_CLUSTER_DOMAIN
               value: {{ .Values.kubernetesClusterDomain }}
-            {{- end }}
+          {{- end }}
           {{- if .Values.controllerManager.env }}{{ toYaml .Values.controllerManager.env | nindent 12 }}{{- end }}
           {{- end }}
           {{- if .Values.admissionWebhook.create }}
@@ -97,10 +97,10 @@ spec:
             - --v={{ .Values.controllerManager.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
-            {{- if .Values.kubernetesClusterDomain }}
+          {{- if .Values.kubernetesClusterDomain }}
             - name: KUBERNETES_CLUSTER_DOMAIN
               value: {{ .Values.kubernetesClusterDomain }}
-            {{- end }}
+          {{- end }}
           {{- if .Values.controllerManager.env }}{{ toYaml .Values.controllerManager.env | nindent 12 }}{{- end }}
           {{- end }}
           resources:
@@ -131,8 +131,10 @@ spec:
     {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
+      {{- with .Values.controllerManager.securityContext }}
       securityContext:
-        runAsNonRoot: true
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
       terminationGracePeriodSeconds: 10
       {{- with .Values.nodeSelector }}
       nodeSelector:

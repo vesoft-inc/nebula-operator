@@ -60,6 +60,9 @@ controllerManager:
   ## Additional controller-manager Volume mounts
   extraVolumeMounts: []
 
+  securityContext: {}
+#    runAsNonRoot: true
+
 admissionWebhook:
   create: false
   # The TCP port the Webhook server binds to. (default 9443)

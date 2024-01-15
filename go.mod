@@ -6,6 +6,7 @@ require (
 	github.com/caarlos0/env/v8 v8.0.0
 	github.com/go-playground/validator/v10 v10.15.5
 	github.com/google/go-cmp v0.5.9
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/joho/godotenv v1.5.1
 	github.com/onsi/gomega v1.27.7
 	github.com/openkruise/kruise-api v1.3.0
@@ -86,7 +87,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect

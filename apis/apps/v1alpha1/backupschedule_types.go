@@ -71,17 +71,16 @@ type ScheduledBackupSpec struct {
 	Schedule string `json:"schedule"`
 	// Pause means paused backupSchedule
 	Pause *bool `json:"pause,omitempty"`
-	// MaxBackups is to specify how many backups we want to keep
-	// 0 is magic number to indicate un-limited backups.
-	// if MaxBackups and MaxReservedTime are set at the same time, MaxReservedTime is preferred
+	// MaxBackups specifies how many backups we want to keep in the remote storage bucket.
+	// 0 is the magic number to indicate unlimited backups.
+	// if both MaxBackups and MaxReservedTime are set at the same time, MaxReservedTime will be used
 	// and MaxBackups is ignored.
 	MaxBackups *int32 `json:"maxBackups,omitempty"`
-	// MaxReservedTime is to specify how long backups we want to keep.
+	// MaxRetentionTime specifies how long we want the backups in the remote storage bucket to be kept for.
 	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?[a-zA-Z]+)+$`
-	MaxReservedTime *string `json:"maxReservedTime,omitempty"`
-	// BackupTemplate is the specification of the backup structure to get scheduled.
+	MaxRetentionTime *string `json:"maxRetentionTime,omitempty"`
+	// BackupTemplate is the specification of the backup structure to schedule.
 	BackupTemplate BackupSpec `json:"backupTemplate"`
-	// LogBackupTemplate is the specification of the log backup structure to get scheduled.
 	// MaxSuccessfulNublaBackupJobs specifies the maximum number of successful backup jobs to keep
 	MaxSuccessfulNebulaBackupJobs *int32 `json:"maxSuccessfulNebulaBackupJobs,omitempty"`
 	// MaxFailedNebulaBackupJobs specifies the maximum number of failed backup jobs to keep

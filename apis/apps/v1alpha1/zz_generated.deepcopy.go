@@ -1046,8 +1046,8 @@ func (in *ScheduledBackupSpec) DeepCopyInto(out *ScheduledBackupSpec) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.MaxReservedTime != nil {
-		in, out := &in.MaxReservedTime, &out.MaxReservedTime
+	if in.MaxRetentionTime != nil {
+		in, out := &in.MaxRetentionTime, &out.MaxRetentionTime
 		*out = new(string)
 		**out = **in
 	}

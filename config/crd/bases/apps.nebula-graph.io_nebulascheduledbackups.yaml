@@ -22,19 +22,14 @@ spec:
       jsonPath: .spec.schedule
       name: Schedule
       type: string
-    - description: The current status of the scheduled backup
-      jsonPath: .status.phase
-      name: Status
+    - description: The timestamp at which the last backup was triggered
+      jsonPath: .status.lastScheduledBackupTime
+      name: Last Triggered Backup
       type: string
-    - description: The timestamp at which the last backup was ran
+    - description: The timestamp at which the last backup was successful completed
       format: date-time
-      jsonPath: .status.lastBackupTime
-      name: Last Backup Time
-      type: string
-    - description: The timestamp at which the next backup will ran
-      format: date-time
-      jsonPath: .status.nextBackupTime
-      name: Next Backup Time
+      jsonPath: .status.lastSuccessfulBackupTime
+      name: Last Successful Backup
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -108,7 +103,7 @@ spec:
               maxFailedNebulaBackupJobs:
                 format: int32
                 type: integer
-              maxReservedTime:
+              maxRetentionTime:
                 pattern: ^([0-9]+(\.[0-9]+)?[a-zA-Z]+)+$
                 type: string
               maxSuccessfulNebulaBackupJobs:

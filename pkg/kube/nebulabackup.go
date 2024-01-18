@@ -43,6 +43,7 @@ type NebulaBackup interface {
 	GetNebulaBackup(namespace, name string) (*v1alpha1.NebulaBackup, error)
 	UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, condition *v1alpha1.BackupCondition, newStatus *BackupUpdateStatus) error
 	DeleteNebulaBackup(namespace, name string) error
+	ListNebulaBackupsByUID(namespace string, ownerReferenceUID types.UID) ([]v1alpha1.NebulaBackup, error)
 }
 
 type backupClient struct {
@@ -75,6 +76,14 @@ func (r *backupClient) GetNebulaBackup(namespace, name string) (*v1alpha1.Nebula
 		return nil, err
 	}
 	return backup, nil
+}
+
+func (r *backupClient) ListNebulaBackupsByUID(namespace string, ownerReferenceUID types.UID) ([]v1alpha1.NebulaBackup, error) {
+	backupList := v1alpha1.NebulaBackupList{}
+	if err := r.cli.List(context.TODO(), &backupList, client.InNamespace(namespace), client.MatchingFields{"metadata.ownerReferences.uid": string(ownerReferenceUID)}); err != nil {
+		return nil, err
+	}
+	return backupList.Items, nil
 }
 
 func (r *backupClient) UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, condition *v1alpha1.BackupCondition, newStatus *BackupUpdateStatus) error {
@@ -131,11 +140,11 @@ func updateBackupStatus(status *v1alpha1.BackupStatus, newStatus *BackupUpdateSt
 		isUpdate = true
 	}
 	if newStatus.TimeStarted != nil {
-		status.TimeStarted = *newStatus.TimeStarted
+		status.TimeStarted = newStatus.TimeStarted
 		isUpdate = true
 	}
 	if newStatus.TimeCompleted != nil {
-		status.TimeCompleted = *newStatus.TimeCompleted
+		status.TimeCompleted = newStatus.TimeCompleted
 		isUpdate = true
 	}
 

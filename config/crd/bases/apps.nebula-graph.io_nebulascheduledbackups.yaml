@@ -92,8 +92,9 @@ spec:
                   maxBackups:
                     format: int32
                     type: integer
-                  maxReservedTime:
-                    type: string
+                  maxReservedTimeEpoch:
+                    format: int64
+                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -104,8 +105,15 @@ spec:
               maxBackups:
                 format: int32
                 type: integer
+              maxFailedNebulaBackupJobs:
+                format: int32
+                type: integer
               maxReservedTime:
+                pattern: ^([0-9]+(\.[0-9]+)?[a-zA-Z]+)+$
                 type: string
+              maxSuccessfulNebulaBackupJobs:
+                format: int32
+                type: integer
               pause:
                 type: boolean
               schedule:
@@ -116,16 +124,14 @@ spec:
             type: object
           status:
             properties:
-              currSchedule:
-                type: string
-              lastBackupTime:
+              lastScheduledBackupTime:
                 format: date-time
                 type: string
-              nextBackupTime:
+              lastSuccessfulBackupTime:
                 format: date-time
                 type: string
-              phase:
-                type: string
+              mostRecentJobFailed:
+                type: boolean
             type: object
         type: object
     served: true

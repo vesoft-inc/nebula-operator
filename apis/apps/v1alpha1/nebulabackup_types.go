@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -99,21 +101,21 @@ type BackupSpec struct {
 
 	BR *BRConfig `json:"br,omitempty"`
 
-	// MaxBackups is to specify how many backups we want to keep. Used for scheduled backups only.
-	MaxBackups *int32 `json:"maxBackups,omitempty"`
+	// NumBackupsKeep is to specify how many backups we want to keep. Used for scheduled backups only.
+	NumBackupsKeep *int32 `json:"maxBackups,omitempty"`
 
-	// MaxReservedTime is to specify how long backups we want to keep. Used for scheduled backups only.
-	MaxReservedTime *string `json:"maxReservedTime,omitempty"`
+	// ReservedTimeEpoach is the epoach time for how long we want to keep the backups. Used for scheduled backups only.
+	ReservedTimeEpoch *time.Duration `json:"maxReservedTimeEpoch,omitempty"`
 }
 
 // BackupStatus represents the current status of a nebula cluster backup.
 type BackupStatus struct {
 	// TimeStarted is the time at which the backup was started.
 	// +nullable
-	TimeStarted metav1.Time `json:"timeStarted,omitempty"`
+	TimeStarted *metav1.Time `json:"timeStarted,omitempty"`
 	// TimeCompleted is the time at which the backup was completed.
 	// +nullable
-	TimeCompleted metav1.Time `json:"timeCompleted,omitempty"`
+	TimeCompleted *metav1.Time `json:"timeCompleted,omitempty"`
 	// Phase is a user readable state inferred from the underlying Backup conditions
 	Phase BackupConditionType `json:"phase,omitempty"`
 	// +nullable

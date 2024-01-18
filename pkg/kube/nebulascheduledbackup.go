@@ -33,10 +33,9 @@ import (
 type ScheduledBackupUpdateStatus struct {
 	// Used for scheduled incremental backups. Not supported for now.
 	// LastBackup     string
-	CurrSchedule   string
-	LastBackupTime *metav1.Time
-	NextBackupTime *metav1.Time
-	Phase          v1alpha1.ScheduledBackupConditionType
+	LastScheduledBackupTime  *metav1.Time
+	LastSuccessfulBackupTime *metav1.Time
+	MostRecentJobFailed      *bool
 }
 
 type NebulaScheduledBackup interface {
@@ -102,20 +101,18 @@ func updateScheduledBackupStatus(status *v1alpha1.ScheduledBackupStatus, newStat
 		status.LastBackup = newStatus.LastBackup
 		isUpdate = true
 	} */
-	if newStatus.CurrSchedule != "" {
-		status.CurrSchedule = newStatus.CurrSchedule
+	if newStatus.LastScheduledBackupTime != nil {
+		status.LastScheduledBackupTime = newStatus.LastScheduledBackupTime
 		isUpdate = true
 	}
-	if newStatus.LastBackupTime != nil {
-		status.LastBackupTime = newStatus.LastBackupTime
+
+	if newStatus.LastSuccessfulBackupTime != nil {
+		status.LastSuccessfulBackupTime = newStatus.LastSuccessfulBackupTime
 		isUpdate = true
 	}
-	if newStatus.NextBackupTime != nil {
-		status.NextBackupTime = newStatus.NextBackupTime
-		isUpdate = true
-	}
-	if newStatus.Phase != "" && status.Phase != newStatus.Phase {
-		status.Phase = newStatus.Phase
+
+	if newStatus.MostRecentJobFailed != nil {
+		status.MostRecentJobFailed = newStatus.MostRecentJobFailed
 		isUpdate = true
 	}
 

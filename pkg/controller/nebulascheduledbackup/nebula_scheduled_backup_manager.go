@@ -18,37 +18,30 @@ package nebulascheduledbackup
 
 import (
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/robfig/cron"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	condutil "github.com/vesoft-inc/nebula-operator/pkg/util/condition"
-	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 const (
-	EnvS3AccessKeyName = "S3_ACCESS_KEY"
-	EnvS3SecretKeyName = "S3_SECRET_KEY"
-	BackupPrefix       = "nsb"
+	BackupPrefix = "nsb"
 )
 
 type Manager interface {
-	// Create creates a scheduled backup job.
-	Create(backup *v1alpha1.NebulaScheduledBackup) error
+	// CleanupFinishedNBJobs implements the logic for deleting all finished Nebula Backup jobs associated with the NebulaScheduledBackup
+	CleanupFinishedNBs(backup *v1alpha1.NebulaScheduledBackup, successfulJobs, FailedJobs []v1alpha1.NebulaBackup) error
 
-	// Sync	implements the logic for syncing NebulaScheduledBackup.
-	Sync(backup *v1alpha1.NebulaScheduledBackup) error
-
-	// Pause implements the logic for pauseing a NebulaScheduledBackup.
-	Pause(backup *v1alpha1.NebulaScheduledBackup) error
-
-	// Resume implements the logic for resuming a NebulaScheduledBackup.
-	Resume(backup *v1alpha1.NebulaScheduledBackup) error
+	// SyncNebulaScheduledBackup implements the logic for syncing a NebulaScheduledBackup.
+	SyncNebulaScheduledBackup(backup *v1alpha1.NebulaScheduledBackup, successfulBackups, failedBackups, runningBackups []v1alpha1.NebulaBackup, now *metav1.Time) (*kube.ScheduledBackupUpdateStatus, *metav1.Time, error)
 }
 
 var _ Manager = (*scheduledBackupManager)(nil)
@@ -61,7 +54,88 @@ func NewBackupManager(clientSet kube.ClientSet) Manager {
 	return &scheduledBackupManager{clientSet: clientSet}
 }
 
-func (bm *scheduledBackupManager) Create(scheduledBackup *v1alpha1.NebulaScheduledBackup) error {
+func (bm *scheduledBackupManager) CleanupFinishedNBs(scheduledBackup *v1alpha1.NebulaScheduledBackup, successfulJobs, failedJobs []v1alpha1.NebulaBackup) error {
+	klog.Info("Cleaning up previous successful and failed backup jobs")
+	if scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs == nil && scheduledBackup.Spec.MaxFailedNebulaBackupJobs == nil {
+		klog.Info("No limit set for either successful backup jobs or failed backup jobs. Nothing to cleanup.")
+		return nil
+	}
+
+	var jobsToDelete int32
+	if scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs != nil {
+		jobsToDelete = int32(len(successfulJobs)) - *scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs
+		if jobsToDelete > 0 {
+			err := bm.cleanupNBs(scheduledBackup, successfulJobs, jobsToDelete)
+			if err != nil {
+				return fmt.Errorf("cleanup successful backup jobs failed for nebula scheduled backup %s/%s. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
+			}
+		} else {
+			klog.Infof("Number of successful backup jobs is less then %v. Nothing to cleanup", scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs)
+		}
+	}
+
+	if scheduledBackup.Spec.MaxFailedNebulaBackupJobs != nil {
+		jobsToDelete = int32(len(failedJobs)) - *scheduledBackup.Spec.MaxFailedNebulaBackupJobs
+		if jobsToDelete > 0 {
+			err := bm.cleanupNBs(scheduledBackup, failedJobs, jobsToDelete)
+			if err != nil {
+				return fmt.Errorf("cleanup failed backup jobs failed for nebula scheduled backup %s/%s. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
+			}
+		} else {
+			klog.Infof("Number of failed backup jobs is less then %v. Nothing to cleanup", scheduledBackup.Spec.MaxFailedNebulaBackupJobs)
+		}
+	}
+
+	return nil
+}
+
+func (bm *scheduledBackupManager) SyncNebulaScheduledBackup(scheduledBackup *v1alpha1.NebulaScheduledBackup, successfulBackups, failedBackups, runningBackups []v1alpha1.NebulaBackup, now *metav1.Time) (*kube.ScheduledBackupUpdateStatus, *metav1.Time, error) {
+	// Create or undate backup cleanup scripts config map. Needed to clean up previous backups
+	nbConfigMap := generateBackupCleanupScriptsConfigMap(scheduledBackup)
+	err := bm.clientSet.ConfigMap().CreateOrUpdateConfigMap(nbConfigMap)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create or update config map for backup cleanup scripts err: %w", err)
+	}
+
+	// Don't do anything except update backup cleanup scripts config map if cronjob is paused
+	if *scheduledBackup.Spec.Pause {
+		klog.Infof("Nebula scheduled backup %s/%s is paused.", scheduledBackup.Namespace, scheduledBackup.Name)
+		return nil, nil, nil
+	}
+
+	// Check status of most recent job
+	klog.Info("Checking status of most recent job")
+	var lastSuccessfulTime *metav1.Time
+	var lastBackupFailed bool
+
+	if len(successfulBackups) != 0 && len(failedBackups) != 0 {
+		sort.Sort(byBackupStartTime(successfulBackups))
+		sort.Sort(byBackupStartTime(failedBackups))
+
+		lastSuccessfulBackup := successfulBackups[len(successfulBackups)-1]
+		lastFailedBackup := failedBackups[len(failedBackups)-1]
+		if lastSuccessfulBackup.Status.TimeStarted.After(lastFailedBackup.Status.TimeStarted.Local()) {
+			// Most recent backup job succeeded
+			lastSuccessfulTime = lastSuccessfulBackup.Status.TimeCompleted
+			klog.Infof("Most recent backup job %s/%s for Nebula scheduled backup %s/%s succeeded", lastSuccessfulBackup.Namespace, lastSuccessfulBackup.Name, scheduledBackup.Namespace, scheduledBackup.Name)
+		} else {
+			// Most recent backup job failed
+			lastBackupFailed = true
+			klog.Errorf("Most recent backup job %s/%s for Nebula scheduled backup %s/%s failed", lastFailedBackup.Namespace, lastFailedBackup.Name, scheduledBackup.Namespace, scheduledBackup.Name)
+		}
+	} else if len(successfulBackups) != 0 {
+		lastSuccessfulBackup := successfulBackups[len(successfulBackups)-1]
+		lastSuccessfulTime = lastSuccessfulBackup.Status.TimeCompleted
+		klog.Infof("Most recent backup job %s/%s for Nebula scheduled backup %s/%s succeeded", lastSuccessfulBackup.Namespace, lastSuccessfulBackup.Name, scheduledBackup.Namespace, scheduledBackup.Name)
+	} else if len(failedBackups) != 0 {
+		lastFailedBackup := failedBackups[len(failedBackups)-1]
+		lastBackupFailed = true
+		klog.Errorf("Most recent backup job %s/%s for Nebula scheduled backup %s/%s failed", lastFailedBackup.Namespace, lastFailedBackup.Name, scheduledBackup.Namespace, scheduledBackup.Name)
+	} else {
+		klog.Info("No previous successful or failed backup jobs detected.")
+	}
+
+	// Check Nebula Graph cluster status and return error if it's down.
 	ns := scheduledBackup.GetNamespace()
 	if scheduledBackup.Spec.BackupTemplate.BR.ClusterNamespace != nil {
 		ns = *scheduledBackup.Spec.BackupTemplate.BR.ClusterNamespace
@@ -69,182 +143,245 @@ func (bm *scheduledBackupManager) Create(scheduledBackup *v1alpha1.NebulaSchedul
 
 	nc, err := bm.clientSet.NebulaCluster().GetNebulaCluster(ns, scheduledBackup.Spec.BackupTemplate.BR.ClusterName)
 	if err != nil {
-		return fmt.Errorf("get nebula cluster %s/%s err: %w", ns, scheduledBackup.Spec.BackupTemplate.BR.ClusterName, err)
+		return nil, nil, fmt.Errorf("get nebula cluster %s/%s err: %w", ns, scheduledBackup.Spec.BackupTemplate.BR.ClusterName, err)
 	}
 
 	if !nc.IsReady() {
-		return fmt.Errorf("nebula cluster %s/%s is not ready", ns, scheduledBackup.Spec.BackupTemplate.BR.ClusterName)
+		return nil, nil, fmt.Errorf("nebula cluster %s/%s is not ready", ns, scheduledBackup.Spec.BackupTemplate.BR.ClusterName)
 	}
 
-	nextRunTime, err := calculateNextRunTime(scheduledBackup, nil)
-	klog.Info("next run time: %v", nextRunTime)
+	// Calculate previous and next backup time
+	previousBackupTime, nextBackupTime, err := calculateRunTimes(scheduledBackup, now)
 	if err != nil {
-		return fmt.Errorf("calculating next runtime for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-	}
-	if nextRunTime.IsZero() {
-		return fmt.Errorf("invalid schedule \"%v\" for scheduled backup %s/%s", scheduledBackup.Spec.Schedule, scheduledBackup.Namespace, scheduledBackup.Name)
+		return nil, nil, fmt.Errorf("failed to calculate next backup time for Nebula scheduled backup %s/%s. Err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 	}
 
-	if err = bm.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(scheduledBackup, &kube.ScheduledBackupUpdateStatus{
-		// Used for scheduled incremental backups. Not supported for now.
-		// LastBackup:     "N/A",
-		CurrSchedule:   scheduledBackup.Spec.Schedule,
-		NextBackupTime: nextRunTime,
-		Phase:          v1alpha1.ScheduledBackupScheduled,
-	}); err != nil {
-		return fmt.Errorf("update nebula scheduled backup %s/%s status err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-	}
-	return nil
-}
+	if now.After(previousBackupTime.Local()) {
+		if len(runningBackups) > 0 {
+			// active running backup from last iteration has not completed. Issue warning and do not start new backup
+			klog.Warning("Active backup job from last scheduled run detected for Nebula scheduled backup %s/%s. Will not kick off new backup job. Please consider decreasing the backup frequency by adjusting the schedule.", scheduledBackup.Namespace, scheduledBackup.Name)
+			if len(runningBackups) != 1 {
+				// This could be because someone manually started a nebula backup and associated it to this scheduled backup. Need to issue another warning.
+				klog.Warning("More than 1 active backup detected for Nebula scheduled backup %s/%s. Please check if the second job was manually started and associated to this crontab", scheduledBackup.Namespace, scheduledBackup.Name)
+			}
 
-func (bm *scheduledBackupManager) Pause(scheduledBackup *v1alpha1.NebulaScheduledBackup) error {
-	if err := bm.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(scheduledBackup, &kube.ScheduledBackupUpdateStatus{
-		Phase: v1alpha1.ScheduledBackupPaused,
-	}); err != nil {
-		return fmt.Errorf("update nebula scheduled backup %s/%s status err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-	}
-	return utilerrors.ReconcileErrorf("pausing nebula scheduled backup [%s/%s] successful", scheduledBackup.Namespace, scheduledBackup.Name)
-}
-
-func (bm *scheduledBackupManager) Resume(scheduledBackup *v1alpha1.NebulaScheduledBackup) error {
-	var nextBackupTime *metav1.Time
-	var err error
-	currTime := metav1.Now()
-	if scheduledBackup.Status.NextBackupTime == nil || scheduledBackup.Status.NextBackupTime.Before(&currTime) {
-		nextBackupTime, err = calculateNextRunTime(scheduledBackup, nil)
-		if err != nil {
-			return fmt.Errorf("calculating next runtime for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-		}
-	}
-
-	if err := bm.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(scheduledBackup, &kube.ScheduledBackupUpdateStatus{
-		NextBackupTime: nextBackupTime,
-		Phase:          v1alpha1.ScheduledBackupScheduled,
-	}); err != nil {
-		return fmt.Errorf("update nebula scheduled backup %s/%s status err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-	}
-	return utilerrors.ReconcileErrorf("resuming nebula scheduled backup [%s/%s] successful", scheduledBackup.Namespace, scheduledBackup.Name)
-}
-
-func (bm *scheduledBackupManager) Sync(scheduledBackup *v1alpha1.NebulaScheduledBackup) error {
-
-	// Detect if schedule for nebula scheduled backup is changed
-	if scheduledBackup.Status.CurrSchedule != scheduledBackup.Spec.Schedule {
-		klog.Infof("Schedule change detected for scheduled backup %v/%v", scheduledBackup.Namespace, scheduledBackup.Name)
-		var custTimeToUse metav1.Time
-		if scheduledBackup.Status.LastBackupTime == nil {
-			custTimeToUse = *scheduledBackup.Status.LastBackupTime
+			for _, backup := range runningBackups {
+				klog.Warningf("Active backup job %v detected", backup.Name)
+			}
+			return &kube.ScheduledBackupUpdateStatus{
+				LastSuccessfulBackupTime: lastSuccessfulTime,
+				MostRecentJobFailed:      &lastBackupFailed,
+			}, nextBackupTime, nil
 		} else {
-			custTimeToUse = metav1.Now()
-		}
+			klog.Infof("Triggering new Nebula backup job for Nebula Scheduled Backup %s/%s.", scheduledBackup.Namespace, scheduledBackup.Name)
 
-		nextBackupTime, err := calculateNextRunTime(scheduledBackup, &custTimeToUse)
-		if err != nil {
-			return fmt.Errorf("calculating next runtime for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-		}
-
-		if err := bm.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(scheduledBackup, &kube.ScheduledBackupUpdateStatus{
-			CurrSchedule:   scheduledBackup.Spec.Schedule,
-			NextBackupTime: nextBackupTime,
-		}); err != nil {
-			return fmt.Errorf("update nebula scheduled backup %s/%s status err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-		}
-		return utilerrors.ReconcileErrorf("Schedule for scheduled backup [%s/%s] updated successfully to %s.", scheduledBackup.Namespace, scheduledBackup.Name, scheduledBackup.Spec.Schedule)
-	} else if scheduledBackup.Status.Phase == v1alpha1.ScheduledBackupRunning {
-		klog.Infof("Running nebula backup detected for scheduled backup %v/%v", scheduledBackup.Namespace, scheduledBackup.Name)
-		// Detect if a running backup has completed or has failed
-		nebulaBackup, err := bm.clientSet.NebulaBackup().GetNebulaBackup(scheduledBackup.Namespace, fmt.Sprintf("%s-%s-%v", BackupPrefix, scheduledBackup.Name, scheduledBackup.Status.LastBackupTime.Unix()))
-		if err != nil {
-			return fmt.Errorf("getting running nebula backup for Nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-		}
-
-		// Detect failed nebula backup
-		for _, condition := range nebulaBackup.Status.Conditions {
-			if (condition.Type == v1alpha1.BackupFailed || condition.Type == v1alpha1.BackupInvalid) && condition.Status == corev1.ConditionTrue {
-				if err := bm.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(scheduledBackup, &kube.ScheduledBackupUpdateStatus{
-					Phase: v1alpha1.ScheduledBackupJobFailed,
-				}); err != nil {
-					return fmt.Errorf("update nebula scheduled backup %s/%s status err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
+			if scheduledBackup.Spec.MaxReservedTime != nil {
+				maxBackupDuration, err := time.ParseDuration(*scheduledBackup.Spec.MaxReservedTime)
+				if err != nil {
+					return nil, nil, fmt.Errorf("parsing maxReservedTime for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 				}
-				return utilerrors.ReconcileErrorf("nebula backup for scheduled backup [%s/%s] failed to complete. reason: %s message: %s", scheduledBackup.Namespace, scheduledBackup.Name, condition.Reason, condition.Message)
+				scheduledBackup.Spec.BackupTemplate.ReservedTimeEpoch = &maxBackupDuration
 			}
-		}
+			scheduledBackup.Spec.BackupTemplate.NumBackupsKeep = scheduledBackup.Spec.MaxBackups
 
-		// Detect complete nebula backup
-		if condutil.IsBackupComplete(nebulaBackup) {
-			err := bm.clientSet.NebulaBackup().DeleteNebulaBackup(nebulaBackup.Namespace, nebulaBackup.Name)
-			if err != nil {
-				return fmt.Errorf("delete nebula backup %s/%s err: %w", nebulaBackup.Namespace, nebulaBackup.Name, err)
-			}
-
-			if err = bm.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(scheduledBackup, &kube.ScheduledBackupUpdateStatus{
-				Phase: v1alpha1.ScheduledBackupScheduled,
-			}); err != nil {
-				return fmt.Errorf("update nebula scheduled backup %s/%s status err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-			}
-			return utilerrors.ReconcileErrorf("nebula backup for scheduled backup [%s/%s] complete succesfully.", scheduledBackup.Namespace, scheduledBackup.Name)
-		}
-		return utilerrors.ReconcileErrorf("waiting for nebula backup [%s/%s] for scheduled backup [%s/%s] to complete.", nebulaBackup.Namespace, nebulaBackup.Name, scheduledBackup.Namespace, scheduledBackup.Name)
-	} else {
-		currTime := metav1.Now()
-		if currTime.Equal(scheduledBackup.Status.NextBackupTime) || currTime.After(scheduledBackup.Status.NextBackupTime.Time) {
-			klog.Infof("next scheduled backup is up for Nebula scheduled backup %v/%v. Triggering Nebula backup job.", scheduledBackup.Namespace, scheduledBackup.Name)
-			lastBackupTime := scheduledBackup.Status.NextBackupTime
-			nextBackupTime, err := calculateNextRunTime(scheduledBackup, nil)
-			if err != nil {
-				return fmt.Errorf("calculating next runtime for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-			}
-
-			scheduledBackup.Spec.BackupTemplate.MaxBackups = scheduledBackup.Spec.MaxBackups
-			scheduledBackup.Spec.BackupTemplate.MaxReservedTime = scheduledBackup.Spec.MaxReservedTime
 			nebulaBackup := v1alpha1.NebulaBackup{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%v", BackupPrefix, scheduledBackup.Name, lastBackupTime.Unix()),
+					Name:      fmt.Sprintf("%s-%s-%v", BackupPrefix, scheduledBackup.Name, previousBackupTime.Unix()),
 					Namespace: scheduledBackup.Namespace,
+					OwnerReferences: []metav1.OwnerReference{
+						*getOwnerReferenceForSubresources(scheduledBackup),
+					},
 				},
 				Spec: scheduledBackup.Spec.BackupTemplate,
 			}
 
 			err = bm.clientSet.NebulaBackup().CreateNebulaBackup(&nebulaBackup)
 			if err != nil {
-				return fmt.Errorf("trigger nebula backup for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
+				return nil, nil, fmt.Errorf("trigger nebula backup for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 			}
 
-			if err = bm.clientSet.NebulaScheduledBackup().UpdateNebulaScheduledBackupStatus(scheduledBackup, &kube.ScheduledBackupUpdateStatus{
-				LastBackupTime: lastBackupTime,
-				NextBackupTime: nextBackupTime,
-				Phase:          v1alpha1.ScheduledBackupRunning,
-			}); err != nil {
-				return fmt.Errorf("update nebula scheduled backup %s/%s status err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
-			}
-
-			return utilerrors.ReconcileErrorf("nebula backup %s/%s for nebula scheduled backup [%s/%s] triggered succesfully.", nebulaBackup.Namespace, nebulaBackup.Name, scheduledBackup.Namespace, scheduledBackup.Name)
+			return &kube.ScheduledBackupUpdateStatus{
+				LastScheduledBackupTime:  previousBackupTime,
+				LastSuccessfulBackupTime: lastSuccessfulTime,
+				MostRecentJobFailed:      &lastBackupFailed,
+			}, nextBackupTime, nil
 		}
-		return utilerrors.ReconcileErrorf("waiting for nebula scheduled backup [%s/%s] to run next backup", scheduledBackup.Namespace, scheduledBackup.Name)
+	}
+
+	return &kube.ScheduledBackupUpdateStatus{
+		LastSuccessfulBackupTime: lastSuccessfulTime,
+		MostRecentJobFailed:      &lastBackupFailed,
+	}, nextBackupTime, nil
+}
+
+func (bm *scheduledBackupManager) cleanupNBs(scheduledBackup *v1alpha1.NebulaScheduledBackup, nebulaBackupJobs []v1alpha1.NebulaBackup, numToDelete int32) error {
+	sort.Sort(byBackupStartTime(nebulaBackupJobs))
+
+	for i := 0; i < int(numToDelete); i++ {
+		klog.Info("Removing Nebula Backup %v triggered by Nebula Scheduled Backup %v/%v", nebulaBackupJobs[i])
+		err := bm.clientSet.NebulaBackup().DeleteNebulaBackup(nebulaBackupJobs[i].Namespace, nebulaBackupJobs[i].Name)
+		if err != nil {
+			return fmt.Errorf("error deleteing backup job %v/%v for nebula scheduled backup %s/%s. err: %w", nebulaBackupJobs[i].Namespace, nebulaBackupJobs[i].Name, scheduledBackup.Namespace, scheduledBackup.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func getBackupCleanupScriptsObjectKey(scheduledBackup *v1alpha1.NebulaScheduledBackup) client.ObjectKey {
+	return client.ObjectKey{
+		Namespace: scheduledBackup.Namespace,
+		Name:      fmt.Sprintf("backup-scripts-cm-%v", scheduledBackup.Name),
 	}
 }
 
-func calculateNextRunTime(scheduledBackup *v1alpha1.NebulaScheduledBackup, custTimeToUse *metav1.Time) (*metav1.Time, error) {
+func getOwnerReferenceForSubresources(scheduledBackup *v1alpha1.NebulaScheduledBackup) *metav1.OwnerReference {
+	return &metav1.OwnerReference{
+		APIVersion: scheduledBackup.APIVersion,
+		Kind:       scheduledBackup.Kind,
+		Name:       scheduledBackup.Name,
+		UID:        scheduledBackup.UID,
+	}
+}
+
+func generateBackupCleanupScriptsConfigMap(scheduledBackup *v1alpha1.NebulaScheduledBackup) *corev1.ConfigMap {
+	nbObjectKey := getBackupCleanupScriptsObjectKey(scheduledBackup)
+
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nbObjectKey.Name,
+			Namespace: nbObjectKey.Namespace,
+			Labels: map[string]string{
+				"backup-name":      scheduledBackup.Name,
+				"backup-namespace": scheduledBackup.Namespace,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				*getOwnerReferenceForSubresources(scheduledBackup),
+			},
+		},
+
+		Data: map[string]string{
+			"backup-cleanup.sh": `#!/bin/bash
+
+# Step 1: run backup
+echo "Running Nebula backup..."
+/usr/local/bin/br-ent backup full --meta "$META_ADDRESS" --storage "$STORAGE" --s3.access_key "$AWS_ACCESS_KEY_ID" --s3.secret_key "$AWS_SECRET_ACCESS_KEY" --s3.region "$S3_REGION" --s3.endpoint "$S3_ENDPOINT"
+echo "Nebula backup complete.\n"
+
+# Step 2: get current backups
+echo "Getting current backup info..."
+backup_names=($(br-ent show --s3.endpoint "$S3_ENDPOINT" --storage "$STORAGE" --s3.access_key "$AWS_ACCESS_KEY_ID" --s3.secret_key "$AWS_SECRET_ACCESS_KEY" --s3.region "$S3_REGION" | grep -e "._[0-9]" | awk -F '|' '{print $2}'))
+backup_dates=($(br-ent show --s3.endpoint "$S3_ENDPOINT" --storage "$STORAGE" --s3.access_key "$AWS_ACCESS_KEY_ID" --s3.secret_key "$AWS_SECRET_ACCESS_KEY" --s3.region "$S3_REGION" | grep -e "._[0-9]" | awk -F '|' '{print $3}' | tr " " "T"))
+total_backups=$(br-ent show --s3.endpoint "$S3_ENDPOINT" --storage "$STORAGE" --s3.access_key "$AWS_ACCESS_KEY_ID" --s3.secret_key "$AWS_SECRET_ACCESS_KEY" --s3.region "$S3_REGION" | grep -e "._[0-9]" | wc -l)
+echo "Current backup info retrieved.\n"
+
+
+# Step 3: remove backups that need to be removed
+echo "Removing previous expired backups..."
+if [[ $RESERVED_TIME_EPOCH -gt 0 ]]; then
+	echo "Maximum retention time of ${RESERVED_TIME_EPOCH}s set. Removing all previous backups exceeding this retention time...."
+	now=$(date +"%s")
+	echo "Current time epoach: $now"
+	for ind in ${!backup_names[@]}
+	do
+		nb_date=$(echo "${backup_dates[ind]}" | tr "T" " " | xargs)
+		nb_date_epoach=$(date -d "$nb_date" +"%s")
+		diff=$((now - nb_date_epoach))
+		echo "Backing up file ${backup_names[ind]}. Backup date: \"$nb_date ($nb_date_epoach)\". Diff: \"$diff\""
+
+		if [[ $diff -gt $RESERVED_TIME_EPOCH ]]; then
+			echo "File ${backup_names[ind]} is older than the maximum reserved time. Deleting..."
+			br-ent cleanup --meta "$META_ADDRESS" --storage "$STORAGE" --s3.access_key $AWS_ACCESS_KEY_ID --s3.secret_key $AWS_SECRET_ACCESS_KEY --s3.region "$S3_REGION" --s3.endpoint "$S3_ENDPOINT" --name "${backup_names[ind]}"
+		fi
+	done
+	echo "All necessary previous backups cleaned up."
+elif [[ $NUM_BACKUPS_KEEP -gt 0 ]]; then
+	if [[ $total_backups -gt $NUM_BACKUPS_KEEP ]]; then
+		echo "Maximum number of backups $NUM_BACKUPS_KEEP set. Removing all backups exceeding this number starting with the oldest backup..."
+		num_to_del=$((total_backups - NUM_BACKUPS_KEEP))
+		echo "Number of previous backups to delete: $num_to_del"
+		for ind in $(seq 0 $((num_to_del - 1)))
+		do
+			br-ent cleanup --meta "$META_ADDRESS" --storage "$STORAGE" --s3.access_key $AWS_ACCESS_KEY_ID --s3.secret_key $AWS_SECRET_ACCESS_KEY --s3.region "$S3_REGION" --s3.endpoint "$S3_ENDPOINT" --name "${backup_names[ind]}"
+		done
+		echo "All necessary previous backups cleaned up."
+	else
+		echo "Current number of backups has not exceeded the maximum number of backups to be kept. Will leave all previous backups alone."
+	fi
+else
+	echo "No max retention time or maximum number of backups set. Will leave all previous backups alone"
+fi
+`,
+		},
+	}
+}
+
+// calculateRunTimes calculates the next runtime and the most recent run time if the scheduled backup was not paused.
+func calculateRunTimes(scheduledBackup *v1alpha1.NebulaScheduledBackup, now *metav1.Time) (*metav1.Time, *metav1.Time, error) {
 	schedule, err := cron.ParseStandard(scheduledBackup.Spec.Schedule)
 	if err != nil {
-		return nil, fmt.Errorf("get schedule for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
+		return nil, nil, fmt.Errorf("get schedule for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 	}
 
-	var timeToUse metav1.Time
-	currTime := metav1.Now()
-	if custTimeToUse != nil {
-		timeToUse = *custTimeToUse
-	} else if scheduledBackup.Status.NextBackupTime == nil || scheduledBackup.Status.NextBackupTime.IsZero() {
-		timeToUse = currTime
-	} else {
-		timeToUse = *scheduledBackup.Status.NextBackupTime
+	earliestTime := scheduledBackup.CreationTimestamp
+	if scheduledBackup.Status.LastScheduledBackupTime != nil {
+		earliestTime = *scheduledBackup.Status.LastScheduledBackupTime
 	}
 
-	nextBackupTime := metav1.NewTime(schedule.Next(timeToUse.Local()))
-	if nextBackupTime.Before(&currTime) {
-		nextBackupTime = metav1.NewTime(schedule.Next(currTime.Local()))
-		klog.Infof("Next backup time is before curr time, New NextBackupTime: %v", nextBackupTime)
+	nextT1 := metav1.NewTime(schedule.Next(earliestTime.Local()))
+	nextT2 := metav1.NewTime(schedule.Next(nextT1.Local()))
+
+	if now.Before(&nextT1) {
+		return nil, &nextT1, nil
 	}
 
-	return &nextBackupTime, nil
+	if now.Before(&nextT2) {
+		return &nextT1, &nextT2, nil
+	}
+
+	// Check for invalid cron schedule that'll slide past ParseStandard (i.e "0 0 31 2 *")
+	timeBetweenSchedules := nextT2.Sub(nextT1.Local()).Round(time.Second).Seconds()
+	if timeBetweenSchedules < 1 {
+		return nil, nil, fmt.Errorf("invalid schedule %v", scheduledBackup.Spec.Schedule)
+	}
+
+	elapsedTime := now.Sub(nextT1.Local()).Seconds()
+	missedRuns := (elapsedTime / timeBetweenSchedules) + 1
+
+	if missedRuns > 80 {
+		klog.Warning("too many missed runs (>80). Please check for possible clock skew")
+	}
+
+	mostRecentBackupTime := metav1.NewTime(nextT1.Add(time.Duration((missedRuns-1-1)*timeBetweenSchedules) * time.Second))
+	for t := schedule.Next(mostRecentBackupTime.Local()); !t.After(now.Local()); t = schedule.Next(t) {
+		mostRecentBackupTime = metav1.NewTime(t)
+	}
+
+	nextBackupTime := metav1.NewTime(schedule.Next(mostRecentBackupTime.Local()))
+
+	return &mostRecentBackupTime, &nextBackupTime, nil
+}
+
+// byBackupStartTime sorts a list of nebula backups by start timestamp, using their names as a tie breaker.
+type byBackupStartTime []v1alpha1.NebulaBackup
+
+func (bt byBackupStartTime) Len() int {
+	return len(bt)
+}
+
+func (bt byBackupStartTime) Swap(i, j int) {
+	bt[i], bt[j] = bt[j], bt[i]
+}
+
+func (bt byBackupStartTime) Less(i, j int) bool {
+	if bt[i].Status.TimeStarted == nil && bt[j].Status.TimeStarted != nil {
+		return false
+	}
+	if bt[i].Status.TimeStarted != nil && bt[j].Status.TimeStarted == nil {
+		return true
+	}
+	if bt[i].Status.TimeStarted.Equal(bt[j].Status.TimeStarted) {
+		return bt[i].Name < bt[j].Name
+	}
+	return bt[i].Status.TimeStarted.Before(bt[j].Status.TimeStarted)
 }

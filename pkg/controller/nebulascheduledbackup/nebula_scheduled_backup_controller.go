@@ -96,7 +96,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res recon
 
 	klog.Info("Start to reconcile NebulaScheduledBackup")
 
-	if err := r.syncNebulaScheduledBackup(scheduledBackup.DeepCopy()); err != nil {
+	newReconcilerDuration, err := r.syncNebulaScheduledBackup(scheduledBackup.DeepCopy())
+	if err != nil {
 		if errorsutil.IsReconcileError(err) {
 			klog.Infof("NebulaScheduledBackup [%s] reconcile details: %v", key, err)
 			return ctrl.Result{RequeueAfter: reconcileTimeOut}, nil
@@ -105,11 +106,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res recon
 		return ctrl.Result{RequeueAfter: defaultTimeout}, nil
 	}
 
+	if newReconcilerDuration != nil {
+		// wait until next backup time to reconcile to avoid wasting resources.
+		return ctrl.Result{RequeueAfter: *newReconcilerDuration}, nil
+	}
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) syncNebulaScheduledBackup(backup *v1alpha1.NebulaScheduledBackup) error {
-	return r.control.SyncNebulaScheduledBackup(backup)
+func (r *Reconciler) syncNebulaScheduledBackup(backup *v1alpha1.NebulaScheduledBackup) (*time.Duration, error) {
+	newReconcilerDuration, err := r.control.SyncNebulaScheduledBackup(backup)
+	return newReconcilerDuration, err
 }
 
 // SetupWithManager sets up the controller with the Manager.

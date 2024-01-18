@@ -33,10 +33,8 @@ const (
 	ScheduledBackupRunning ScheduledBackupConditionType = "Running"
 	// ScheduledBackupPaused means the schedule backup is currently suspended
 	ScheduledBackupPaused ScheduledBackupConditionType = "Paused"
-	// ScheduledBackupJobFailed means the active backup job has failed to execute successfully
-	ScheduledBackupJobFailed ScheduledBackupConditionType = "Backup job failed"
-	// BackupFailed means the backup cron job creation has failed.
-	ScheduledBackupFailed ScheduledBackupConditionType = "Cron Creation Failed"
+	// BackupFailed means the Nebula Scheduled Backup has failed.
+	ScheduledBackupFailed ScheduledBackupConditionType = "Failed"
 	// BackupInvalid means invalid backup CR.
 	ScheduledBackupInvalid ScheduledBackupConditionType = "Invalid"
 )
@@ -73,31 +71,34 @@ type ScheduledBackupSpec struct {
 	// Schedule specifies the cron string used for backup scheduling.
 	Schedule string `json:"schedule"`
 	// Pause means paused backupSchedule
-	Pause bool `json:"pause,omitempty"`
+	Pause *bool `json:"pause,omitempty"`
 	// MaxBackups is to specify how many backups we want to keep
 	// 0 is magic number to indicate un-limited backups.
 	// if MaxBackups and MaxReservedTime are set at the same time, MaxReservedTime is preferred
 	// and MaxBackups is ignored.
 	MaxBackups *int32 `json:"maxBackups,omitempty"`
 	// MaxReservedTime is to specify how long backups we want to keep.
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?[a-zA-Z]+)+$`
 	MaxReservedTime *string `json:"maxReservedTime,omitempty"`
 	// BackupTemplate is the specification of the backup structure to get scheduled.
 	BackupTemplate BackupSpec `json:"backupTemplate"`
 	// LogBackupTemplate is the specification of the log backup structure to get scheduled.
+	// MaxSuccessfulNublaBackupJobs specifies the maximum number of successful backup jobs to keep
+	MaxSuccessfulNebulaBackupJobs *int32 `json:"maxSuccessfulNebulaBackupJobs,omitempty"`
+	// MaxFailedNebulaBackupJobs specifies the maximum number of failed backup jobs to keep
+	MaxFailedNebulaBackupJobs *int32 `json:"maxFailedNebulaBackupJobs,omitempty"`
 }
 
 // ScheduledBackupStatus represents the current status of a nebula cluster NebulaScheduledBackup.
 type ScheduledBackupStatus struct {
 	// LastBackup represents the last backup. Used for scheduled incremental backups. Not supported for now.
 	//LastBackup string `json:"lastBackup,omitempty"`
-	// CurrSchedule represents the current backup schedule
-	CurrSchedule string `json:"currSchedule,omitempty"`
-	// LastBackupTime represents the last time the backup was successfully created.
-	LastBackupTime *metav1.Time `json:"lastBackupTime,omitempty"`
-	// NextBackupTime represent the next time the backup will be run.
-	NextBackupTime *metav1.Time `json:"nextBackupTime,omitempty"`
-	// Phase represents the status of the scheduled backup
-	Phase ScheduledBackupConditionType `json:"phase,omitempty"`
+	// LastScheduledBackupTime represents the last time a backup job was successfully scheduled.
+	LastScheduledBackupTime *metav1.Time `json:"lastScheduledBackupTime,omitempty"`
+	// LastSuccessfulBackupTime represents the last time a backup was successfully created.
+	LastSuccessfulBackupTime *metav1.Time `json:"lastSuccessfulBackupTime,omitempty"`
+	// MostRecentJobFailed represents if the most recent backup job failed.
+	MostRecentJobFailed *bool `json:"mostRecentJobFailed,omitempty"`
 }
 
 func init() {

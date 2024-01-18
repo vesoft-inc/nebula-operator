@@ -84,8 +84,9 @@ spec:
               maxBackups:
                 format: int32
                 type: integer
-              maxReservedTime:
-                type: string
+              maxReservedTimeEpoch:
+                format: int64
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string

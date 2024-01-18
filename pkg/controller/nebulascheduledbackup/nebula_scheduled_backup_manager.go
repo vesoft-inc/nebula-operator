@@ -175,8 +175,8 @@ func (bm *scheduledBackupManager) SyncNebulaScheduledBackup(scheduledBackup *v1a
 		} else {
 			klog.Infof("Triggering new Nebula backup job for Nebula Scheduled Backup %s/%s.", scheduledBackup.Namespace, scheduledBackup.Name)
 
-			if scheduledBackup.Spec.MaxReservedTime != nil {
-				maxBackupDuration, err := time.ParseDuration(*scheduledBackup.Spec.MaxReservedTime)
+			if scheduledBackup.Spec.MaxRetentionTime != nil {
+				maxBackupDuration, err := time.ParseDuration(*scheduledBackup.Spec.MaxRetentionTime)
 				if err != nil {
 					return nil, nil, fmt.Errorf("parsing maxReservedTime for nebula scheduled backup %s/%s failed. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 				}

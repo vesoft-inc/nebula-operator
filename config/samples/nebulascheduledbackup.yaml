@@ -10,16 +10,19 @@ data:
 apiVersion: apps.nebula-graph.io/v1alpha1
 kind: NebulaScheduledBackup
 metadata:
-  name: backup1
+  name: backup-kl
 spec:
   backupTemplate:
-    toolImage: reg.vesoft-inc.com/cloud-dev/br-ent:v3.5.1
+    toolImage: reg.vesoft-inc.com/cloud-dev/br-ent:kevin-test
     br:
-      clusterName: nebula-kevinl
+      clusterName: nebula
       s3:
         region: "us-west-2"
         bucket: "nebula-br-test"
         endpoint: "https://s3.us-west-2.amazonaws.com"
         secretName: "aws-s3-secret"
   schedule: "*/5 * * * *"
-  maxBackups: 7
+  maxRetentionTime: "24h"
+  maxSuccessfulNebulaBackupJobs: 3
+  maxFailedNebulaBackupJobs: 3
+  maxBackups: 5

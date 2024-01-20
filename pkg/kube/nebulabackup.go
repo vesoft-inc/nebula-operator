@@ -80,10 +80,20 @@ func (r *backupClient) GetNebulaBackup(namespace, name string) (*v1alpha1.Nebula
 
 func (r *backupClient) ListNebulaBackupsByUID(namespace string, ownerReferenceUID types.UID) ([]v1alpha1.NebulaBackup, error) {
 	backupList := v1alpha1.NebulaBackupList{}
-	if err := r.cli.List(context.TODO(), &backupList, client.InNamespace(namespace), client.MatchingFields{"metadata.ownerReferences.uid": string(ownerReferenceUID)}); err != nil {
+	if err := r.cli.List(context.TODO(), &backupList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
-	return backupList.Items, nil
+
+	var filteredBackups []v1alpha1.NebulaBackup
+	for _, backup := range backupList.Items {
+		for _, ownerRef := range backup.OwnerReferences {
+			if ownerRef.UID == ownerReferenceUID {
+				filteredBackups = append(filteredBackups, backup)
+			}
+		}
+	}
+
+	return filteredBackups, nil
 }
 
 func (r *backupClient) UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, condition *v1alpha1.BackupCondition, newStatus *BackupUpdateStatus) error {
@@ -99,6 +109,14 @@ func (r *backupClient) UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, c
 			utilruntime.HandleError(fmt.Errorf("get NebulaBackup [%s/%s] failed: %v", ns, rtName, err))
 			return err
 		}
+
+		// Make sure current resource version changes to avoid immediate reconcile if no error
+		updateErr := r.cli.Update(context.TODO(), backup)
+		if updateErr != nil {
+			klog.Errorf("update NebulaScheduledBackup [%s/%s] status failed: %v", ns, rtName, updateErr)
+			return updateErr
+		}
+
 		isStatusUpdate = updateBackupStatus(&backup.Status, newStatus)
 		isConditionUpdate = condutil.UpdateNebulaBackupCondition(&backup.Status, condition)
 		if isStatusUpdate || isConditionUpdate {

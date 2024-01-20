@@ -17,16 +17,17 @@ limitations under the License.
 package nebulabackup
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
+	"fmt"
+	"time"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
+	"k8s.io/klog/v2"
 )
 
 type ControlInterface interface {
-	SyncNebulaBackup(bp *v1alpha1.NebulaBackup) error
+	SyncNebulaBackup(bp *v1alpha1.NebulaBackup) (*time.Duration, error)
 }
 
 var _ ControlInterface = (*defaultBackupControl)(nil)
@@ -43,49 +44,39 @@ func NewBackupControl(clientSet kube.ClientSet, backupManager Manager) ControlIn
 	}
 }
 
-func (c *defaultBackupControl) SyncNebulaBackup(bp *v1alpha1.NebulaBackup) error {
-	phase := bp.Status.Phase
-	if phase == "" {
-		phase = v1alpha1.BackupPending
+func (c *defaultBackupControl) SyncNebulaBackup(bp *v1alpha1.NebulaBackup) (*time.Duration, error) {
+
+	updateCondition, updateStatus, syncErr := c.backupManager.Sync(bp)
+
+	if syncErr != nil {
+		klog.Errorf("Fail to sync NebulaBackup [%s/%s], %v", bp.Namespace, bp.Name, syncErr)
 	}
 
-	switch phase {
-	case v1alpha1.BackupPending:
-		klog.Infof("create backup job %s", bp.Name)
-		err := c.backupManager.Create(bp)
-		if err != nil && !errors.IsReconcileError(err) {
-			klog.Errorf("Fail to create NebulaBackup [%s/%s], %v", bp.Namespace, bp.Name, err)
-			if err = c.clientSet.NebulaBackup().UpdateNebulaBackupStatus(bp, &v1alpha1.BackupCondition{
-				Type:    v1alpha1.BackupFailed,
-				Status:  corev1.ConditionTrue,
-				Reason:  "CreateBackupJobFailed",
-				Message: err.Error(),
-			}, &kube.BackupUpdateStatus{
-				ConditionType: v1alpha1.BackupFailed,
-			}); err != nil {
-				klog.Errorf("Fail to update the condition of NebulaBackup [%s/%s], %v", bp.Namespace, bp.Name, err)
-			}
+	if updateCondition != nil && updateStatus != nil {
+		klog.Infof("Update status for NebulaBackup [%s/%s]", bp.Namespace, bp.Name)
+		if updateErr := c.clientSet.NebulaBackup().UpdateNebulaBackupStatus(bp, updateCondition, updateStatus); updateErr != nil {
+			return nil, fmt.Errorf("update nebula backup %s/%s status err: %w", bp.Namespace, bp.Name, updateErr)
 		}
-		return err
-	case v1alpha1.BackupRunning:
-		klog.Infof("sync backup job %s", bp.Name)
-		err := c.backupManager.Sync(bp)
-		if err != nil && !errors.IsReconcileError(err) {
-			klog.Errorf("Fail to sync NebulaBackup [%s/%s], %v", bp.Namespace, bp.Name, err)
-			if err = c.clientSet.NebulaBackup().UpdateNebulaBackupStatus(bp, &v1alpha1.BackupCondition{
-				Type:    v1alpha1.BackupFailed,
-				Status:  corev1.ConditionTrue,
-				Reason:  "SyncNebulaBackupFailed",
-				Message: err.Error(),
-			}, &kube.BackupUpdateStatus{
-				ConditionType: v1alpha1.BackupFailed,
-			}); err != nil {
-				klog.Errorf("Fail to update the condition of NebulaBackup [%s/%s], %v", bp.Namespace, bp.Name, err)
-			}
-		}
-		return err
-	}
-	klog.Infof("sync NebulaBackup success, backup %s phase is %s", bp.Name, phase)
+		klog.Infof("Successfully updated status for NebulaBackup [%s/%s]", bp.Namespace, bp.Name)
 
-	return nil
+		if updateStatus.ConditionType == v1alpha1.BackupFailed || updateStatus.ConditionType == v1alpha1.BackupInvalid {
+			return nil, syncErr
+		}
+
+		if updateStatus.ConditionType == v1alpha1.BackupComplete {
+			return nil, nil
+		}
+
+	} else {
+		if bp.Status.Phase == v1alpha1.BackupComplete {
+			return nil, nil
+		}
+		if bp.Status.Phase == v1alpha1.BackupFailed || bp.Status.Phase == v1alpha1.BackupInvalid {
+			return nil, utilerrors.ReconcileErrorf("error syncing Nebula backup [%s/%s] for a second time.", bp.Namespace, bp.Name)
+		}
+	}
+
+	klog.Infof("Waiting for NebulaBackup [%s/%s] to complete", bp.Namespace, bp.Name)
+	nextReconcile := 15 * time.Second
+	return &nextReconcile, nil
 }

@@ -56,13 +56,13 @@ func NewBackupManager(clientSet kube.ClientSet) Manager {
 
 func (bm *scheduledBackupManager) CleanupFinishedNBs(scheduledBackup *v1alpha1.NebulaScheduledBackup, successfulJobs, failedJobs []v1alpha1.NebulaBackup) error {
 	klog.Info("Cleaning up previous successful and failed backup jobs")
-	if scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs == nil && scheduledBackup.Spec.MaxFailedNebulaBackupJobs == nil {
-		klog.Info("No limit set for either successful backup jobs or failed backup jobs. Nothing to cleanup.")
+	if (scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs == nil || *scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs < 0) && (scheduledBackup.Spec.MaxFailedNebulaBackupJobs == nil || *scheduledBackup.Spec.MaxFailedNebulaBackupJobs < 0) {
+		klog.Infof("No limit set for either successful backup jobs or failed backup jobs for nebula scheduled backup %s/%s. Nothing to cleanup.", scheduledBackup.Namespace, scheduledBackup.Name)
 		return nil
 	}
 
 	var jobsToDelete int32
-	if scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs != nil {
+	if scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs != nil && *scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs >= 0 {
 		jobsToDelete = int32(len(successfulJobs)) - *scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs
 		if jobsToDelete > 0 {
 			err := bm.cleanupNBs(scheduledBackup, successfulJobs, jobsToDelete)
@@ -70,11 +70,13 @@ func (bm *scheduledBackupManager) CleanupFinishedNBs(scheduledBackup *v1alpha1.N
 				return fmt.Errorf("cleanup successful backup jobs failed for nebula scheduled backup %s/%s. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 			}
 		} else {
-			klog.Infof("Number of successful backup jobs is less then %v. Nothing to cleanup", scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs)
+			klog.Infof("Number of successful backup jobs is less then %v. Nothing to cleanup", *scheduledBackup.Spec.MaxSuccessfulNebulaBackupJobs)
 		}
+	} else {
+		klog.Infof("No limit set for successful backup jobs for nebula scheduled backup %s/%s. Nothing to cleanup.", scheduledBackup.Namespace, scheduledBackup.Name)
 	}
 
-	if scheduledBackup.Spec.MaxFailedNebulaBackupJobs != nil {
+	if scheduledBackup.Spec.MaxFailedNebulaBackupJobs != nil && *scheduledBackup.Spec.MaxFailedNebulaBackupJobs >= 0 {
 		jobsToDelete = int32(len(failedJobs)) - *scheduledBackup.Spec.MaxFailedNebulaBackupJobs
 		if jobsToDelete > 0 {
 			err := bm.cleanupNBs(scheduledBackup, failedJobs, jobsToDelete)
@@ -82,8 +84,10 @@ func (bm *scheduledBackupManager) CleanupFinishedNBs(scheduledBackup *v1alpha1.N
 				return fmt.Errorf("cleanup failed backup jobs failed for nebula scheduled backup %s/%s. err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 			}
 		} else {
-			klog.Infof("Number of failed backup jobs is less then %v. Nothing to cleanup", scheduledBackup.Spec.MaxFailedNebulaBackupJobs)
+			klog.Infof("Number of failed backup jobs is less then %v. Nothing to cleanup", *scheduledBackup.Spec.MaxFailedNebulaBackupJobs)
 		}
+	} else {
+		klog.Infof("No limit set for failed backup jobs for nebula scheduled backup %s/%s. Nothing to cleanup.", scheduledBackup.Namespace, scheduledBackup.Name)
 	}
 
 	return nil
@@ -98,9 +102,11 @@ func (bm *scheduledBackupManager) SyncNebulaScheduledBackup(scheduledBackup *v1a
 	}
 
 	// Don't do anything except update backup cleanup scripts config map if cronjob is paused
-	if *scheduledBackup.Spec.Pause {
+	if scheduledBackup.Spec.Pause != nil && *scheduledBackup.Spec.Pause {
 		klog.Infof("Nebula scheduled backup %s/%s is paused.", scheduledBackup.Namespace, scheduledBackup.Name)
-		return nil, nil, nil
+		return &kube.ScheduledBackupUpdateStatus{
+			CurrPauseStatus: scheduledBackup.Spec.Pause,
+		}, nil, nil
 	}
 
 	// Check status of most recent job
@@ -156,19 +162,20 @@ func (bm *scheduledBackupManager) SyncNebulaScheduledBackup(scheduledBackup *v1a
 		return nil, nil, fmt.Errorf("failed to calculate next backup time for Nebula scheduled backup %s/%s. Err: %w", scheduledBackup.Namespace, scheduledBackup.Name, err)
 	}
 
-	if now.After(previousBackupTime.Local()) {
+	if previousBackupTime != nil && now.After(previousBackupTime.Local()) && (scheduledBackup.Status.CurrPauseStatus == nil || !*scheduledBackup.Status.CurrPauseStatus) {
 		if len(runningBackups) > 0 {
 			// active running backup from last iteration has not completed. Issue warning and do not start new backup
-			klog.Warning("Active backup job from last scheduled run detected for Nebula scheduled backup %s/%s. Will not kick off new backup job. Please consider decreasing the backup frequency by adjusting the schedule.", scheduledBackup.Namespace, scheduledBackup.Name)
+			klog.Warningf("Active backup job from last scheduled run detected for Nebula scheduled backup %s/%s. Will not kick off new backup job. Please consider decreasing the backup frequency by adjusting the schedule.", scheduledBackup.Namespace, scheduledBackup.Name)
 			if len(runningBackups) != 1 {
 				// This could be because someone manually started a nebula backup and associated it to this scheduled backup. Need to issue another warning.
-				klog.Warning("More than 1 active backup detected for Nebula scheduled backup %s/%s. Please check if the second job was manually started and associated to this crontab", scheduledBackup.Namespace, scheduledBackup.Name)
+				klog.Warningf("More than 1 active backup detected for Nebula scheduled backup %s/%s. Please check if the second job was manually started and associated to this crontab", scheduledBackup.Namespace, scheduledBackup.Name)
 			}
 
 			for _, backup := range runningBackups {
 				klog.Warningf("Active backup job %v detected", backup.Name)
 			}
 			return &kube.ScheduledBackupUpdateStatus{
+				CurrPauseStatus:          scheduledBackup.Spec.Pause,
 				LastSuccessfulBackupTime: lastSuccessfulTime,
 				MostRecentJobFailed:      &lastBackupFailed,
 			}, nextBackupTime, nil
@@ -201,6 +208,7 @@ func (bm *scheduledBackupManager) SyncNebulaScheduledBackup(scheduledBackup *v1a
 			}
 
 			return &kube.ScheduledBackupUpdateStatus{
+				CurrPauseStatus:          scheduledBackup.Spec.Pause,
 				LastScheduledBackupTime:  previousBackupTime,
 				LastSuccessfulBackupTime: lastSuccessfulTime,
 				MostRecentJobFailed:      &lastBackupFailed,
@@ -209,6 +217,7 @@ func (bm *scheduledBackupManager) SyncNebulaScheduledBackup(scheduledBackup *v1a
 	}
 
 	return &kube.ScheduledBackupUpdateStatus{
+		CurrPauseStatus:          scheduledBackup.Spec.Pause,
 		LastSuccessfulBackupTime: lastSuccessfulTime,
 		MostRecentJobFailed:      &lastBackupFailed,
 	}, nextBackupTime, nil
@@ -218,7 +227,7 @@ func (bm *scheduledBackupManager) cleanupNBs(scheduledBackup *v1alpha1.NebulaSch
 	sort.Sort(byBackupStartTime(nebulaBackupJobs))
 
 	for i := 0; i < int(numToDelete); i++ {
-		klog.Info("Removing Nebula Backup %v triggered by Nebula Scheduled Backup %v/%v", nebulaBackupJobs[i])
+		klog.Infof("Removing Nebula Backup %s/%s triggered by Nebula Scheduled Backup %s/%s", nebulaBackupJobs[i].Namespace, nebulaBackupJobs[i].Name, scheduledBackup.Namespace, scheduledBackup.Name)
 		err := bm.clientSet.NebulaBackup().DeleteNebulaBackup(nebulaBackupJobs[i].Namespace, nebulaBackupJobs[i].Name)
 		if err != nil {
 			return fmt.Errorf("error deleteing backup job %v/%v for nebula scheduled backup %s/%s. err: %w", nebulaBackupJobs[i].Namespace, nebulaBackupJobs[i].Name, scheduledBackup.Namespace, scheduledBackup.Name, err)
@@ -349,7 +358,7 @@ func calculateRunTimes(scheduledBackup *v1alpha1.NebulaScheduledBackup, now *met
 	missedRuns := (elapsedTime / timeBetweenSchedules) + 1
 
 	if missedRuns > 80 {
-		klog.Warning("too many missed runs (>80). Please check for possible clock skew")
+		klog.Warningf("too many missed runs (>80) for nebula scheduled backup %s/%s. Please check for possible clock skew", scheduledBackup.Namespace, scheduledBackup.Name)
 	}
 
 	mostRecentBackupTime := metav1.NewTime(nextT1.Add(time.Duration((missedRuns-1-1)*timeBetweenSchedules) * time.Second))

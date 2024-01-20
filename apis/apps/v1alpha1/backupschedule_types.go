@@ -23,27 +23,12 @@ import (
 // BackupConditionType represents a valid condition of a Backup.
 type ScheduledBackupConditionType string
 
-const (
-	// ScheduledBackupPending means the scheduled backup job is pending, waiting for creation of the backup cronjob
-	ScheduledBackupPending ScheduledBackupConditionType = "Pending"
-	// ScheduledBackupScheduled means the scheduled backup cronjob was created successfully and no active backup jobs are running
-	// if there was an active backup job, the job has executed successfully and the backup data has been loaded into the nebula cluster.
-	ScheduledBackupScheduled ScheduledBackupConditionType = "Scheduled"
-	// ScheduledBackupRunning means there's an active backup job current running.
-	ScheduledBackupRunning ScheduledBackupConditionType = "Running"
-	// ScheduledBackupPaused means the schedule backup is currently suspended
-	ScheduledBackupPaused ScheduledBackupConditionType = "Paused"
-	// BackupFailed means the Nebula Scheduled Backup has failed.
-	ScheduledBackupFailed ScheduledBackupConditionType = "Failed"
-	// BackupInvalid means invalid backup CR.
-	ScheduledBackupInvalid ScheduledBackupConditionType = "Invalid"
-)
-
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName="nsb"
 // +kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.schedule`,description="The current schedule set for the scheduled backup"
+// +kubebuilder:printcolumn:name="Pause",type=string,JSONPath=`.spec.pause`,description="Whether or not the scheduled backup is paused"
 // +kubebuilder:printcolumn:name="Last Triggered Backup",type=string,JSONPath=`.status.lastScheduledBackupTime`,description="The timestamp at which the last backup was triggered"
 // +kubebuilder:printcolumn:name="Last Successful Backup",format=date-time,type=string,JSONPath=`.status.lastSuccessfulBackupTime`,description="The timestamp at which the last backup was successful completed"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -89,6 +74,8 @@ type ScheduledBackupSpec struct {
 
 // ScheduledBackupStatus represents the current status of a nebula cluster NebulaScheduledBackup.
 type ScheduledBackupStatus struct {
+	// CurrPauseStatus represent the current pause status of the nebula scheduled backup
+	CurrPauseStatus *bool `json:"currPauseStatus,omitempty"`
 	// LastBackup represents the last backup. Used for scheduled incremental backups. Not supported for now.
 	//LastBackup string `json:"lastBackup,omitempty"`
 	// LastScheduledBackupTime represents the last time a backup job was successfully scheduled.

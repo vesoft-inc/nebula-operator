@@ -33,6 +33,7 @@ import (
 type ScheduledBackupUpdateStatus struct {
 	// Used for scheduled incremental backups. Not supported for now.
 	// LastBackup     string
+	CurrPauseStatus          *bool
 	LastScheduledBackupTime  *metav1.Time
 	LastSuccessfulBackupTime *metav1.Time
 	MostRecentJobFailed      *bool
@@ -40,7 +41,7 @@ type ScheduledBackupUpdateStatus struct {
 
 type NebulaScheduledBackup interface {
 	GetNebulaScheduledBackup(namespace, name string) (*v1alpha1.NebulaScheduledBackup, error)
-	UpdateNebulaScheduledBackupStatus(backup *v1alpha1.NebulaScheduledBackup, newStatus *ScheduledBackupUpdateStatus) error
+	SetNebulaScheduledBackupStatus(backup *v1alpha1.NebulaScheduledBackup, newStatus *ScheduledBackupUpdateStatus) error
 }
 
 type scheduledBackupClient struct {
@@ -64,7 +65,7 @@ func (r *scheduledBackupClient) GetNebulaScheduledBackup(namespace, name string)
 	return scheduledBackup, nil
 }
 
-func (r *scheduledBackupClient) UpdateNebulaScheduledBackupStatus(backup *v1alpha1.NebulaScheduledBackup, newStatus *ScheduledBackupUpdateStatus) error {
+func (r *scheduledBackupClient) SetNebulaScheduledBackupStatus(backup *v1alpha1.NebulaScheduledBackup, newStatus *ScheduledBackupUpdateStatus) error {
 	var isStatusUpdate bool
 	ns := backup.GetNamespace()
 	rtName := backup.GetName()
@@ -76,9 +77,17 @@ func (r *scheduledBackupClient) UpdateNebulaScheduledBackupStatus(backup *v1alph
 			utilruntime.HandleError(fmt.Errorf("get NebulaScheduledBackup [%s/%s] failed: %v", ns, rtName, err))
 			return err
 		}
+
+		// Make sure current resource version changes to avoid immediate reconcile if no error
+		updateErr := r.cli.Update(context.TODO(), backup)
+		if updateErr != nil {
+			klog.Errorf("update NebulaScheduledBackup [%s/%s] status failed: %v", ns, rtName, updateErr)
+			return updateErr
+		}
+
 		isStatusUpdate = updateScheduledBackupStatus(&backup.Status, newStatus)
 		if isStatusUpdate {
-			updateErr := r.cli.Status().Update(context.TODO(), backup)
+			updateErr = r.cli.Status().Update(context.TODO(), backup)
 			if updateErr == nil {
 				klog.Infof("NebulaScheduledBackup [%s/%s] updated successfully", ns, rtName)
 				return nil
@@ -101,6 +110,11 @@ func updateScheduledBackupStatus(status *v1alpha1.ScheduledBackupStatus, newStat
 		status.LastBackup = newStatus.LastBackup
 		isUpdate = true
 	} */
+	if newStatus.CurrPauseStatus != status.CurrPauseStatus {
+		status.CurrPauseStatus = newStatus.CurrPauseStatus
+		isUpdate = true
+	}
+
 	if newStatus.LastScheduledBackupTime != nil {
 		status.LastScheduledBackupTime = newStatus.LastScheduledBackupTime
 		isUpdate = true

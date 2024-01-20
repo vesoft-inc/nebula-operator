@@ -22,6 +22,10 @@ spec:
       jsonPath: .spec.schedule
       name: Schedule
       type: string
+    - description: Whether or not the scheduled backup is paused
+      jsonPath: .spec.pause
+      name: Pause
+      type: string
     - description: The timestamp at which the last backup was triggered
       jsonPath: .status.lastScheduledBackupTime
       name: Last Triggered Backup
@@ -119,6 +123,8 @@ spec:
             type: object
           status:
             properties:
+              currPauseStatus:
+                type: boolean
               lastScheduledBackupTime:
                 format: date-time
                 type: string

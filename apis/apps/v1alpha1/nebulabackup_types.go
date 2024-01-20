@@ -53,8 +53,6 @@ type NebulaBackupList struct {
 type BackupConditionType string
 
 const (
-	// BackupPending means the backup is pending, waiting for create backup job
-	BackupPending BackupConditionType = "Pending"
 	// BackupRunning means the backup is running.
 	BackupRunning BackupConditionType = "Running"
 	// BackupComplete means the backup has successfully executed and the

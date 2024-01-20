@@ -96,25 +96,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res recon
 
 	klog.Info("Start to reconcile NebulaScheduledBackup")
 
-	newReconcilerDuration, err := r.syncNebulaScheduledBackup(scheduledBackup.DeepCopy())
+	// Check the current resource version
+	currentResourceVersion := scheduledBackup.GetResourceVersion()
+	klog.Infof("Current resource version: %v", currentResourceVersion)
+
+	updatedScheduledBackup := scheduledBackup.DeepCopy()
+	newReconcilerDuration, err := r.syncNebulaScheduledBackup(updatedScheduledBackup)
 	if err != nil {
 		if errorsutil.IsReconcileError(err) {
 			klog.Infof("NebulaScheduledBackup [%s] reconcile details: %v", key, err)
-			return ctrl.Result{RequeueAfter: reconcileTimeOut}, nil
+			return ctrl.Result{RequeueAfter: reconcileTimeOut}, err
 		}
 		klog.Errorf("NebulaScheduledBackup [%s] reconcile failed: %v", key, err)
-		return ctrl.Result{RequeueAfter: defaultTimeout}, nil
+		return ctrl.Result{RequeueAfter: defaultTimeout}, err
 	}
 
 	if newReconcilerDuration != nil {
 		// wait until next backup time to reconcile to avoid wasting resources.
-		return ctrl.Result{RequeueAfter: *newReconcilerDuration}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: *newReconcilerDuration}, nil
 	}
 	return ctrl.Result{}, nil
 }
 
 func (r *Reconciler) syncNebulaScheduledBackup(backup *v1alpha1.NebulaScheduledBackup) (*time.Duration, error) {
-	newReconcilerDuration, err := r.control.SyncNebulaScheduledBackup(backup)
+	newReconcilerDuration, err := r.control.Sync(backup)
 	return newReconcilerDuration, err
 }
 

@@ -29,7 +29,7 @@ import (
 )
 
 type ControlInterface interface {
-	SyncNebulaScheduledBackup(bp *v1alpha1.NebulaScheduledBackup) (*time.Duration, error)
+	Sync(bp *v1alpha1.NebulaScheduledBackup) (*time.Duration, error)
 }
 
 var _ ControlInterface = (*defaultScheduledBackupControl)(nil)
@@ -46,7 +46,7 @@ func NewBackupControl(clientSet kube.ClientSet, scheduledBackupManager Manager) 
 	}
 }
 
-func (c *defaultScheduledBackupControl) SyncNebulaScheduledBackup(sbp *v1alpha1.NebulaScheduledBackup) (*time.Duration, error) {
+func (c *defaultScheduledBackupControl) Sync(sbp *v1alpha1.NebulaScheduledBackup) (*time.Duration, error) {
 	ownedNebulaBackups, err := c.clientSet.NebulaBackup().ListNebulaBackupsByUID(sbp.Namespace, sbp.UID)
 	if err != nil {
 		klog.Errorf("Fail to get nebula backup jobs owned by [%s/%s], err: %v", sbp.Namespace, sbp.Name, err)
@@ -78,12 +78,18 @@ func (c *defaultScheduledBackupControl) SyncNebulaScheduledBackup(sbp *v1alpha1.
 	}
 
 	if syncUpdates != nil {
-		klog.Infof("updating status for Nebula scheduled backup [%s/%s]", sbp.Namespace, sbp.Name)
+		klog.Infof("Updating Nebula scheduled backup [%s/%s]", sbp.Namespace, sbp.Name)
+		err = c.clientSet.NebulaScheduledBackup().SetNebulaScheduledBackupStatus(sbp, syncUpdates)
+		if err != nil {
+			klog.Errorf("Fail to update Nebula scheduled backup [%s/%s], err: %v", sbp.Namespace, sbp.Name, err)
+			return nil, err
+		}
+		klog.Infof("Nebula scheduled backup [%s/%s] updated successfully.", sbp.Namespace, sbp.Name)
 	} else {
-		klog.Info("No status updates needed for Nebula scheduled backup [%s/%s]", sbp.Namespace, sbp.Name)
+		klog.Infof("No status updates needed for Nebula scheduled backup [%s/%s]", sbp.Namespace, sbp.Name)
 	}
 
-	klog.Infof("Reconcile NebulaScheduledBackup success, scheduled backup %s", sbp.Name)
+	klog.Infof("Reconcile NebulaScheduledBackup success for Nebula scheduled backup %s", sbp.Name)
 
 	if NextBackupTime != nil {
 		newReconcilDuration := NextBackupTime.Sub(now.Local())

@@ -511,17 +511,15 @@ func (m *metaClient) retryOnError(req interface{}, fn Fn) (interface{}, error) {
 			}
 			code := getResponseCode(resp)
 			if code != nebula.ErrorCode_SUCCEEDED {
-				if code == nebula.ErrorCode_E_EXISTED {
-					return resp, nil
-				} else if code == nebula.ErrorCode_E_NO_HOSTS {
+				if code == nebula.ErrorCode_E_EXISTED ||
+					code == nebula.ErrorCode_E_NO_HOSTS {
 					return resp, nil
 				}
 				return nil, fmt.Errorf("metad client retry response code %d name %s", code, code.String())
 			}
 			return resp, nil
-		} else if code == nebula.ErrorCode_E_EXISTED {
-			return resp, nil
-		} else if code == nebula.ErrorCode_E_NO_HOSTS {
+		} else if code == nebula.ErrorCode_E_EXISTED ||
+			code == nebula.ErrorCode_E_NO_HOSTS {
 			return resp, nil
 		}
 		return nil, fmt.Errorf("metad client response code %d name %s", code, code.String())

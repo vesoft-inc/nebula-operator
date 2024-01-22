@@ -31,7 +31,7 @@ import (
 )
 
 type ControlInterface interface {
-	UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) error
+	UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) error
 }
 
 var _ ControlInterface = (*defaultRestoreControl)(nil)
@@ -48,40 +48,40 @@ func NewRestoreControl(clientSet kube.ClientSet, restoreManager Manager) Control
 	}
 }
 
-func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) error {
-	ns := rt.GetNamespace()
-	name := rt.GetName()
+func (c *defaultRestoreControl) UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) error {
+	ns := nr.GetNamespace()
+	name := nr.GetName()
 
-	if condition.IsRestoreInvalid(rt) {
+	if condition.IsRestoreInvalid(nr) {
 		klog.Infof("Skipping because NebulaRestore [%s/%s] is invalid.", ns, name)
 		return nil
 	}
 
-	if condition.IsRestoreComplete(rt) {
+	if condition.IsRestoreComplete(nr) {
 		klog.Infof("Skipping because NebulaRestore [%s/%s] is complete.", ns, name)
 		return nil
 	}
 
-	if condition.IsRestoreFailed(rt) {
+	if condition.IsRestoreFailed(nr) {
 		klog.Infof("Skipping because NebulaRestore [%s/%s] is failed.", ns, name)
 		return nil
 	}
 
-	if rt.Status.ClusterName != "" {
-		selector, err := label.New().Cluster(rt.Status.ClusterName).Selector()
+	if nr.Status.ClusterName != "" {
+		selector, err := label.New().Cluster(nr.Status.ClusterName).Selector()
 		if err != nil {
-			klog.Errorf("Fail to generate selector for NebulaCluster [%s/%s], %v", ns, rt.Status.ClusterName, err)
+			klog.Errorf("Fail to generate selector for NebulaCluster [%s/%s], %v", ns, nr.Status.ClusterName, err)
 			return nil
 		}
 		pods, err := c.clientSet.Pod().ListPods(ns, selector)
 		if err != nil {
-			klog.Errorf("Fail to list pod for NebulaCluster [%s/%s] with selector %s, %v", ns, rt.Status.ClusterName, selector, err)
+			klog.Errorf("Fail to list pod for NebulaCluster [%s/%s] with selector %s, %v", ns, nr.Status.ClusterName, selector, err)
 			return nil
 		}
 		for _, pod := range pods {
 			if pod.Status.Phase == corev1.PodFailed {
 				klog.Infof("NebulaCluster [%s/%s] has failed pod %s.", ns, name, pod.Name)
-				if err := c.restoreManager.UpdateCondition(rt, &v1alpha1.RestoreCondition{
+				if err := c.restoreManager.UpdateCondition(nr, &v1alpha1.RestoreCondition{
 					Type:    v1alpha1.RestoreFailed,
 					Status:  corev1.ConditionTrue,
 					Reason:  "PodFailed",
@@ -89,9 +89,9 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) 
 				}); err != nil {
 					klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
 				}
-				if rt.Spec.AutoRemoveFailed {
-					if err := c.deleteRestoredCluster(ns, rt.Status.ClusterName); err != nil {
-						klog.Errorf("Fail to delete NebulaCluster [%s/%s], %v", ns, rt.Status.ClusterName, err)
+				if nr.Spec.AutoRemoveFailed {
+					if err := c.deleteRestoredCluster(ns, nr.Status.ClusterName); err != nil {
+						klog.Errorf("Fail to delete NebulaCluster [%s/%s], %v", ns, nr.Status.ClusterName, err)
 					}
 				}
 				return nil
@@ -99,12 +99,12 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) 
 		}
 	}
 
-	err := c.restoreManager.Sync(rt)
+	err := c.restoreManager.Sync(nr)
 	if err != nil && !errors.IsReconcileError(err) {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		if err := c.restoreManager.UpdateCondition(rt, &v1alpha1.RestoreCondition{
+		if err := c.restoreManager.UpdateCondition(nr, &v1alpha1.RestoreCondition{
 			Type:    v1alpha1.RestoreFailed,
 			Status:  corev1.ConditionTrue,
 			Reason:  "ExecuteFailed",
@@ -112,11 +112,11 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(rt *v1alpha1.NebulaRestore) 
 		}); err != nil {
 			klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
 		}
-		updated, err := c.clientSet.NebulaRestore().GetNebulaRestore(ns, rt.Name)
+		updated, err := c.clientSet.NebulaRestore().GetNebulaRestore(ns, nr.Name)
 		if err != nil {
 			klog.Errorf("Fail to get NebulaRestore [%s/%s], %v", ns, name, err)
 		}
-		if rt.Spec.AutoRemoveFailed {
+		if nr.Spec.AutoRemoveFailed {
 			if err := c.deleteRestoredCluster(ns, updated.Status.ClusterName); err != nil {
 				klog.Errorf("Fail to delete NebulaCluster %v", err)
 			}

@@ -58,6 +58,15 @@ spec:
                   concurrency:
                     format: int32
                     type: integer
+                  gs:
+                    properties:
+                      bucket:
+                        type: string
+                      location:
+                        type: string
+                      secretName:
+                        type: string
+                    type: object
                   s3:
                     properties:
                       bucket:

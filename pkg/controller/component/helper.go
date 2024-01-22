@@ -249,10 +249,7 @@ func updateDynamicFlags(endpoints []string, newAnnotations map[string]string) er
 	return nil
 }
 
-func getContainerImage(
-	obj *unstructured.Unstructured,
-	containerName string,
-) string {
+func getContainerImage(obj *unstructured.Unstructured, containerName string) string {
 	if obj == nil {
 		return ""
 	}
@@ -265,11 +262,7 @@ func getContainerImage(
 	return ""
 }
 
-func isUpdating(
-	component v1alpha1.NebulaClusterComponent,
-	podClient kube.Pod,
-	obj *unstructured.Unstructured,
-) (bool, error) {
+func isUpdating(component v1alpha1.NebulaClusterComponent, podClient kube.Pod, obj *unstructured.Unstructured) (bool, error) {
 	if extender.IsUpdating(obj) {
 		return true, nil
 	}
@@ -493,9 +486,7 @@ func updateSinglePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error
 	return clientSet.Pod().CreatePod(newPod)
 }
 
-func syncPVC(
-	component v1alpha1.NebulaClusterComponent,
-	pvcClient kube.PersistentVolumeClaim) error {
+func syncPVC(component v1alpha1.NebulaClusterComponent, pvcClient kube.PersistentVolumeClaim) error {
 	replicas := int(component.ComponentSpec().Replicas())
 	volumeClaims, err := component.GenerateVolumeClaim()
 	if err != nil {

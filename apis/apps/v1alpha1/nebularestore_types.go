@@ -41,6 +41,7 @@ type NebulaRestore struct {
 }
 
 // +kubebuilder:object:root=true
+
 // NebulaRestoreList contains a list of NebulaRestore.
 type NebulaRestoreList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -100,6 +101,7 @@ type BRConfig struct {
 
 type StorageProvider struct {
 	S3 *S3StorageProvider `json:"s3,omitempty"`
+	GS *GsStorageProvider `json:"gs,omitempty"`
 }
 
 // S3StorageProvider represents a S3 compliant storage for storing backups.
@@ -112,6 +114,18 @@ type S3StorageProvider struct {
 	Endpoint string `json:"endpoint,omitempty"`
 	// SecretName is the name of secret which stores access key and secret key.
 	// Secret keys: access-key, secret-key
+	SecretName string `json:"secretName,omitempty"`
+}
+
+// GsStorageProvider represents a GS compliant storage for storing backups.
+type GsStorageProvider struct {
+	// Location in which the gs bucket is located.
+	Location string `json:"location,omitempty"`
+	// Bucket in which to store the backup data.
+	Bucket string `json:"bucket,omitempty"`
+	// SecretName is the name of secret which stores
+	// the GS service account or refresh token JSON.
+	// Secret key: credentials
 	SecretName string `json:"secretName,omitempty"`
 }
 

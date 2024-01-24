@@ -30,6 +30,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/br"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 const (
@@ -39,7 +40,7 @@ const (
 
 type Manager interface {
 	// Sync	implements the logic for syncing NebulaBackup.
-	Sync(backup *v1alpha1.NebulaBackup) (*v1alpha1.BackupCondition, *kube.BackupUpdateStatus, error)
+	Sync(backup *v1alpha1.NebulaBackup) error
 }
 
 var _ Manager = (*backupManager)(nil)
@@ -52,20 +53,11 @@ func NewBackupManager(clientSet kube.ClientSet) Manager {
 	return &backupManager{clientSet: clientSet}
 }
 
-func (bm *backupManager) Sync(backup *v1alpha1.NebulaBackup) (conditionUpdate *v1alpha1.BackupCondition, statusUpdate *kube.BackupUpdateStatus, retErr error) {
-	defer func() {
-		if retErr != nil {
-			conditionUpdate = &v1alpha1.BackupCondition{
-				Type:   v1alpha1.BackupFailed,
-				Status: corev1.ConditionTrue,
-				Reason: "SyncNebulaBackupFailed",
-			}
-			statusUpdate = &kube.BackupUpdateStatus{
-				ConditionType: v1alpha1.BackupFailed,
-			}
-		}
-	}()
+func (bm *backupManager) Sync(backup *v1alpha1.NebulaBackup) error {
 
+	var nbCondition *v1alpha1.BackupCondition
+	var nbStatus *kube.BackupUpdateStatus
+	var backupJob *batchv1.Job
 	if backup.Status.TimeStarted == nil {
 		ns := backup.GetNamespace()
 		if backup.Spec.BR.ClusterNamespace != nil {
@@ -74,73 +66,82 @@ func (bm *backupManager) Sync(backup *v1alpha1.NebulaBackup) (conditionUpdate *v
 
 		nc, err := bm.clientSet.NebulaCluster().GetNebulaCluster(ns, backup.Spec.BR.ClusterName)
 		if err != nil {
-			return nil, nil, fmt.Errorf("get nebula cluster %s/%s err: %w", ns, backup.Spec.BR.ClusterName, err)
+			return fmt.Errorf("get nebula cluster %s/%s err: %w", ns, backup.Spec.BR.ClusterName, err)
 		}
 
 		if !nc.IsReady() {
-			return nil, nil, fmt.Errorf("nebula cluster %s/%s is not ready", ns, backup.Spec.BR.ClusterName)
+			return fmt.Errorf("nebula cluster %s/%s is not ready", ns, backup.Spec.BR.ClusterName)
 		}
 
-		backupJob := bm.generateBackupJob(backup, fmt.Sprintf("%v:%v", nc.MetadComponent().GetPodFQDN(0), nc.MetadComponent().GetPort(v1alpha1.MetadPortNameThrift)))
+		backupJob = bm.generateBackupJob(backup, fmt.Sprintf("%v:%v", nc.MetadComponent().GetPodFQDN(0), nc.MetadComponent().GetPort(v1alpha1.MetadPortNameThrift)))
 		if err = bm.clientSet.Job().CreateJob(backupJob); err != nil && !apierrors.IsAlreadyExists(err) {
-			return nil, nil, fmt.Errorf("create backup job err: %w", err)
+			return fmt.Errorf("create backup job err: %w", err)
 		}
 
-		return &v1alpha1.BackupCondition{
-				Type:   v1alpha1.BackupRunning,
-				Status: corev1.ConditionTrue,
-				Reason: "CreateBackupJobSuccess",
-			}, &kube.BackupUpdateStatus{
-				TimeStarted:   &metav1.Time{Time: time.Now()},
-				ConditionType: v1alpha1.BackupRunning,
-			}, nil
+		nbCondition = &v1alpha1.BackupCondition{
+			Type:   v1alpha1.BackupRunning,
+			Status: corev1.ConditionTrue,
+			Reason: "CreateBackupJobSuccess",
+		}
+
+		nbStatus = &kube.BackupUpdateStatus{
+			TimeStarted:   &metav1.Time{Time: time.Now()},
+			ConditionType: v1alpha1.BackupRunning,
+		}
+
+		klog.Infof("Backup job [%s/%s] for NebulaBackup [%s/%s] created successfully", backupJob.Namespace, backupJob.Name, backup.Namespace, backup.Name)
+
 	} else {
-		if backup.Status.Phase == v1alpha1.BackupComplete {
-			klog.Infof("Backup %s/%s is already complete.", backup.Namespace, backup.Name)
-			return nil, nil, nil
-		}
-
-		backupJob, err := bm.clientSet.Job().GetJob(backup.Namespace, backup.Name)
+		var err error
+		backupJob, err = bm.clientSet.Job().GetJob(backup.Namespace, backup.Name)
 		if err != nil {
-			return nil, nil, fmt.Errorf("get backup job %s/%s err: %w", backup.Namespace, backup.Name, err)
-		}
-
-		if backupJob.Status.CompletionTime != nil {
-			return &v1alpha1.BackupCondition{
-					Type:   v1alpha1.BackupComplete,
-					Status: corev1.ConditionTrue,
-					Reason: "BackupComplete",
-				}, &kube.BackupUpdateStatus{
-					TimeCompleted: &metav1.Time{Time: backupJob.Status.CompletionTime.Time},
-					ConditionType: v1alpha1.BackupComplete,
-				}, nil
+			return fmt.Errorf("get backup job %s/%s err: %w", backup.Namespace, backup.Name, err)
 		}
 
 		for _, condition := range backupJob.Status.Conditions {
-			if condition.Type == batchv1.JobFailed && condition.Status == corev1.ConditionTrue {
-				return nil, nil, fmt.Errorf("backup failed, reason: %s, message: %s", condition.Reason, condition.Message)
+			if condition.Type == batchv1.JobComplete && condition.Status == corev1.ConditionTrue {
+				nbCondition = &v1alpha1.BackupCondition{
+					Type:   v1alpha1.BackupComplete,
+					Status: corev1.ConditionTrue,
+					Reason: "BackupComplete",
+				}
+
+				nbStatus = &kube.BackupUpdateStatus{
+					TimeCompleted: &metav1.Time{Time: backupJob.Status.CompletionTime.Time},
+					ConditionType: v1alpha1.BackupComplete,
+				}
+
+				if err := bm.clientSet.NebulaBackup().UpdateNebulaBackupStatus(backup, nbCondition, nbStatus); err != nil {
+					return fmt.Errorf("update nebula backup %s/%s status err: %w", backup.Namespace, backup.Name, err)
+				}
+
+				return nil
+			} else if condition.Type == batchv1.JobFailed && condition.Status == corev1.ConditionTrue {
+				return fmt.Errorf("backup failed, reason: %s, message: %s", condition.Reason, condition.Message)
 			}
 		}
-
-		klog.Infof("Waiting for backup job [%s/%s] of NebulaBackup [%s/%s] to complete", backupJob.Namespace, backupJob.Name, backup.Namespace, backup.Name)
-		return nil, nil, nil
 	}
+
+	if err := bm.clientSet.NebulaBackup().UpdateNebulaBackupStatus(backup, nbCondition, nbStatus); err != nil {
+		return fmt.Errorf("update nebula backup %s/%s status err: %w", backup.Namespace, backup.Name, err)
+	}
+	return utilerrors.ReconcileErrorf("Waiting for backup job [%s/%s] of NebulaBackup [%s/%s] to complete", backupJob.Namespace, backupJob.Name, backup.Namespace, backup.Name)
+}
+
+func createStorageString(backup *v1alpha1.NebulaBackup) string {
+	var storageString string
+	switch backup.Spec.BR.StorageProviderType {
+	case "s3":
+		storageString = fmt.Sprintf("--storage s3://%s --s3.access_key $(%s) --s3.secret_key $(%s) --s3.region %s --s3.endpoint %s", backup.Spec.BR.S3.Bucket, EnvS3AccessKeyName, EnvS3SecretKeyName, backup.Spec.BR.S3.Region, backup.Spec.BR.S3.Endpoint)
+	}
+	return storageString
 }
 
 func (bm *backupManager) generateBackupJob(backup *v1alpha1.NebulaBackup, metaAddr string) *batchv1.Job {
 	var podSpec corev1.PodSpec
 	var ttlFinished *int32
-	if len(backup.OwnerReferences) != 0 && backup.OwnerReferences[0].Kind == "NebulaScheduledBackup" && backup.Spec.ReservedTimeEpoch != nil || backup.Spec.NumBackupsKeep != nil {
-		var maxReservedTimeToUse time.Duration = 0
-		if backup.Spec.ReservedTimeEpoch != nil {
-			maxReservedTimeToUse = *backup.Spec.ReservedTimeEpoch
-		}
-
-		maxBackupToUse := int32(0)
-		if backup.Spec.NumBackupsKeep != nil {
-			maxBackupToUse = *backup.Spec.NumBackupsKeep
-		}
-
+	storageString := createStorageString(backup)
+	if len(backup.OwnerReferences) != 0 && backup.OwnerReferences[0].Kind == "NebulaScheduledBackup" && len(backup.Env) != 0 {
 		podSpec = corev1.PodSpec{
 			ImagePullSecrets: backup.Spec.ImagePullSecrets,
 			Containers: []corev1.Container{
@@ -148,14 +149,10 @@ func (bm *backupManager) generateBackupJob(backup *v1alpha1.NebulaBackup, metaAd
 					Name:            "backup",
 					Image:           backup.Spec.ToolImage,
 					ImagePullPolicy: backup.Spec.ImagePullPolicy,
-					Env: []corev1.EnvVar{
+					Env: append([]corev1.EnvVar{
 						{
 							Name:  "META_ADDRESS",
 							Value: metaAddr,
-						},
-						{
-							Name:  "STORAGE",
-							Value: fmt.Sprintf("s3://%v", backup.Spec.BR.S3.Bucket),
 						},
 						{
 							Name: EnvS3AccessKeyName,
@@ -180,22 +177,10 @@ func (bm *backupManager) generateBackupJob(backup *v1alpha1.NebulaBackup, metaAd
 							},
 						},
 						{
-							Name:  "S3_REGION",
-							Value: backup.Spec.BR.S3.Region,
+							Name:  "STORAGE_LINE",
+							Value: storageString,
 						},
-						{
-							Name:  "S3_ENDPOINT",
-							Value: backup.Spec.BR.S3.Endpoint,
-						},
-						{
-							Name:  "NUM_BACKUPS_KEEP",
-							Value: fmt.Sprintf("%v", maxBackupToUse),
-						},
-						{
-							Name:  "RESERVED_TIME_EPOCH",
-							Value: fmt.Sprintf("%v", maxReservedTimeToUse.Seconds()),
-						},
-					},
+					}, backup.Env...),
 					Command: []string{"/bin/bash", "-c"},
 					Args:    []string{"/usr/local/bin/runnable/backup-cleanup-run.sh"},
 					VolumeMounts: []corev1.VolumeMount{
@@ -251,8 +236,7 @@ func (bm *backupManager) generateBackupJob(backup *v1alpha1.NebulaBackup, metaAd
 			bpCmdHead = fmt.Sprintf("exec /usr/local/bin/br-ent backup incr --base %s", backup.Spec.BR.BackupName)
 		}
 
-		backupCmd := fmt.Sprintf("%s --meta %s --storage s3://%s --s3.access_key $%s --s3.secret_key $%s --s3.region %s --s3.endpoint %s",
-			bpCmdHead, metaAddr, backup.Spec.BR.S3.Bucket, EnvS3AccessKeyName, EnvS3SecretKeyName, backup.Spec.BR.S3.Region, backup.Spec.BR.S3.Endpoint)
+		backupCmd := fmt.Sprintf("%s --meta %s %s", bpCmdHead, metaAddr, storageString)
 
 		podSpec = corev1.PodSpec{
 			ImagePullSecrets: backup.Spec.ImagePullSecrets,

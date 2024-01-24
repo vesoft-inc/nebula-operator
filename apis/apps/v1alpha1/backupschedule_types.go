@@ -20,8 +20,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// BackupConditionType represents a valid condition of a Backup.
-type ScheduledBackupConditionType string
+var (
+	maxSuccessfulBackupJobsDef int32 = 3
+	maxSuccessfulFailedJobsDef int32 = 3
+)
 
 // +genclient
 // +kubebuilder:object:root=true
@@ -62,13 +64,13 @@ type ScheduledBackupSpec struct {
 	// and MaxBackups is ignored.
 	MaxBackups *int32 `json:"maxBackups,omitempty"`
 	// MaxRetentionTime specifies how long we want the backups in the remote storage bucket to be kept for.
-	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?[a-zA-Z]+)+$`
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 	MaxRetentionTime *string `json:"maxRetentionTime,omitempty"`
 	// BackupTemplate is the specification of the backup structure to schedule.
 	BackupTemplate BackupSpec `json:"backupTemplate"`
-	// MaxSuccessfulNublaBackupJobs specifies the maximum number of successful backup jobs to keep
+	// MaxSuccessfulNublaBackupJobs specifies the maximum number of successful backup jobs to keep. Default 3.
 	MaxSuccessfulNebulaBackupJobs *int32 `json:"maxSuccessfulNebulaBackupJobs,omitempty"`
-	// MaxFailedNebulaBackupJobs specifies the maximum number of failed backup jobs to keep
+	// MaxFailedNebulaBackupJobs specifies the maximum number of failed backup jobs to keep. Default 3
 	MaxFailedNebulaBackupJobs *int32 `json:"maxFailedNebulaBackupJobs,omitempty"`
 }
 
@@ -82,8 +84,22 @@ type ScheduledBackupStatus struct {
 	LastScheduledBackupTime *metav1.Time `json:"lastScheduledBackupTime,omitempty"`
 	// LastSuccessfulBackupTime represents the last time a backup was successfully created.
 	LastSuccessfulBackupTime *metav1.Time `json:"lastSuccessfulBackupTime,omitempty"`
+	// NumberOfSuccessfulBackups represents the total number of successful Nebula Backups run by this the Nebula Scheduled Backup
+	NumberOfSuccessfulBackups *int32 `json:"numberofSuccessfulBackups,omitempty"`
+	// NumberOfFailedBackups represents the total number of failed Nebula Backups run by this the Nebula Scheduled Backup
+	NumberOfFailedBackups *int32 `json:"numberofFailedBackups,omitempty"`
 	// MostRecentJobFailed represents if the most recent backup job failed.
 	MostRecentJobFailed *bool `json:"mostRecentJobFailed,omitempty"`
+}
+
+// Defaulting implementation for ScheduledBackupStatus
+func (nsb *NebulaScheduledBackup) Default() {
+	if nsb.Spec.MaxSuccessfulNebulaBackupJobs == nil {
+		nsb.Spec.MaxSuccessfulNebulaBackupJobs = &maxSuccessfulBackupJobsDef
+	}
+	if nsb.Spec.MaxFailedNebulaBackupJobs == nil {
+		nsb.Spec.MaxFailedNebulaBackupJobs = &maxSuccessfulFailedJobsDef
+	}
 }
 
 func init() {

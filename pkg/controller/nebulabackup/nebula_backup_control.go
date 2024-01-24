@@ -18,16 +18,19 @@ package nebulabackup
 
 import (
 	"fmt"
-	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-	"k8s.io/klog/v2"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 type ControlInterface interface {
-	SyncNebulaBackup(bp *v1alpha1.NebulaBackup) (*time.Duration, error)
+	SyncNebulaBackup(bp *v1alpha1.NebulaBackup) error
 }
 
 var _ ControlInterface = (*defaultBackupControl)(nil)
@@ -44,39 +47,43 @@ func NewBackupControl(clientSet kube.ClientSet, backupManager Manager) ControlIn
 	}
 }
 
-func (c *defaultBackupControl) SyncNebulaBackup(bp *v1alpha1.NebulaBackup) (*time.Duration, error) {
+func (c *defaultBackupControl) SyncNebulaBackup(bp *v1alpha1.NebulaBackup) error {
 
-	updateCondition, updateStatus, syncErr := c.backupManager.Sync(bp)
+	namespace := bp.GetNamespace()
+	name := bp.GetName()
 
-	if syncErr != nil {
-		klog.Errorf("Fail to sync NebulaBackup [%s/%s], %v", bp.Namespace, bp.Name, syncErr)
+	if condition.IsBackupInvalid(bp) {
+		klog.Infof("Skipping sync because NebulaBackup [%s/%s] is invalid.", namespace, name)
+		return nil
 	}
 
-	if updateCondition != nil && updateStatus != nil {
-		klog.Infof("Update status for NebulaBackup [%s/%s]", bp.Namespace, bp.Name)
-		if updateErr := c.clientSet.NebulaBackup().UpdateNebulaBackupStatus(bp, updateCondition, updateStatus); updateErr != nil {
-			return nil, fmt.Errorf("update nebula backup %s/%s status err: %w", bp.Namespace, bp.Name, updateErr)
-		}
-		klog.Infof("Successfully updated status for NebulaBackup [%s/%s]", bp.Namespace, bp.Name)
-
-		if updateStatus.ConditionType == v1alpha1.BackupFailed || updateStatus.ConditionType == v1alpha1.BackupInvalid {
-			return nil, syncErr
-		}
-
-		if updateStatus.ConditionType == v1alpha1.BackupComplete {
-			return nil, nil
-		}
-
-	} else {
-		if bp.Status.Phase == v1alpha1.BackupComplete {
-			return nil, nil
-		}
-		if bp.Status.Phase == v1alpha1.BackupFailed || bp.Status.Phase == v1alpha1.BackupInvalid {
-			return nil, utilerrors.ReconcileErrorf("error syncing Nebula backup [%s/%s] for a second time.", bp.Namespace, bp.Name)
-		}
+	if condition.IsBackupComplete(bp) {
+		klog.Infof("Skipping sync because NebulaBackup [%s/%s] is already complete.", namespace, name)
+		return nil
 	}
 
-	klog.Infof("Waiting for NebulaBackup [%s/%s] to complete", bp.Namespace, bp.Name)
-	nextReconcile := 15 * time.Second
-	return &nextReconcile, nil
+	if condition.IsBackupFailed(bp) {
+		klog.Infof("Skipping sync because NebulaBackup [%s/%s] has already failed.", namespace, name)
+		return nil
+	}
+
+	err := c.backupManager.Sync(bp)
+	if err != nil && !errors.IsReconcileError(err) {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		if err := c.clientSet.NebulaBackup().UpdateNebulaBackupStatus(bp, &v1alpha1.BackupCondition{
+			Type:   v1alpha1.BackupFailed,
+			Status: corev1.ConditionTrue,
+			Reason: err.Error(),
+		}, &kube.BackupUpdateStatus{
+			ConditionType: v1alpha1.BackupFailed,
+		}); err != nil {
+			return fmt.Errorf("failed to update NebulaBackup [%s/%s], %v", namespace, name, err)
+		}
+
+		return nil
+	}
+
+	return err
 }

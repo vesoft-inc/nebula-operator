@@ -74,6 +74,9 @@ spec:
                           secretName:
                             type: string
                         type: object
+                      storageProviderType:
+                        pattern: ^(s3)$
+                        type: string
                     required:
                     - clusterName
                     type: object
@@ -108,7 +111,7 @@ spec:
                 format: int32
                 type: integer
               maxRetentionTime:
-                pattern: ^([0-9]+(\.[0-9]+)?[a-zA-Z]+)+$
+                pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
                 type: string
               maxSuccessfulNebulaBackupJobs:
                 format: int32
@@ -133,6 +136,12 @@ spec:
                 type: string
               mostRecentJobFailed:
                 type: boolean
+              numberofFailedBackups:
+                format: int32
+                type: integer
+              numberofSuccessfulBackups:
+                format: int32
+                type: integer
             type: object
         type: object
     served: true

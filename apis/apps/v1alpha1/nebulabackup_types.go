@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,6 +33,8 @@ import (
 type NebulaBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	Spec   BackupSpec   `json:"spec,omitempty"`
 	Status BackupStatus `json:"status,omitempty"`
@@ -98,12 +98,6 @@ type BackupSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	BR *BRConfig `json:"br,omitempty"`
-
-	// NumBackupsKeep is to specify how many backups we want to keep. Used for scheduled backups only.
-	NumBackupsKeep *int32 `json:"maxBackups,omitempty"`
-
-	// ReservedTimeEpoach is the epoach time for how long we want to keep the backups. Used for scheduled backups only.
-	ReservedTimeEpoch *time.Duration `json:"maxReservedTimeEpoch,omitempty"`
 }
 
 // BackupStatus represents the current status of a nebula cluster backup.

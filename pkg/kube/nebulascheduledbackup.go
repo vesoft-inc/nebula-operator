@@ -33,10 +33,12 @@ import (
 type ScheduledBackupUpdateStatus struct {
 	// Used for scheduled incremental backups. Not supported for now.
 	// LastBackup     string
-	CurrPauseStatus          *bool
-	LastScheduledBackupTime  *metav1.Time
-	LastSuccessfulBackupTime *metav1.Time
-	MostRecentJobFailed      *bool
+	CurrPauseStatus           *bool
+	LastScheduledBackupTime   *metav1.Time
+	LastSuccessfulBackupTime  *metav1.Time
+	NumberOfSuccessfulBackups *int32
+	NumberOfFailedBackups     *int32
+	MostRecentJobFailed       *bool
 }
 
 type NebulaScheduledBackup interface {
@@ -123,6 +125,14 @@ func updateScheduledBackupStatus(status *v1alpha1.ScheduledBackupStatus, newStat
 	if newStatus.LastSuccessfulBackupTime != nil {
 		status.LastSuccessfulBackupTime = newStatus.LastSuccessfulBackupTime
 		isUpdate = true
+	}
+
+	if newStatus.NumberOfSuccessfulBackups != nil {
+		status.NumberOfSuccessfulBackups = newStatus.NumberOfSuccessfulBackups
+	}
+
+	if newStatus.NumberOfFailedBackups != nil {
+		status.NumberOfFailedBackups = newStatus.NumberOfFailedBackups
 	}
 
 	if newStatus.MostRecentJobFailed != nil {

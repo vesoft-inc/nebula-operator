@@ -21,11 +21,12 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	condutil "github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 )
 
 type ControlInterface interface {

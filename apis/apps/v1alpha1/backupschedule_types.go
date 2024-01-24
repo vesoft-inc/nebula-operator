@@ -68,7 +68,7 @@ type ScheduledBackupSpec struct {
 	MaxRetentionTime *string `json:"maxRetentionTime,omitempty"`
 	// BackupTemplate is the specification of the backup structure to schedule.
 	BackupTemplate BackupSpec `json:"backupTemplate"`
-	// MaxSuccessfulNublaBackupJobs specifies the maximum number of successful backup jobs to keep. Default 3.
+	// MaxSuccessfulNebulaBackupJobs specifies the maximum number of successful backup jobs to keep. Default 3.
 	MaxSuccessfulNebulaBackupJobs *int32 `json:"maxSuccessfulNebulaBackupJobs,omitempty"`
 	// MaxFailedNebulaBackupJobs specifies the maximum number of failed backup jobs to keep. Default 3
 	MaxFailedNebulaBackupJobs *int32 `json:"maxFailedNebulaBackupJobs,omitempty"`

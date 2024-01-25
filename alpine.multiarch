@@ -1,9 +1,17 @@
 FROM alpine:3.18.2
 
+ENV LOGROTATE_ROTATE=5 \
+    LOGROTATE_SIZE=100M \
+    TZ=Asia/Shanghai
+
 ARG TARGETARCH
 
+ADD hack/logrotate.sh /logrotate.sh
+RUN chmod +x /logrotate.sh
+RUN ln -sf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
 RUN apk update \
   && apk upgrade \
   && apk add --no-cache \
-    curl jq util-linux bash xfsprogs \
+    curl jq util-linux bash xfsprogs logrotate \
   && rm -rf /var/cache/apk/*

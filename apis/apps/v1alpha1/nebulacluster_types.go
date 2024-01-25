@@ -294,7 +294,6 @@ type ConsoleSpec struct {
 
 // AgentContainerSpec defines the desired state of Agent
 type AgentContainerSpec struct {
-
 	// url for docker image
 	// +optional
 	Image string `json:"image,omitempty"`
@@ -306,6 +305,16 @@ type AgentContainerSpec struct {
 	// K8S resources settings.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// Container environment variables.
+	// +optional
+	EnvVars []corev1.EnvVar `json:"env,omitempty"`
+
+	// +optional
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 type LicenseSpec struct {

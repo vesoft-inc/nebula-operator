@@ -42,12 +42,13 @@ const (
 	NebulaServiceAccountName  = "nebula-sa"
 	NebulaRoleName            = "nebula-role"
 	NebulaRoleBindingName     = "nebula-rolebinding"
+	LogSidecarContainerName   = "ng-logrotate"
 	AgentSidecarContainerName = "ng-agent"
 	AgentInitContainerName    = "ng-init-agent"
 	DefaultAgentPortGRPC      = 8888
-	agentPortNameGRPC         = "grpc"
-	defaultAgentImage         = "vesoft/nebula-agent"
-	defaultAlpineImage        = "vesoft/nebula-alpine:latest"
+	AgentPortNameGRPC         = "grpc"
+	DefaultAgentImage         = "vesoft/nebula-agent"
+	DefaultAlpineImage        = "vesoft/nebula-alpine:latest"
 
 	ZoneSuffix = "zone"
 )
@@ -271,9 +272,56 @@ func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, 
 	}, nil
 }
 
+func logVolumeExists(componentType string, volumes []corev1.Volume) bool {
+	logVolName := logVolume(componentType)
+	for _, volume := range volumes {
+		if volume.Name == logVolName {
+			return true
+		}
+	}
+	return false
+}
+
 func GenerateInitAgentContainer(c NebulaClusterComponent) corev1.Container {
 	container := generateAgentContainer(c, true)
 	container.Name = AgentInitContainerName
+
+	return container
+}
+
+func generateLogContainer(c NebulaClusterComponent) corev1.Container {
+	nc := c.GetNebulaCluster()
+	componentType := c.ComponentType().String()
+
+	image := DefaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	cmd := []string{"/bin/sh", "-ecx", "sh /logrotate.sh; crond -f -l 2"}
+	container := corev1.Container{
+		Name:    LogSidecarContainerName,
+		Image:   image,
+		Command: cmd,
+	}
+
+	logRotate := nc.Spec.LogRotate
+	container.Env = []corev1.EnvVar{
+		{
+			Name:  "LOGROTATE_ROTATE",
+			Value: strconv.Itoa(int(logRotate.Rotate)),
+		},
+		{
+			Name:  "LOGROTATE_SIZE",
+			Value: logRotate.Size,
+		},
+	}
+
+	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+		Name:      logVolume(componentType),
+		MountPath: "/usr/local/nebula/logs",
+		SubPath:   "logs",
+	})
 
 	return container
 }
@@ -288,33 +336,25 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC) +
 		" --ratelimit=1073741824 --debug"
 	brCmd := initCmd + " --meta=" + metadAddr
-	logCmd := "sh /logrotate.sh; /etc/init.d/cron start"
-	logfgCmd := "sh /logrotate.sh; exec cron -f"
 
 	if nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled() {
-		initCmd += " --enable_ssl"
-		brCmd += " --enable_ssl"
+		initCmd += " --enable-ssl"
+		brCmd += " --enable-ssl"
 		if nc.InsecureSkipVerify() {
-			initCmd += " --insecure_skip_verify"
-			brCmd += " --insecure_skip_verify"
+			initCmd += " --insecure-skip-verify"
+			brCmd += " --insecure-skip-verify"
 		}
 	}
 
 	if init {
 		cmd = append(cmd, initCmd)
 	} else {
-		if nc.IsLogRotateEnabled() && nc.IsBREnabled() {
-			cmd = append(cmd, fmt.Sprintf(`%s; %s`, logCmd, brCmd))
-		} else if nc.IsLogRotateEnabled() {
-			cmd = append(cmd, logfgCmd)
-		} else if nc.IsBREnabled() {
-			cmd = append(cmd, brCmd)
-		}
+		cmd = append(cmd, brCmd)
 	}
 
 	container := corev1.Container{
 		Name:    AgentSidecarContainerName,
-		Image:   defaultAgentImage,
+		Image:   DefaultAgentImage,
 		Command: cmd,
 	}
 	imagePullPolicy := nc.Spec.ImagePullPolicy
@@ -346,33 +386,13 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 
 		container.Ports = []corev1.ContainerPort{
 			{
-				Name:          agentPortNameGRPC,
+				Name:          AgentPortNameGRPC,
 				ContainerPort: int32(DefaultAgentPortGRPC),
 			},
 		}
 	}
 
-	if nc.IsLogRotateEnabled() {
-		logRotate := nc.Spec.LogRotate
-		container.Env = []corev1.EnvVar{
-			{
-				Name:  "LOGROTATE_ROTATE",
-				Value: strconv.Itoa(int(logRotate.Rotate)),
-			},
-			{
-				Name:  "LOGROTATE_SIZE",
-				Value: logRotate.Size,
-			},
-		}
-
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-			Name:      logVolume(componentType),
-			MountPath: "/usr/local/nebula/logs",
-			SubPath:   "logs",
-		})
-	}
-
-	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() {
+	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() && !enableLocalCerts() {
 		certMounts := []corev1.VolumeMount{
 			{
 				Name:      "client-crt",
@@ -412,7 +432,7 @@ NODE_ZONE=$(jq '."topology.kubernetes.io/zone"' -r /node/labels.json)
 echo "NODE_ZONE is ${NODE_ZONE}"
 echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 `
-	image := defaultAlpineImage
+	image := DefaultAlpineImage
 	if nc.Spec.AlpineImage != nil {
 		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
 	}
@@ -617,9 +637,13 @@ done
 
 	containers = append(containers, baseContainer)
 
-	if nc.IsBREnabled() || nc.IsLogRotateEnabled() {
+	if nc.IsBREnabled() {
 		agentContainer := generateAgentContainer(c, false)
 		containers = append(containers, agentContainer)
+	}
+	if nc.IsLogRotateEnabled() && logVolumeExists(componentType, c.GenerateVolumes()) {
+		logContainer := generateLogContainer(c)
+		containers = append(containers, logContainer)
 	}
 
 	containers = mergeSidecarContainers(containers, c.ComponentSpec().SidecarContainers())
@@ -932,4 +956,10 @@ func separateFlags(config map[string]string) (map[string]string, map[string]stri
 		}
 	}
 	return dynamic, static
+}
+
+func enableLocalCerts() bool {
+	return os.Getenv("CA_CERT_PATH") != "" &&
+		os.Getenv("CLIENT_CERT_PATH") != "" &&
+		os.Getenv("CLIENT_KEY_PATH") != ""
 }

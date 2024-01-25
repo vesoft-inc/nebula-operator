@@ -154,7 +154,7 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 
 	updatePod, err := s.clientSet.Pod().GetPod(namespace, updatePodName)
 	if err != nil {
-		klog.Errorf("get pod failed: %v", namespace, updatePodName, err)
+		klog.Errorf("get pod [%s/%s] failed: %v", namespace, updatePodName, err)
 		return err
 	}
 	_, ok := updatePod.Annotations[TransLeaderBeginTime]
@@ -397,6 +397,7 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 		return nil
 	}
 
+	// TODO the invoking maybe repeat times
 	for _, space := range spaces {
 		if err := mc.BalanceLeader(*space.Id.SpaceID); err != nil {
 			return err

@@ -3,8 +3,8 @@ CRD_OPTIONS ?= "crd:generateEmbeddedObjectMeta=false,maxDescLen=0"
 # Set build symbols
 LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
-DOCKER_REGISTRY ?= docker.io
-DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
+DOCKER_REGISTRY ?= reg.vesoft-inc.com
+DOCKER_REPO ?= ${DOCKER_REGISTRY}/cloud-dev
 IMAGE_TAG ?= v1.7.5
 
 CHARTS_VERSION ?= 1.7.0
@@ -98,26 +98,15 @@ USERNAME = $(shell echo $$USERNAME)
 docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchitecture docker images and manifest.
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build;)
 	echo "Building and pushing nebula-operator image... $(BUILDX_PLATFORMS)"
-	if [ -z ${USERNAME} ];then \
-		docker buildx build \
-				--no-cache \
-				--pull \
-				--push \
-				--progress plain \
-				--platform $(BUILDX_PLATFORMS) \
-				--file Dockerfile.multiarch \
-				-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .;\
-	else\
-  		docker buildx build \
-				--no-cache \
-				--pull \
-				--push \
-				--progress plain \
-				--platform $(BUILDX_PLATFORMS) \
-				--file Dockerfile.multiarch \
-				--build-arg USERNAME=${USERNAME} \
-				-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .;\
-	fi
+	docker buildx build \
+    		--no-cache \
+    		--pull \
+    		--push \
+    		--progress plain \
+    		--platform $(BUILDX_PLATFORMS) \
+    		--file Dockerfile.multiarch \
+    		--build-arg USERNAME=${USERNAME} \
+    		-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
 
 alpine-tools: ## Build and push the alpine-tools docker images and manifest.
 	echo "Building and pushing alpine-tools image... $(BUILDX_PLATFORMS)"

@@ -5,7 +5,7 @@ LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
 DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
-IMAGE_TAG ?= v1.7.0
+IMAGE_TAG ?= v1.7.5
 
 CHARTS_VERSION ?= 1.7.0
 
@@ -93,18 +93,31 @@ ensure-buildx:
 
 PLATFORMS = arm64 amd64
 BUILDX_PLATFORMS = linux/arm64,linux/amd64
+USERNAME = $(shell echo $$USERNAME)
 
 docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchitecture docker images and manifest.
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build;)
 	echo "Building and pushing nebula-operator image... $(BUILDX_PLATFORMS)"
-	docker buildx build \
-    		--no-cache \
-    		--pull \
-    		--push \
-    		--progress plain \
-    		--platform $(BUILDX_PLATFORMS) \
-    		--file Dockerfile.multiarch \
-    		-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
+	if [ -z ${USERNAME} ];then \
+		docker buildx build \
+				--no-cache \
+				--pull \
+				--push \
+				--progress plain \
+				--platform $(BUILDX_PLATFORMS) \
+				--file Dockerfile.multiarch \
+				-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .;\
+	else\
+  		docker buildx build \
+				--no-cache \
+				--pull \
+				--push \
+				--progress plain \
+				--platform $(BUILDX_PLATFORMS) \
+				--file Dockerfile.multiarch \
+				--build-arg USERNAME=${USERNAME} \
+				-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .;\
+	fi
 
 alpine-tools: ## Build and push the alpine-tools docker images and manifest.
 	echo "Building and pushing alpine-tools image... $(BUILDX_PLATFORMS)"

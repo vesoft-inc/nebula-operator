@@ -5,7 +5,8 @@ LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
 DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
-IMAGE_TAG ?= v1.7.0
+USERNAME ?= ng-user
+IMAGE_TAG ?= v1.7.5
 
 CHARTS_VERSION ?= 1.7.0
 
@@ -104,6 +105,7 @@ docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchi
     		--progress plain \
     		--platform $(BUILDX_PLATFORMS) \
     		--file Dockerfile.multiarch \
+    		--build-arg USERNAME=${USERNAME} \
     		-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
 
 alpine-tools: ## Build and push the alpine-tools docker images and manifest.

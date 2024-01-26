@@ -3,8 +3,9 @@ CRD_OPTIONS ?= "crd:generateEmbeddedObjectMeta=false,maxDescLen=0"
 # Set build symbols
 LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
-DOCKER_REGISTRY ?= reg.vesoft-inc.com
-DOCKER_REPO ?= ${DOCKER_REGISTRY}/cloud-dev
+DOCKER_REGISTRY ?= docker.io
+DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
+USERNAME ?= ng-user
 IMAGE_TAG ?= v1.7.5
 
 CHARTS_VERSION ?= 1.7.0
@@ -93,7 +94,6 @@ ensure-buildx:
 
 PLATFORMS = arm64 amd64
 BUILDX_PLATFORMS = linux/arm64,linux/amd64
-USERNAME = $(shell echo $$USERNAME)
 
 docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchitecture docker images and manifest.
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build;)

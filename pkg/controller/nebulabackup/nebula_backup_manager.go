@@ -18,6 +18,7 @@ package nebulabackup
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -34,8 +35,8 @@ import (
 )
 
 const (
-	EnvS3AccessKeyName = "AWS_ACCESS_KEY_ID"
-	EnvS3SecretKeyName = "AWS_SECRET_ACCESS_KEY"
+	S3AccessKey = "AWS_ACCESS_KEY_ID"
+	S3SecretKey = "AWS_SECRET_ACCESS_KEY"
 )
 
 type Manager interface {
@@ -132,16 +133,60 @@ func createStorageString(backup *v1alpha1.NebulaBackup) string {
 	var storageString string
 	switch backup.Spec.BR.StorageProviderType {
 	case "s3":
-		storageString = fmt.Sprintf("--storage s3://%s --s3.access_key $(%s) --s3.secret_key $(%s) --s3.region %s --s3.endpoint %s", backup.Spec.BR.S3.Bucket, EnvS3AccessKeyName, EnvS3SecretKeyName, backup.Spec.BR.S3.Region, backup.Spec.BR.S3.Endpoint)
+		storageString = fmt.Sprintf("--storage s3://%s --s3.access_key $(%s) --s3.secret_key $(%s) --s3.region %s --s3.endpoint %s", backup.Spec.BR.S3.Bucket, S3AccessKey, S3SecretKey, backup.Spec.BR.S3.Region, backup.Spec.BR.S3.Endpoint)
 	}
 	return storageString
+}
+
+func getEnvForCredentials(backup *v1alpha1.NebulaBackup) []corev1.EnvVar {
+	if os.Getenv(S3AccessKey) != "" && os.Getenv(S3SecretKey) != "" {
+		return []corev1.EnvVar{
+			{
+				Name:  S3AccessKey,
+				Value: os.Getenv(S3AccessKey),
+			},
+			{
+				Name:  S3SecretKey,
+				Value: os.Getenv(S3SecretKey),
+			},
+		}
+	}
+
+	return []corev1.EnvVar{
+		{
+			Name: S3AccessKey,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: backup.Spec.BR.S3.SecretName,
+					},
+					Key: br.S3AccessKey,
+				},
+			},
+		},
+		{
+			Name: S3SecretKey,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: backup.Spec.BR.S3.SecretName,
+					},
+					Key: br.S3SecretKey,
+				},
+			},
+		},
+	}
 }
 
 func (bm *backupManager) generateBackupJob(backup *v1alpha1.NebulaBackup, metaAddr string) *batchv1.Job {
 	var podSpec corev1.PodSpec
 	var ttlFinished *int32
 	storageString := createStorageString(backup)
+
+	credentials := getEnvForCredentials(backup)
+
 	if len(backup.OwnerReferences) != 0 && backup.OwnerReferences[0].Kind == "NebulaScheduledBackup" && len(backup.Env) != 0 {
+		envtoPass := append(credentials, backup.Env...)
 		podSpec = corev1.PodSpec{
 			ImagePullSecrets: backup.Spec.ImagePullSecrets,
 			Containers: []corev1.Container{
@@ -149,38 +194,16 @@ func (bm *backupManager) generateBackupJob(backup *v1alpha1.NebulaBackup, metaAd
 					Name:            "backup",
 					Image:           backup.Spec.ToolImage,
 					ImagePullPolicy: backup.Spec.ImagePullPolicy,
-					Env: append([]corev1.EnvVar{
-						{
+					Env: append(envtoPass,
+						corev1.EnvVar{
 							Name:  "META_ADDRESS",
 							Value: metaAddr,
 						},
-						{
-							Name: EnvS3AccessKeyName,
-							ValueFrom: &corev1.EnvVarSource{
-								SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: backup.Spec.BR.S3.SecretName,
-									},
-									Key: br.S3AccessKey,
-								},
-							},
-						},
-						{
-							Name: EnvS3SecretKeyName,
-							ValueFrom: &corev1.EnvVarSource{
-								SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: backup.Spec.BR.S3.SecretName,
-									},
-									Key: br.S3SecretKey,
-								},
-							},
-						},
-						{
+						corev1.EnvVar{
 							Name:  "STORAGE_LINE",
 							Value: storageString,
 						},
-					}, backup.Env...),
+					),
 					Command: []string{"/bin/bash", "-c"},
 					Args:    []string{"/usr/local/bin/runnable/backup-cleanup-run.sh"},
 					VolumeMounts: []corev1.VolumeMount{
@@ -245,32 +268,9 @@ func (bm *backupManager) generateBackupJob(backup *v1alpha1.NebulaBackup, metaAd
 					Name:            "backup",
 					Image:           backup.Spec.ToolImage,
 					ImagePullPolicy: backup.Spec.ImagePullPolicy,
-					Env: []corev1.EnvVar{
-						{
-							Name: EnvS3AccessKeyName,
-							ValueFrom: &corev1.EnvVarSource{
-								SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: backup.Spec.BR.S3.SecretName,
-									},
-									Key: br.S3AccessKey,
-								},
-							},
-						},
-						{
-							Name: EnvS3SecretKeyName,
-							ValueFrom: &corev1.EnvVarSource{
-								SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: backup.Spec.BR.S3.SecretName,
-									},
-									Key: br.S3SecretKey,
-								},
-							},
-						},
-					},
-					Command: []string{"/bin/sh", "-ecx"},
-					Args:    []string{backupCmd},
+					Env:             credentials,
+					Command:         []string{"/bin/sh", "-ecx"},
+					Args:            []string{backupCmd},
 				},
 			},
 			RestartPolicy: corev1.RestartPolicyNever,

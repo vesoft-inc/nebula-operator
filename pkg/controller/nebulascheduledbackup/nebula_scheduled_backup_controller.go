@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nebulabackup
+package nebulascheduledbackup
 
 import (
 	"context"
@@ -62,13 +62,11 @@ func NewBackupReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;list
-// +kubebuilder:rbac:groups="",resources=jobs,verbs=create;get;list;watch;delete
-// +kubebuilder:rbac:groups="batch",resources=jobs,verbs=create;get;list;watch;delete
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups/finalizers,verbs=update
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulascheduledbackups,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulascheduledbackups/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulascheduledbackups/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
 	key := req.NamespacedName.String()
@@ -79,45 +77,56 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res recon
 	defer func() {
 		if retErr == nil {
 			if res.Requeue || res.RequeueAfter > 0 {
-				klog.Infof("Finished reconciling NebulaBackup [%s] (%v), result: %v", key, time.Since(startTime), res)
+				klog.Infof("Finished reconciling NebulaScheduledBackup [%s] (%v), result: %v", key, time.Since(startTime), res)
 			} else {
-				klog.Infof("Finished reconciling NebulaBackup [%s], spendTime: (%v)", key, time.Since(startTime))
+				klog.Infof("Finished reconciling NebulaScheduledBackup [%s], spendTime: (%v)", key, time.Since(startTime))
 			}
 		} else {
-			klog.Errorf("Failed to reconcile NebulaBackup [%s], spendTime: (%v)", key, time.Since(startTime))
+			klog.Errorf("Failed to reconcile NebulaScheduledBackup [%s], spendTime: (%v)", key, time.Since(startTime))
 		}
 	}()
 
-	var backup v1alpha1.NebulaBackup
-	if err := r.client.Get(subCtx, req.NamespacedName, &backup); err != nil {
+	var scheduledBackup v1alpha1.NebulaScheduledBackup
+	if err := r.client.Get(subCtx, req.NamespacedName, &scheduledBackup); err != nil {
 		if apierrors.IsNotFound(err) {
-			klog.Infof("Skipping because NebulaBackup [%s] has been deleted", key)
+			klog.Infof("Skipping because NebulaScheduledBackup [%s] has been deleted", key)
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	klog.Info("Start to reconcile NebulaBackup")
+	klog.Info("Start to reconcile NebulaScheduledBackup")
 
-	if err := r.syncNebulaBackup(backup.DeepCopy()); err != nil {
+	// Check the current resource version
+	currentResourceVersion := scheduledBackup.GetResourceVersion()
+	klog.Infof("Current resource version: %v", currentResourceVersion)
+
+	updatedScheduledBackup := scheduledBackup.DeepCopy()
+	newReconcilerDuration, err := r.syncNebulaScheduledBackup(updatedScheduledBackup)
+	if err != nil {
 		if errorsutil.IsReconcileError(err) {
-			klog.Infof("NebulaBackup [%s] reconcile details: %v", key, err)
-			return ctrl.Result{RequeueAfter: reconcileTimeOut}, nil
+			klog.Infof("NebulaScheduledBackup [%s] reconcile details: %v", key, err)
+			return ctrl.Result{RequeueAfter: reconcileTimeOut}, err
 		}
-		klog.Errorf("NebulaBackup [%s] reconcile failed: %v", key, err)
-		return ctrl.Result{RequeueAfter: defaultTimeout}, nil
+		klog.Errorf("NebulaScheduledBackup [%s] reconcile failed: %v", key, err)
+		return ctrl.Result{RequeueAfter: defaultTimeout}, err
 	}
 
+	if newReconcilerDuration != nil {
+		// wait until next backup time to reconcile to avoid wasting resources.
+		return ctrl.Result{Requeue: true, RequeueAfter: *newReconcilerDuration}, nil
+	}
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) syncNebulaBackup(backup *v1alpha1.NebulaBackup) error {
-	return r.control.SyncNebulaBackup(backup)
+func (r *Reconciler) syncNebulaScheduledBackup(backup *v1alpha1.NebulaScheduledBackup) (*time.Duration, error) {
+	newReconcilerDuration, err := r.control.Sync(backup)
+	return newReconcilerDuration, err
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.NebulaBackup{}).
+		For(&v1alpha1.NebulaScheduledBackup{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
 		Complete(r)
 }

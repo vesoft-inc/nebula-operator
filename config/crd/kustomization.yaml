@@ -3,6 +3,9 @@
 # It should be run by config/default
 resources:
 - bases/apps.nebula-graph.io_nebulaclusters.yaml
+- bases/apps.nebula-graph.io_nebulabackups.yaml
+- bases/apps.nebula-graph.io_nebularestores.yaml
+- bases/apps.nebula-graph.io_nebulascheduledbackups.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

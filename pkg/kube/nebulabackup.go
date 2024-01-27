@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,8 +39,11 @@ type BackupUpdateStatus struct {
 }
 
 type NebulaBackup interface {
+	CreateNebulaBackup(nb *v1alpha1.NebulaBackup) error
 	GetNebulaBackup(namespace, name string) (*v1alpha1.NebulaBackup, error)
 	UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, condition *v1alpha1.BackupCondition, newStatus *BackupUpdateStatus) error
+	DeleteNebulaBackup(namespace, name string) error
+	ListNebulaBackupsByUID(namespace string, ownerReferenceUID types.UID) ([]v1alpha1.NebulaBackup, error)
 }
 
 type backupClient struct {
@@ -48,6 +52,17 @@ type backupClient struct {
 
 func NewNebulaBackup(cli client.Client) NebulaBackup {
 	return &backupClient{cli: cli}
+}
+
+func (c *backupClient) CreateNebulaBackup(nb *v1alpha1.NebulaBackup) error {
+	if err := c.cli.Create(context.TODO(), nb); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			klog.Infof("NebulaBackup %s/%s already exists", nb.Namespace, nb.Name)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *backupClient) GetNebulaBackup(namespace, name string) (*v1alpha1.NebulaBackup, error) {
@@ -63,6 +78,24 @@ func (r *backupClient) GetNebulaBackup(namespace, name string) (*v1alpha1.Nebula
 	return backup, nil
 }
 
+func (r *backupClient) ListNebulaBackupsByUID(namespace string, ownerReferenceUID types.UID) ([]v1alpha1.NebulaBackup, error) {
+	backupList := v1alpha1.NebulaBackupList{}
+	if err := r.cli.List(context.TODO(), &backupList, client.InNamespace(namespace)); err != nil {
+		return nil, err
+	}
+
+	var filteredBackups []v1alpha1.NebulaBackup
+	for _, backup := range backupList.Items {
+		for _, ownerRef := range backup.OwnerReferences {
+			if ownerRef.UID == ownerReferenceUID {
+				filteredBackups = append(filteredBackups, backup)
+			}
+		}
+	}
+
+	return filteredBackups, nil
+}
+
 func (r *backupClient) UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, condition *v1alpha1.BackupCondition, newStatus *BackupUpdateStatus) error {
 	var isStatusUpdate bool
 	var isConditionUpdate bool
@@ -76,6 +109,14 @@ func (r *backupClient) UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, c
 			utilruntime.HandleError(fmt.Errorf("get NebulaBackup [%s/%s] failed: %v", ns, rtName, err))
 			return err
 		}
+
+		// Make sure current resource version changes to avoid immediate reconcile if no error
+		updateErr := r.cli.Update(context.TODO(), backup)
+		if updateErr != nil {
+			klog.Errorf("update NebulaScheduledBackup [%s/%s] status failed: %v", ns, rtName, updateErr)
+			return updateErr
+		}
+
 		isStatusUpdate = updateBackupStatus(&backup.Status, newStatus)
 		isConditionUpdate = condutil.UpdateNebulaBackupCondition(&backup.Status, condition)
 		if isStatusUpdate || isConditionUpdate {
@@ -91,6 +132,21 @@ func (r *backupClient) UpdateNebulaBackupStatus(backup *v1alpha1.NebulaBackup, c
 	})
 }
 
+func (r *backupClient) DeleteNebulaBackup(namespace, name string) error {
+	nb, err := r.GetNebulaBackup(namespace, name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := r.cli.Delete(context.TODO(), nb); err != nil {
+		return err
+	}
+	klog.Infof("NebulaBackup [%s/%s] deleted successfully", namespace, name)
+	return nil
+}
+
 func updateBackupStatus(status *v1alpha1.BackupStatus, newStatus *BackupUpdateStatus) bool {
 	if newStatus == nil {
 		return false
@@ -102,11 +158,11 @@ func updateBackupStatus(status *v1alpha1.BackupStatus, newStatus *BackupUpdateSt
 		isUpdate = true
 	}
 	if newStatus.TimeStarted != nil {
-		status.TimeStarted = *newStatus.TimeStarted
+		status.TimeStarted = newStatus.TimeStarted
 		isUpdate = true
 	}
 	if newStatus.TimeCompleted != nil {
-		status.TimeCompleted = *newStatus.TimeCompleted
+		status.TimeCompleted = newStatus.TimeCompleted
 		isUpdate = true
 	}
 

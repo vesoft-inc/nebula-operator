@@ -34,6 +34,8 @@ type NebulaBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
 	Spec   BackupSpec   `json:"spec,omitempty"`
 	Status BackupStatus `json:"status,omitempty"`
 }
@@ -51,8 +53,6 @@ type NebulaBackupList struct {
 type BackupConditionType string
 
 const (
-	// BackupPending means the backup is pending, waiting for create backup job
-	BackupPending BackupConditionType = "Pending"
 	// BackupRunning means the backup is running.
 	BackupRunning BackupConditionType = "Running"
 	// BackupComplete means the backup has successfully executed and the
@@ -104,10 +104,10 @@ type BackupSpec struct {
 type BackupStatus struct {
 	// TimeStarted is the time at which the backup was started.
 	// +nullable
-	TimeStarted metav1.Time `json:"timeStarted,omitempty"`
+	TimeStarted *metav1.Time `json:"timeStarted,omitempty"`
 	// TimeCompleted is the time at which the backup was completed.
 	// +nullable
-	TimeCompleted metav1.Time `json:"timeCompleted,omitempty"`
+	TimeCompleted *metav1.Time `json:"timeCompleted,omitempty"`
 	// Phase is a user readable state inferred from the underlying Backup conditions
 	Phase BackupConditionType `json:"phase,omitempty"`
 	// +nullable

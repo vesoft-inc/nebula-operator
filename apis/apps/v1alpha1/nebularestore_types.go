@@ -97,6 +97,9 @@ type BRConfig struct {
 	BackupName string `json:"backupName"`
 	// Concurrency is used to control the number of concurrent file downloads during data restoration.
 	Concurrency int32 `json:"concurrency,omitempty"`
+	// StorageProviderType specifies the type of storage backups should be stored in (currently only s3 is supported).
+	// +kubebuilder:validation:Pattern=`^(s3)$`
+	StorageProviderType string `json:"storageProviderType,omitempty"`
 	// StorageProvider configures where and how backups should be stored.
 	StorageProvider `json:",inline"`
 }

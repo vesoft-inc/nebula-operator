@@ -28,6 +28,16 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - get
@@ -215,6 +225,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulascheduledbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulascheduledbackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulascheduledbackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - autoscaling.nebula-graph.io
   resources:
   - nebulaautoscalers
@@ -234,6 +270,16 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
 - apiGroups:
   - metrics.k8s.io
   resources:

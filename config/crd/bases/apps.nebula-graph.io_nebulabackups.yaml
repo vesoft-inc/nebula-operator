@@ -67,6 +67,9 @@ spec:
                       secretName:
                         type: string
                     type: object
+                  storageProviderType:
+                    pattern: ^(s3)$
+                    type: string
                 required:
                 - clusterName
                 type: object
@@ -81,6 +84,12 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+              maxBackups:
+                format: int32
+                type: integer
+              maxReservedTimeEpoch:
+                format: int64
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string

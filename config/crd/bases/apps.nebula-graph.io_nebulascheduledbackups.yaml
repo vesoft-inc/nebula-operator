@@ -5,19 +5,40 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: backupschedules.apps.nebula-graph.io
+  name: nebulascheduledbackups.apps.nebula-graph.io
 spec:
   group: apps.nebula-graph.io
   names:
-    kind: BackupSchedule
-    listKind: BackupScheduleList
-    plural: backupschedules
+    kind: NebulaScheduledBackup
+    listKind: NebulaScheduledBackupList
+    plural: nebulascheduledbackups
     shortNames:
-    - bs
-    singular: backupschedule
+    - nsb
+    singular: nebulascheduledbackup
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The current schedule set for the scheduled backup
+      jsonPath: .spec.schedule
+      name: Schedule
+      type: string
+    - description: Whether or not the scheduled backup is paused
+      jsonPath: .spec.pause
+      name: Pause
+      type: string
+    - description: The timestamp at which the last backup was triggered
+      jsonPath: .status.lastScheduledBackupTime
+      name: Last Triggered Backup
+      type: string
+    - description: The timestamp at which the last backup was successful completed
+      format: date-time
+      jsonPath: .status.lastSuccessfulBackupTime
+      name: Last Successful Backup
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:
@@ -53,6 +74,9 @@ spec:
                           secretName:
                             type: string
                         type: object
+                      storageProviderType:
+                        pattern: ^(s3)$
+                        type: string
                     required:
                     - clusterName
                     type: object
@@ -67,6 +91,12 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     type: array
+                  maxBackups:
+                    format: int32
+                    type: integer
+                  maxReservedTimeEpoch:
+                    format: int64
+                    type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -77,8 +107,15 @@ spec:
               maxBackups:
                 format: int32
                 type: integer
-              maxReservedTime:
+              maxFailedNebulaBackupJobs:
+                format: int32
+                type: integer
+              maxRetentionTime:
+                pattern: ^([0-9]+(\.[0-9]+)?(s|m|h))+$
                 type: string
+              maxSuccessfulNebulaBackupJobs:
+                format: int32
+                type: integer
               pause:
                 type: boolean
               schedule:
@@ -89,11 +126,22 @@ spec:
             type: object
           status:
             properties:
-              lastBackup:
-                type: string
-              lastBackupTime:
+              currPauseStatus:
+                type: boolean
+              lastScheduledBackupTime:
                 format: date-time
                 type: string
+              lastSuccessfulBackupTime:
+                format: date-time
+                type: string
+              mostRecentJobFailed:
+                type: boolean
+              numberofFailedBackups:
+                format: int32
+                type: integer
+              numberofSuccessfulBackups:
+                format: int32
+                type: integer
             type: object
         type: object
     served: true

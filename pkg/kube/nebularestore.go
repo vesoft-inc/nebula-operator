@@ -47,16 +47,16 @@ type NebulaRestore interface {
 }
 
 type restoreClient struct {
-	cli client.Client
+	client client.Client
 }
 
-func NewNebulaRestore(cli client.Client) NebulaRestore {
-	return &restoreClient{cli: cli}
+func NewNebulaRestore(client client.Client) NebulaRestore {
+	return &restoreClient{client: client}
 }
 
 func (r *restoreClient) GetNebulaRestore(namespace, name string) (*v1alpha1.NebulaRestore, error) {
 	restore := &v1alpha1.NebulaRestore{}
-	err := r.cli.Get(context.TODO(), types.NamespacedName{
+	err := r.client.Get(context.TODO(), types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}, restore)
@@ -83,7 +83,7 @@ func (r *restoreClient) UpdateNebulaRestoreStatus(restore *v1alpha1.NebulaRestor
 		isStatusUpdate = updateRestoreStatus(&restore.Status, newStatus)
 		isConditionUpdate = condutil.UpdateNebulaRestoreCondition(&restore.Status, condition)
 		if isStatusUpdate || isConditionUpdate {
-			updateErr := r.cli.Status().Update(context.TODO(), restore)
+			updateErr := r.client.Status().Update(context.TODO(), restore)
 			if updateErr == nil {
 				klog.Infof("NebulaRestore [%s/%s] updated successfully", ns, rtName)
 				return nil
@@ -110,11 +110,11 @@ func updateRestoreStatus(status *v1alpha1.RestoreStatus, newStatus *RestoreUpdat
 		isUpdate = true
 	}
 	if newStatus.TimeStarted != nil {
-		status.TimeStarted = *newStatus.TimeStarted
+		status.TimeStarted = newStatus.TimeStarted
 		isUpdate = true
 	}
 	if newStatus.TimeCompleted != nil {
-		status.TimeCompleted = *newStatus.TimeCompleted
+		status.TimeCompleted = newStatus.TimeCompleted
 		isUpdate = true
 	}
 	if newStatus.Partitions != nil || (status.Partitions != nil && newStatus.Partitions == nil) {

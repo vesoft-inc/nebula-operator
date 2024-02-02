@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Vesoft Inc.
+Copyright 2024 Vesoft Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nebularestore
+package nebulabackup
 
 import (
 	"context"
@@ -44,14 +44,19 @@ const (
 
 var _ reconcile.Reconciler = (*Reconciler)(nil)
 
-// Reconciler reconciles a NebulaRestore object
+// Reconciler reconciles a NebulaBackup object
 type Reconciler struct {
 	control ControlInterface
 	client  client.Client
 }
 
-func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
+func NewBackupReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 	clientSet, err := kube.NewClientSet(mgr.GetConfig())
+	if err != nil {
+		return nil, err
+	}
+
+	restClient, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -63,24 +68,23 @@ func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 	eventBroadcaster := record.NewBroadcasterWithCorrelatorOptions(record.CorrelatorOptions{QPS: 1})
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: typedv1.New(kubeClient.CoreV1().RESTClient()).Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "nebula-restore-controller"})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "nebula-backup-controller"})
 
-	restoreMgr := NewRestoreManager(clientSet, recorder)
+	backupMgr := NewBackupManager(clientSet, restClient, recorder)
 
 	return &Reconciler{
-		control: NewRestoreControl(clientSet, restoreMgr),
+		control: NewBackupControl(mgr.GetClient(), clientSet, backupMgr),
 		client:  mgr.GetClient(),
 	}, nil
 }
 
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;list
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebularestores,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebularestores/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebularestores/finalizers,verbs=update
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulaclusters,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.nebula-graph.io,resources=nebulabackups/finalizers,verbs=update
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
 	key := req.NamespacedName.String()
@@ -88,44 +92,44 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res recon
 	defer func() {
 		if retErr == nil {
 			if res.Requeue || res.RequeueAfter > 0 {
-				klog.Infof("Finished reconciling NebulaRestore [%s] (%v), result: %v", key, time.Since(startTime), res)
+				klog.Infof("Finished reconciling NebulaBackup [%s] (%v), result: %v", key, time.Since(startTime), res)
 			} else {
-				klog.Infof("Finished reconciling NebulaRestore [%s], spendTime: (%v)", key, time.Since(startTime))
+				klog.Infof("Finished reconciling NebulaBackup [%s], spendTime: (%v)", key, time.Since(startTime))
 			}
 		} else {
-			klog.Errorf("Failed to reconcile NebulaRestore [%s], spendTime: (%v)", key, time.Since(startTime))
+			klog.Errorf("Failed to reconcile NebulaBackup [%s], spendTime: (%v)", key, time.Since(startTime))
 		}
 	}()
 
-	var restore v1alpha1.NebulaRestore
-	if err := r.client.Get(context.Background(), req.NamespacedName, &restore); err != nil {
+	var backup v1alpha1.NebulaBackup
+	if err := r.client.Get(context.Background(), req.NamespacedName, &backup); err != nil {
 		if apierrors.IsNotFound(err) {
-			klog.Infof("Skipping because NebulaRestore [%s] has been deleted", key)
+			klog.Infof("Skipping because NebulaBackup [%s] has been deleted", key)
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	klog.Info("Start to reconcile NebulaRestore")
+	klog.Info("Start to reconcile NebulaBackup")
 
-	if err := r.syncNebulaRestore(restore.DeepCopy()); err != nil {
+	if err := r.syncNebulaBackup(backup.DeepCopy()); err != nil {
 		if errorsutil.IsReconcileError(err) {
-			klog.Infof("NebulaRestore [%s] reconcile details: %v", key, err)
+			klog.Infof("NebulaBackup [%s] reconcile details: %v", key, err)
 			return ctrl.Result{RequeueAfter: reconcileTimeOut}, nil
 		}
-		klog.Errorf("NebulaRestore [%s] reconcile failed: %v", key, err)
+		klog.Errorf("NebulaBackup [%s] reconcile failed: %v", key, err)
 		return ctrl.Result{RequeueAfter: defaultTimeout}, nil
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) syncNebulaRestore(restore *v1alpha1.NebulaRestore) error {
-	return r.control.UpdateNebulaRestore(restore)
+func (r *Reconciler) syncNebulaBackup(backup *v1alpha1.NebulaBackup) error {
+	return r.control.UpdateNebulaBackup(backup)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.NebulaRestore{}).
+		For(&v1alpha1.NebulaBackup{}).
 		Complete(r)
 }

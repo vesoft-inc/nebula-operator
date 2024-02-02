@@ -151,7 +151,7 @@ func (c *nebulaConsole) generatePod(nc *v1alpha1.NebulaCluster) *corev1.Pod {
 
 	volumes := make([]corev1.Volume, 0)
 	if nc.IsGraphdSSLEnabled() || nc.IsClusterSSLEnabled() {
-		certVolumes := v1alpha1.GetClientCertsVolume(nc.Spec.SSLCerts)
+		certVolumes := v1alpha1.GetClientCertVolumes(nc.Spec.SSLCerts)
 		volumes = append(volumes, certVolumes...)
 	}
 

@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nebula-full-backup
+spec:
+  parallelism: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: nebula-image
+      containers:
+        - image: reg.vesoft-inc.com/cloud-dev/br-ent:v3.7.0
+          imagePullPolicy: Always
+          name: backup
+          env:
+          - name: CA_CERT_PATH
+            value: /credentials/ca.crt
+          - name: CLIENT_CERT_PATH
+            value: /credentials/client.crt
+          - name: CLIENT_KEY_PATH
+            value: /credentials/client.key
+          command:
+            - /bin/sh
+            - -ecx
+            - 'exec /usr/local/bin/br-ent backup full 
+            --meta META_ADDRESS:9559 
+            --storage s3://BUCKET
+            --s3.access_key ACCESS_KEY 
+            --s3.secret_key SECRET_KEY 
+            --s3.region REGION 
+            --s3.endpoint https://s3.REGION.amazonaws.com
+            --enable_ssl
+            --insecure_skip_verify'
+          volumeMounts:
+          - name: credentials
+            mountPath: /credentials
+        - name: auth-sidecar
+          imagePullPolicy: Always
+          image: reg.vesoft-inc.com/cloud-dev/nebula-certs:latest
+          volumeMounts:
+          - name: credentials
+            mountPath: /credentials
+      volumes:
+      - name: credentials
+        emptyDir:
+          medium: Memory

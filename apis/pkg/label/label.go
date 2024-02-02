@@ -37,6 +37,10 @@ const (
 	ComponentLabelKey string = "app.kubernetes.io/component"
 	// ClusterLabelKey represents a unique name identifying the cluster of an application
 	ClusterLabelKey string = "app.kubernetes.io/cluster"
+	// CronBackupLabelKey is cron backup key
+	CronBackupLabelKey string = "apps.nebula-graph.io/cron-backup"
+	// BackupLabelKey is backup key
+	BackupLabelKey string = "apps.nebula-graph.io/backup"
 
 	// NebulaOperator is ManagedByLabelKey label value
 	NebulaOperator string = "nebula-operator"
@@ -51,6 +55,11 @@ const (
 	ExporterLabelVal string = "exporter"
 	// ConsoleLabelVal is exporter label value
 	ConsoleLabelVal string = "console"
+
+	// CleanJobLabelVal is clean job label value
+	CleanJobLabelVal string = "clean"
+	// BackupJobLabelVal is backup job label value
+	BackupJobLabelVal string = "backup"
 )
 
 type Label labels.Set
@@ -67,9 +76,27 @@ func (l Label) Cluster(name string) Label {
 	return l
 }
 
+func (l Label) CronJob(val string) Label {
+	l[CronBackupLabelKey] = val
+	return l
+}
+
+func (l Label) Backup(val string) Label {
+	l[BackupLabelKey] = val
+	return l
+}
+
 func (l Label) Component(name string) Label {
 	l[ComponentLabelKey] = name
 	return l
+}
+
+func (l Label) CleanJob() Label {
+	return l.Component(CleanJobLabelVal)
+}
+
+func (l Label) BackupJob() Label {
+	return l.Component(BackupJobLabelVal)
 }
 
 func (l Label) Console() Label {

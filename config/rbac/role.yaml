@@ -139,6 +139,32 @@ rules:
 - apiGroups:
   - apps.nebula-graph.io
   resources:
+  - nebulabackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulabackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulabackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
   - nebulaclusters
   verbs:
   - create
@@ -158,6 +184,32 @@ rules:
   - apps.nebula-graph.io
   resources:
   - nebulaclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulacronbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulacronbackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.nebula-graph.io
+  resources:
+  - nebulacronbackups/status
   verbs:
   - get
   - patch
@@ -208,6 +260,18 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - metrics.k8s.io
   resources:

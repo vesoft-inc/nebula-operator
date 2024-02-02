@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gs-secret
+type: Opaque
+data:
+  credentials: <GOOGLE_APPLICATION_CREDENTIALS_JSON>
+---
+apiVersion: apps.nebula-graph.io/v1alpha1
+kind: NebulaRestore
+metadata:
+  name: restore
+spec:
+  config:
+    clusterName: nebula
+    backupName: "BACKUP_2024_01_12_10_04_16"
+    concurrency: 3
+    gs:
+      location: us-central1
+      bucket: "nebula-br-test"
+      secretName: "gs-secret"

@@ -33,7 +33,10 @@ type ClientSet interface {
 	Ingress() Ingress
 	Workload() Workload
 	Deployment() Deployment
+	Job() Job
 	NebulaCluster() NebulaCluster
+	NebulaBackup() NebulaBackup
+	NebulaCronBackup() NebulaCronBackup
 	NebulaRestore() NebulaRestore
 	NebulaAutoscaler() NebulaAutoscaler
 }
@@ -49,30 +52,36 @@ type clientSet struct {
 	ingressClient    Ingress
 	workloadClient   Workload
 	deployClient     Deployment
+	jobClient        Job
 	nebulaClient     NebulaCluster
+	backupClient     NebulaBackup
+	cronBackupClient NebulaCronBackup
 	restoreClient    NebulaRestore
 	autoscalerClient NebulaAutoscaler
 }
 
 func NewClientSet(config *rest.Config) (ClientSet, error) {
-	cli, err := client.New(config, client.Options{})
+	c, err := client.New(config, client.Options{})
 	if err != nil {
 		return nil, errors.Errorf("error building runtime client: %v", err)
 	}
 	return &clientSet{
-		nodeClient:       NewNode(cli),
-		secretClient:     NewSecret(cli),
-		cmClient:         NewConfigMap(cli),
-		pvClient:         NewPV(cli),
-		pvcClient:        NewPVC(cli),
-		podClient:        NewPod(cli),
-		svcClient:        NewService(cli),
-		ingressClient:    NewIngress(cli),
-		workloadClient:   NewWorkload(cli),
-		deployClient:     NewDeployment(cli),
-		nebulaClient:     NewNebulaCluster(cli),
-		restoreClient:    NewNebulaRestore(cli),
-		autoscalerClient: NewNebulaAutoscaler(cli),
+		nodeClient:       NewNode(c),
+		secretClient:     NewSecret(c),
+		cmClient:         NewConfigMap(c),
+		pvClient:         NewPV(c),
+		pvcClient:        NewPVC(c),
+		podClient:        NewPod(c),
+		svcClient:        NewService(c),
+		ingressClient:    NewIngress(c),
+		workloadClient:   NewWorkload(c),
+		deployClient:     NewDeployment(c),
+		jobClient:        NewJob(c),
+		nebulaClient:     NewNebulaCluster(c),
+		backupClient:     NewNebulaBackup(c),
+		cronBackupClient: NewCronNebulaBackup(c),
+		restoreClient:    NewNebulaRestore(c),
+		autoscalerClient: NewNebulaAutoscaler(c),
 	}, nil
 }
 
@@ -116,8 +125,20 @@ func (c *clientSet) Deployment() Deployment {
 	return c.deployClient
 }
 
+func (c *clientSet) Job() Job {
+	return c.jobClient
+}
+
 func (c *clientSet) NebulaCluster() NebulaCluster {
 	return c.nebulaClient
+}
+
+func (c *clientSet) NebulaBackup() NebulaBackup {
+	return c.backupClient
+}
+
+func (c *clientSet) NebulaCronBackup() NebulaCronBackup {
+	return c.cronBackupClient
 }
 
 func (c *clientSet) NebulaRestore() NebulaRestore {

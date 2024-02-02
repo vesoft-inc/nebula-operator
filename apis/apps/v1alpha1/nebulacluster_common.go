@@ -53,6 +53,27 @@ const (
 	ZoneSuffix = "zone"
 )
 
+func GetClientCertVolumes(sslCerts *SSLCertsSpec) []corev1.Volume {
+	return getClientCertVolumes(sslCerts)
+}
+
+func GetClientCertVolumeMounts() []corev1.VolumeMount {
+	return getClientCertVolumeMounts()
+}
+
+func GenerateInitAgentContainer(c NebulaClusterComponent) corev1.Container {
+	container := generateAgentContainer(c, true)
+	container.Name = AgentInitContainerName
+
+	return container
+}
+
+func EnableLocalCerts() bool {
+	return os.Getenv("CA_CERT_PATH") != "" &&
+		os.Getenv("CLIENT_CERT_PATH") != "" &&
+		os.Getenv("CLIENT_KEY_PATH") != ""
+}
+
 func getComponentName(clusterName string, typ ComponentType) string {
 	return fmt.Sprintf("%s-%s", clusterName, typ)
 }
@@ -139,11 +160,30 @@ func parseCustomPort(defaultPort int32, customPort string) (int32, error) {
 	return p, nil
 }
 
-func GetClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {
-	return getClientCertsVolume(sslCerts)
+func getClientCertVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{
+			Name:      "client-crt",
+			ReadOnly:  true,
+			MountPath: "/usr/local/certs/client.crt",
+			SubPath:   "client.crt",
+		},
+		{
+			Name:      "client-key",
+			ReadOnly:  true,
+			MountPath: "/usr/local/certs/client.key",
+			SubPath:   "client.key",
+		},
+		{
+			Name:      "client-ca-crt",
+			ReadOnly:  true,
+			MountPath: "/usr/local/certs/ca.crt",
+			SubPath:   "ca.crt",
+		},
+	}
 }
 
-func getClientCertsVolume(sslCerts *SSLCertsSpec) []corev1.Volume {
+func getClientCertVolumes(sslCerts *SSLCertsSpec) []corev1.Volume {
 	if sslCerts == nil {
 		return nil
 	}
@@ -282,13 +322,6 @@ func logVolumeExists(componentType string, volumes []corev1.Volume) bool {
 	return false
 }
 
-func GenerateInitAgentContainer(c NebulaClusterComponent) corev1.Container {
-	container := generateAgentContainer(c, true)
-	container.Name = AgentInitContainerName
-
-	return container
-}
-
 func generateLogContainer(c NebulaClusterComponent) corev1.Container {
 	nc := c.GetNebulaCluster()
 	componentType := c.ComponentType().String()
@@ -338,11 +371,11 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 	brCmd := initCmd + " --meta=" + metadAddr
 
 	if nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled() {
-		initCmd += " --enable-ssl"
-		brCmd += " --enable-ssl"
+		initCmd += " --enable_ssl"
+		brCmd += " --enable_ssl"
 		if nc.InsecureSkipVerify() {
-			initCmd += " --insecure-skip-verify"
-			brCmd += " --insecure-skip-verify"
+			initCmd += " --insecure_skip_verify"
+			brCmd += " --insecure_skip_verify"
 		}
 	}
 
@@ -392,27 +425,8 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		}
 	}
 
-	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() && !enableLocalCerts() {
-		certMounts := []corev1.VolumeMount{
-			{
-				Name:      "client-crt",
-				ReadOnly:  true,
-				MountPath: "/usr/local/certs/client.crt",
-				SubPath:   "client.crt",
-			},
-			{
-				Name:      "client-key",
-				ReadOnly:  true,
-				MountPath: "/usr/local/certs/client.key",
-				SubPath:   "client.key",
-			},
-			{
-				Name:      "client-ca-crt",
-				ReadOnly:  true,
-				MountPath: "/usr/local/certs/ca.crt",
-				SubPath:   "ca.crt",
-			},
-		}
+	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() && !EnableLocalCerts() {
+		certMounts := getClientCertVolumeMounts()
 		container.VolumeMounts = append(container.VolumeMounts, certMounts...)
 	}
 
@@ -684,8 +698,8 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 			},
 		})
 	}
-	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() {
-		certVolumes := getClientCertsVolume(nc.Spec.SSLCerts)
+	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() && !EnableLocalCerts() {
+		certVolumes := getClientCertVolumes(nc.Spec.SSLCerts)
 		volumes = append(volumes, certVolumes...)
 	}
 
@@ -956,10 +970,4 @@ func separateFlags(config map[string]string) (map[string]string, map[string]stri
 		}
 	}
 	return dynamic, static
-}
-
-func enableLocalCerts() bool {
-	return os.Getenv("CA_CERT_PATH") != "" &&
-		os.Getenv("CLIENT_CERT_PATH") != "" &&
-		os.Getenv("CLIENT_KEY_PATH") != ""
 }

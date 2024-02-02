@@ -27,7 +27,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
+	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
 type ControlInterface interface {
@@ -81,11 +81,13 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) 
 		for _, pod := range pods {
 			if pod.Status.Phase == corev1.PodFailed {
 				klog.Infof("NebulaCluster [%s/%s] has failed pod %s.", ns, name, pod.Name)
-				if err := c.restoreManager.UpdateCondition(nr, &v1alpha1.RestoreCondition{
+				if err := c.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, &v1alpha1.RestoreCondition{
 					Type:    v1alpha1.RestoreFailed,
 					Status:  corev1.ConditionTrue,
 					Reason:  "PodFailed",
 					Message: fmt.Sprintf("Pod %s has failed", pod.Name),
+				}, &kube.RestoreUpdateStatus{
+					ConditionType: v1alpha1.RestoreFailed,
 				}); err != nil {
 					klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
 				}
@@ -100,15 +102,17 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) 
 	}
 
 	err := c.restoreManager.Sync(nr)
-	if err != nil && !errors.IsReconcileError(err) {
+	if err != nil && !utilerrors.IsReconcileError(err) {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		if err := c.restoreManager.UpdateCondition(nr, &v1alpha1.RestoreCondition{
+		if err := c.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, &v1alpha1.RestoreCondition{
 			Type:    v1alpha1.RestoreFailed,
 			Status:  corev1.ConditionTrue,
 			Reason:  "ExecuteFailed",
 			Message: err.Error(),
+		}, &kube.RestoreUpdateStatus{
+			ConditionType: v1alpha1.RestoreFailed,
 		}); err != nil {
 			klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
 		}

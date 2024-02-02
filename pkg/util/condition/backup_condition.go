@@ -23,13 +23,13 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 )
 
-func UpdateNebulaRestoreCondition(status *v1alpha1.RestoreStatus, condition *v1alpha1.RestoreCondition) bool {
+func UpdateNebulaBackupCondition(status *v1alpha1.BackupStatus, condition *v1alpha1.BackupCondition) bool {
 	if condition == nil {
 		return false
 	}
 
 	condition.LastTransitionTime = metav1.Now()
-	conditionIndex, oldCondition := getRestoreCondition(status, condition.Type)
+	conditionIndex, oldCondition := getBackupCondition(status, condition.Type)
 
 	if oldCondition == nil {
 		status.Conditions = append(status.Conditions, *condition)
@@ -50,32 +50,27 @@ func UpdateNebulaRestoreCondition(status *v1alpha1.RestoreStatus, condition *v1a
 	return !isUpdate
 }
 
-func IsRestoreInvalid(restore *v1alpha1.NebulaRestore) bool {
-	_, condition := getRestoreCondition(&restore.Status, v1alpha1.RestoreInvalid)
+func IsBackupInvalid(backup *v1alpha1.NebulaBackup) bool {
+	_, condition := getBackupCondition(&backup.Status, v1alpha1.BackupInvalid)
 	return condition != nil && condition.Status == corev1.ConditionTrue
 }
 
-func IsRestoreMetadComplete(restore *v1alpha1.NebulaRestore) bool {
-	_, condition := getRestoreCondition(&restore.Status, v1alpha1.RestoreMetadComplete)
+func IsBackupComplete(backup *v1alpha1.NebulaBackup) bool {
+	_, condition := getBackupCondition(&backup.Status, v1alpha1.BackupComplete)
 	return condition != nil && condition.Status == corev1.ConditionTrue
 }
 
-func IsRestoreStoragedComplete(restore *v1alpha1.NebulaRestore) bool {
-	_, condition := getRestoreCondition(&restore.Status, v1alpha1.RestoreStoragedCompleted)
+func IsBackupFailed(backup *v1alpha1.NebulaBackup) bool {
+	_, condition := getBackupCondition(&backup.Status, v1alpha1.BackupFailed)
 	return condition != nil && condition.Status == corev1.ConditionTrue
 }
 
-func IsRestoreComplete(restore *v1alpha1.NebulaRestore) bool {
-	_, condition := getRestoreCondition(&restore.Status, v1alpha1.RestoreComplete)
+func IsBackupClean(backup *v1alpha1.NebulaBackup) bool {
+	_, condition := getBackupCondition(&backup.Status, v1alpha1.BackupClean)
 	return condition != nil && condition.Status == corev1.ConditionTrue
 }
 
-func IsRestoreFailed(restore *v1alpha1.NebulaRestore) bool {
-	_, condition := getRestoreCondition(&restore.Status, v1alpha1.RestoreFailed)
-	return condition != nil && condition.Status == corev1.ConditionTrue
-}
-
-func getRestoreCondition(status *v1alpha1.RestoreStatus, conditionType v1alpha1.RestoreConditionType) (int, *v1alpha1.RestoreCondition) {
+func getBackupCondition(status *v1alpha1.BackupStatus, conditionType v1alpha1.BackupConditionType) (int, *v1alpha1.BackupCondition) {
 	if status == nil {
 		return -1, nil
 	}

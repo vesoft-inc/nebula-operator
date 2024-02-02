@@ -57,9 +57,9 @@ const (
 	// RestoreComplete means the restore has successfully executed and the
 	// backup data has been loaded into nebula cluster.
 	RestoreComplete RestoreConditionType = "Complete"
-	// RestoreMetadComplete means metad pods have been rebuilded from the backup data
+	// RestoreMetadComplete means metad pods have been rebuilt from the backup data
 	RestoreMetadComplete RestoreConditionType = "MetadComplete"
-	// RestoreStoragedCompleted means storaged pods have been rebuilded from the backup data
+	// RestoreStoragedCompleted means storaged pods have been rebuilt from the backup data
 	RestoreStoragedCompleted RestoreConditionType = "StoragedComplete"
 	// RestoreFailed means the restore has failed.
 	RestoreFailed RestoreConditionType = "Failed"
@@ -86,66 +86,42 @@ type RestoreCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-type BRConfig struct {
-	// ClusterName of restore cluster
-	ClusterName string `json:"clusterName"`
-	// ClusterNamespace of restore cluster
-	ClusterNamespace *string `json:"clusterNamespace,omitempty"`
+type RestoreConfig struct {
+	NamespacedObjectReference `json:",inline"`
 	// The name of the backup file.
-	BackupName string `json:"backupName"`
+	BackupName string `json:"backupName,omitempty"`
 	// Concurrency is used to control the number of concurrent file downloads during data restoration.
 	Concurrency int32 `json:"concurrency,omitempty"`
 	// StorageProvider configures where and how backups should be stored.
 	StorageProvider `json:",inline"`
 }
 
-type StorageProvider struct {
-	S3 *S3StorageProvider `json:"s3,omitempty"`
-	GS *GsStorageProvider `json:"gs,omitempty"`
-}
-
-// S3StorageProvider represents a S3 compliant storage for storing backups.
-type S3StorageProvider struct {
-	// Region in which the S3 compatible bucket is located.
-	Region string `json:"region,omitempty"`
-	// Bucket in which to store the backup data.
-	Bucket string `json:"bucket,omitempty"`
-	// Endpoint of S3 compatible storage service
-	Endpoint string `json:"endpoint,omitempty"`
-	// SecretName is the name of secret which stores access key and secret key.
-	// Secret keys: access-key, secret-key
-	SecretName string `json:"secretName,omitempty"`
-}
-
-// GsStorageProvider represents a GS compliant storage for storing backups.
-type GsStorageProvider struct {
-	// Location in which the gs bucket is located.
-	Location string `json:"location,omitempty"`
-	// Bucket in which to store the backup data.
-	Bucket string `json:"bucket,omitempty"`
-	// SecretName is the name of secret which stores
-	// the GS service account or refresh token JSON.
-	// Secret key: credentials
-	SecretName string `json:"secretName,omitempty"`
-}
-
 // RestoreSpec contains the specification for a restore of a nebula cluster backup.
 type RestoreSpec struct {
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
 	// +optional
-	AutoRemoveFailed bool      `json:"autoRemoveFailed,omitempty"`
-	BR               *BRConfig `json:"br,omitempty"`
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// +optional
+	AutoRemoveFailed bool `json:"autoRemoveFailed,omitempty"`
+
+	// +optional
+	Config *RestoreConfig `json:"config,omitempty"`
 }
 
 // RestoreStatus represents the current status of a nebula cluster restore.
 type RestoreStatus struct {
 	// TimeStarted is the time at which the restore was started.
 	// +nullable
-	TimeStarted metav1.Time `json:"timeStarted,omitempty"`
+	TimeStarted *metav1.Time `json:"timeStarted,omitempty"`
 	// TimeCompleted is the time at which the restore was completed.
 	// +nullable
-	TimeCompleted metav1.Time `json:"timeCompleted,omitempty"`
+	TimeCompleted *metav1.Time `json:"timeCompleted,omitempty"`
 	// ClusterName is the name of restored nebula cluster.
 	ClusterName string `json:"clusterName,omitempty"`
 	// Phase is a user readable state inferred from the underlying Restore conditions

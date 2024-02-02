@@ -74,7 +74,7 @@ kind: NebulaRestore
 metadata:
   name: restore1
 spec:
-  br:
+  config:
     # The name of the restore nebula cluster
     clusterName: nebula
     # The name of the backup file.

@@ -28,7 +28,7 @@ type NebulaClusterConditionType string
 const (
 	// NebulaClusterReady indicates that the nebula cluster is ready or not.
 	// This is defined as:
-	// - All workloads are up to date (currentRevision == updateRevision).
+	// - All workloads are up-to-date (currentRevision == updateRevision).
 	// - All nebula component pods are healthy.
 	NebulaClusterReady NebulaClusterConditionType = "Ready"
 )
@@ -230,7 +230,7 @@ type NebulaClusterCondition struct {
 // A WorkloadReference refers to a CustomResourceDefinition by name.
 type WorkloadReference struct {
 	// Name of the referenced CustomResourceDefinition.
-	// eg. statefulsets.apps
+	// e.g. statefulsets.apps
 	Name string `json:"name"`
 
 	// Version indicate which version should be used if CRD has multiple versions
@@ -279,11 +279,11 @@ type ConsoleSpec struct {
 	// +optional
 	Password string `json:"password,omitempty"`
 
-	// url for docker image
+	// Container image.
 	// +optional
 	Image string `json:"image,omitempty"`
 
-	// Version tag for docker images
+	// Version tag for container image.
 	// +optional
 	Version string `json:"version,omitempty"`
 
@@ -294,11 +294,11 @@ type ConsoleSpec struct {
 
 // AgentContainerSpec defines the desired state of Agent
 type AgentContainerSpec struct {
-	// url for docker image
+	// Container image.
 	// +optional
 	Image string `json:"image,omitempty"`
 
-	// Version tag for docker images
+	// Version tag for container image.
 	// +optional
 	Version string `json:"version,omitempty"`
 

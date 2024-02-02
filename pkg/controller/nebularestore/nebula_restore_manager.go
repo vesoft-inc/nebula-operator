@@ -39,20 +39,11 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
+	"github.com/vesoft-inc/nebula-operator/pkg/remote"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	rtutil "github.com/vesoft-inc/nebula-operator/pkg/util/restore"
-)
-
-const (
-	S3AccessKey    = "access-key"
-	S3SecretKey    = "secret-key"
-	S3AccessKeyEnv = "S3_ACCESS_KEY"
-	S3SecretKeyEnv = "S3_SECRET_KEY"
-
-	GsCredentialsKey = "credentials"
-	GsCredentialsEnv = "GS_CREDENTIALS"
 )
 
 type RestoreAgent struct {
@@ -74,9 +65,6 @@ type RestoreAgent struct {
 type Manager interface {
 	// Sync	implements the logic for syncing NebulaRestore.
 	Sync(restore *v1alpha1.NebulaRestore) error
-
-	// UpdateCondition updates the condition for a NebulaRestore.
-	UpdateCondition(restore *v1alpha1.NebulaRestore, condition *v1alpha1.RestoreCondition) error
 }
 
 var _ Manager = (*restoreManager)(nil)
@@ -92,10 +80,6 @@ func NewRestoreManager(clientSet kube.ClientSet, recorder record.EventRecorder) 
 
 func (rm *restoreManager) Sync(restore *v1alpha1.NebulaRestore) error {
 	return rm.syncRestoreProcess(restore)
-}
-
-func (rm *restoreManager) UpdateCondition(restore *v1alpha1.NebulaRestore, condition *v1alpha1.RestoreCondition) error {
-	return rm.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(restore, condition, nil)
 }
 
 // syncRestoreProcess restores nebula cluster which storage is one engine for one part
@@ -115,9 +99,9 @@ backup_root/backup_name
 func (rm *restoreManager) syncRestoreProcess(nr *v1alpha1.NebulaRestore) error {
 	var ready bool
 	ns := nr.GetNamespace()
-	originalName := nr.Spec.BR.ClusterName
-	if nr.Spec.BR.ClusterNamespace != nil {
-		ns = *nr.Spec.BR.ClusterNamespace
+	originalName := nr.Spec.Config.ClusterName
+	if nr.Spec.Config.ClusterNamespace != nil {
+		ns = *nr.Spec.Config.ClusterNamespace
 	}
 	original, err := rm.clientSet.NebulaCluster().GetNebulaCluster(ns, originalName)
 	if err != nil {
@@ -354,38 +338,48 @@ func (rm *restoreManager) genNebulaCluster(restoredName string, nr *v1alpha1.Neb
 	if nr.Spec.NodeSelector != nil {
 		nc.Spec.NodeSelector = nr.Spec.NodeSelector
 	}
+	if nr.Spec.Affinity != nil {
+		nc.Spec.Affinity = nr.Spec.Affinity
+	}
+	if nr.Spec.Tolerations != nil {
+		nc.Spec.Tolerations = nr.Spec.Tolerations
+	}
 
 	return nc
 }
 
 func initRestoreAgent(clientSet kube.ClientSet, restore *v1alpha1.NebulaRestore) (*RestoreAgent, error) {
 	backend := &pb.Backend{}
-	if restore.Spec.BR.S3 != nil {
-		if err := backend.SetUri(fmt.Sprintf("s3://%s", restore.Spec.BR.S3.Bucket)); err != nil {
+	storageType := remote.GetStorageType(restore.Spec.Config.StorageProvider)
+	switch storageType {
+	case v1alpha1.ObjectStorageS3:
+		if err := backend.SetUri(fmt.Sprintf("s3://%s", restore.Spec.Config.S3.Bucket)); err != nil {
 			return nil, err
 		}
-		backend.GetS3().Region = restore.Spec.BR.S3.Region
-		backend.GetS3().Endpoint = restore.Spec.BR.S3.Endpoint
-		accessKey, secretKey, err := getS3Key(clientSet, restore.Namespace, restore.Spec.BR.S3.SecretName)
+		backend.GetS3().Region = restore.Spec.Config.S3.Region
+		backend.GetS3().Endpoint = restore.Spec.Config.S3.Endpoint
+		accessKey, secretKey, err := remote.GetS3Key(clientSet, restore.Namespace, restore.Spec.Config.S3.SecretName)
 		if err != nil {
 			return nil, fmt.Errorf("get S3 key failed: %v", err)
 		}
 		backend.GetS3().AccessKey = accessKey
 		backend.GetS3().SecretKey = secretKey
-	} else if restore.Spec.BR.GS != nil {
-		if err := backend.SetUri(fmt.Sprintf("gs://%s", restore.Spec.BR.GS.Bucket)); err != nil {
+	case v1alpha1.ObjectStorageGS:
+		if err := backend.SetUri(fmt.Sprintf("gs://%s", restore.Spec.Config.GS.Bucket)); err != nil {
 			return nil, err
 		}
-		credentials, err := getGsCredentials(clientSet, restore.Namespace, restore.Spec.BR.GS.SecretName)
+		credentials, err := remote.GetGsCredentials(clientSet, restore.Namespace, restore.Spec.Config.GS.SecretName)
 		if err != nil {
 			return nil, fmt.Errorf("get GS credentials failed: %v", err)
 		}
 		backend.GetGs().Credentials = credentials
+	default:
+		return nil, fmt.Errorf("unknown storage type: %s", storageType)
 	}
 
 	cfg := &rtutil.Config{
-		BackupName:  restore.Spec.BR.BackupName,
-		Concurrency: restore.Spec.BR.Concurrency,
+		BackupName:  restore.Spec.Config.BackupName,
+		Concurrency: restore.Spec.Config.Concurrency,
 		Backend:     backend,
 	}
 
@@ -812,37 +806,4 @@ func (rm *restoreManager) getRestoredName(nr *v1alpha1.NebulaRestore) (string, e
 	}
 
 	return nr.Status.ClusterName, nil
-}
-
-func getGsCredentials(clientSet kube.ClientSet, namespace, secretName string) (credentials string, err error) {
-	if os.Getenv(GsCredentialsEnv) != "" {
-		credentials = os.Getenv(GsCredentialsEnv)
-		return
-	}
-
-	var secret *corev1.Secret
-	secret, err = clientSet.Secret().GetSecret(namespace, secretName)
-	if err != nil {
-		return
-	}
-	credentials = string(secret.Data[GsCredentialsKey])
-	return
-}
-
-func getS3Key(clientSet kube.ClientSet, namespace, secretName string) (accessKey string, secretKey string, err error) {
-	if os.Getenv(S3AccessKeyEnv) != "" && os.Getenv(S3SecretKeyEnv) != "" {
-		accessKey = os.Getenv(S3AccessKeyEnv)
-		secretKey = os.Getenv(S3SecretKeyEnv)
-		return
-	}
-
-	var secret *corev1.Secret
-	secret, err = clientSet.Secret().GetSecret(namespace, secretName)
-	if err != nil {
-		return
-	}
-	accessKey = string(secret.Data[S3AccessKey])
-	secretKey = string(secret.Data[S3SecretKey])
-
-	return
 }

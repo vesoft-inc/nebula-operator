@@ -147,9 +147,6 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res reconcile.Result, retErr error) {
 	key := req.NamespacedName.String()
-	subCtx, cancel := context.WithTimeout(ctx, time.Minute*1)
-	defer cancel()
-
 	startTime := time.Now()
 	defer func() {
 		if retErr == nil {
@@ -164,7 +161,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	}()
 
 	var nebulaCluster v1alpha1.NebulaCluster
-	if err := r.client.Get(subCtx, req.NamespacedName, &nebulaCluster); err != nil {
+	if err := r.client.Get(context.Background(), req.NamespacedName, &nebulaCluster); err != nil {
 		if apierrors.IsNotFound(err) {
 			klog.Infof("Skipping because NebulaCluster [%s] has been deleted", key)
 		}

@@ -1,0 +1,24 @@
+apiVersion: apps.nebula-graph.io/v1alpha1
+kind: NebulaBackup
+metadata:
+  name: backup
+spec:
+  image: reg.vesoft-inc.com/cloud-dev/br-ent
+  version: v3.7.0
+  resources:
+    limits:
+      cpu: "200m"
+      memory: 300Mi
+    requests:
+      cpu: 100m
+      memory: 200Mi
+  imagePullSecrets:
+  - name: nebula-image
+  autoRemoveFinished: true
+  cleanBackupData: true
+  config:
+    clusterName: nebula
+    gs:
+      location: "us-central1"
+      bucket: "nebula-test"
+      secretName: "gcp-secret"

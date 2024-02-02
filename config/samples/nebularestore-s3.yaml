@@ -10,9 +10,9 @@ data:
 apiVersion: apps.nebula-graph.io/v1alpha1
 kind: NebulaRestore
 metadata:
-  name: restore1
+  name: restore
 spec:
-  br:
+  config:
     clusterName: nebula
     backupName: "BACKUP_2023_02_12_10_04_16"
     concurrency: 3

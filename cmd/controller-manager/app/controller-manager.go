@@ -40,6 +40,8 @@ import (
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/cmd/controller-manager/app/options"
+	"github.com/vesoft-inc/nebula-operator/pkg/controller/cronbackup"
+	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulabackup"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulacluster"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebularestore"
 	klogflag "github.com/vesoft-inc/nebula-operator/pkg/flag/klog"
@@ -127,8 +129,10 @@ func Run(ctx context.Context, opts *options.Options) error {
 		},
 		Controller: config.Controller{
 			GroupKindConcurrency: map[string]int{
-				v1alpha1.SchemeGroupVersion.WithKind("NebulaCluster").GroupKind().String(): opts.ConcurrentNebulaClusterSyncs,
-				v1alpha1.SchemeGroupVersion.WithKind("NebulaRestore").GroupKind().String(): opts.ConcurrentNebulaRestoreSyncs,
+				v1alpha1.SchemeGroupVersion.WithKind("NebulaCluster").GroupKind().String():    opts.ConcurrentNebulaClusterSyncs,
+				v1alpha1.SchemeGroupVersion.WithKind("NebulaBackup").GroupKind().String():     opts.ConcurrentNebulaBackupSyncs,
+				v1alpha1.SchemeGroupVersion.WithKind("NebulaCronBackup").GroupKind().String(): opts.ConcurrentNebulaCronBackupSyncs,
+				v1alpha1.SchemeGroupVersion.WithKind("NebulaRestore").GroupKind().String():    opts.ConcurrentNebulaRestoreSyncs,
 			},
 			RecoverPanic: pointer.Bool(true),
 		},
@@ -163,9 +167,26 @@ func Run(ctx context.Context, opts *options.Options) error {
 	if err != nil {
 		return err
 	}
-
 	if err := clusterReconciler.SetupWithManager(mgr); err != nil {
 		klog.Errorf("failed to set up NebulaCluster controller: %v", err)
+		return err
+	}
+
+	backupReconciler, err := nebulabackup.NewBackupReconciler(mgr)
+	if err != nil {
+		return err
+	}
+	if err := backupReconciler.SetupWithManager(mgr); err != nil {
+		klog.Errorf("failed to set up NebulaBackup controller: %v", err)
+		return err
+	}
+
+	cronBackupReconciler, err := cronbackup.NewCronBackupReconciler(mgr)
+	if err != nil {
+		return err
+	}
+	if err := cronBackupReconciler.SetupWithManager(mgr); err != nil {
+		klog.Errorf("failed to set up NebulaCronBackup controller: %v", err)
 		return err
 	}
 
@@ -173,7 +194,6 @@ func Run(ctx context.Context, opts *options.Options) error {
 	if err != nil {
 		return err
 	}
-
 	if err := restoreReconciler.SetupWithManager(mgr); err != nil {
 		klog.Errorf("failed to set up NebulaRestore controller: %v", err)
 		return err

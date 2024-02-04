@@ -160,7 +160,7 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 	_, ok := updatePod.Annotations[TransLeaderBeginTime]
 	if !ok {
 		if updatePod.Annotations == nil {
-			updatePod.Annotations = make(map[string]string, 0)
+			updatePod.Annotations = make(map[string]string)
 		}
 		now := time.Now().Format(time.RFC3339)
 		updatePod.Annotations[TransLeaderBeginTime] = now
@@ -176,10 +176,45 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 	}
 
 	if err := s.transLeaderIfNecessary(nc, mc, ordinal); err != nil {
-		return &utilerrors.ReconcileError{Msg: fmt.Sprintf("%v", err)}
+		klog.Errorf("failed to transfer leader: %v", err)
+		return err
 	}
 
 	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("storaged pod %s is transferring leader", updatePodName)}
+}
+
+func (s *storagedUpdater) Balance(nc *v1alpha1.NebulaCluster) error {
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
+	if err != nil {
+		return err
+	}
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	mc, err := nebula.NewMetaClient(endpoints, options...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := mc.Disconnect(); err != nil {
+			klog.Errorf("meta client disconnect failed: %v", err)
+		}
+	}()
+
+	spaces, err := mc.ListSpaces()
+	if err != nil {
+		return err
+	}
+	empty := len(spaces) == 0
+
+	if empty || nc.IsForceUpdateEnabled() {
+		return nil
+	}
+
+	if err := s.balanceLeader(mc, nc, spaces); err != nil {
+		return err
+	}
+
+	nc.Status.Storaged.BalancedSpaces = nil
+	return nil
 }
 
 // nolint: revive
@@ -207,7 +242,7 @@ func (s *storagedUpdater) updateStoragedPod(
 	_, ok := updatePod.Annotations[TransLeaderBeginTime]
 	if !ok {
 		if updatePod.Annotations == nil {
-			updatePod.Annotations = make(map[string]string, 0)
+			updatePod.Annotations = make(map[string]string)
 		}
 		now := time.Now().Format(time.RFC3339)
 		updatePod.Annotations[TransLeaderBeginTime] = now
@@ -223,7 +258,8 @@ func (s *storagedUpdater) updateStoragedPod(
 	}
 
 	if err := s.transLeaderIfNecessary(nc, mc, ordinal); err != nil {
-		return &utilerrors.ReconcileError{Msg: fmt.Sprintf("%v", err)}
+		klog.Errorf("failed to transfer leader: %v", err)
+		return err
 	}
 
 	return &utilerrors.ReconcileError{Msg: fmt.Sprintf("storaged pod %s is transferring leader", updatePodName)}
@@ -397,14 +433,32 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 		return nil
 	}
 
-	// TODO the invoking maybe repeat times
+	if err := s.balanceLeader(mc, nc, spaces); err != nil {
+		return err
+	}
+
+	nc.Status.Storaged.BalancedSpaces = nil
+	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
+	return nil
+}
+
+func (s *storagedUpdater) balanceLeader(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaces []*meta.IdName) error {
+	if nc.Status.Storaged.BalancedSpaces == nil {
+		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
+	}
+
 	for _, space := range spaces {
+		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
+			continue
+		}
 		if err := mc.BalanceLeader(*space.Id.SpaceID); err != nil {
 			return err
 		}
+		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
+		if err := s.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
+			return err
+		}
 	}
-
-	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
 }
 

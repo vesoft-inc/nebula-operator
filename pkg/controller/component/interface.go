@@ -46,6 +46,9 @@ type UpdateManager interface {
 
 	// RestartPod restart the specified Pod
 	RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error
+
+	// Balance balances the cluster
+	Balance(nc *v1alpha1.NebulaCluster) error
 }
 
 type FailoverManager interface {

@@ -189,25 +189,7 @@ func (c *storagedComponent) GenerateContainerPorts() []corev1.ContainerPort {
 
 func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	componentType := c.ComponentType().String()
-	mounts := make([]corev1.VolumeMount, 0)
-
-	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
-		volumeName := storageDataVolume(componentType, i)
-		mountPath := "/usr/local/nebula/data"
-		if i > 0 {
-			mountPath = fmt.Sprintf("/usr/local/nebula/data%d", i)
-		}
-		subPath := "data"
-		if i > 0 {
-			subPath = fmt.Sprintf("data%d", i)
-		}
-		mount := corev1.VolumeMount{
-			Name:      volumeName,
-			MountPath: mountPath,
-			SubPath:   subPath,
-		}
-		mounts = append(mounts, mount)
-	}
+	mounts := getStoragedDataVolumeMounts(c)
 
 	if c.nc.Spec.Storaged.LogVolumeClaim != nil {
 		mounts = append(mounts, corev1.VolumeMount{

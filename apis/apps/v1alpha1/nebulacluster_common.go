@@ -160,6 +160,28 @@ func parseCustomPort(defaultPort int32, customPort string) (int32, error) {
 	return p, nil
 }
 
+func getStoragedDataVolumeMounts(c NebulaClusterComponent) []corev1.VolumeMount {
+	nc := c.GetNebulaCluster()
+	componentType := c.ComponentType().String()
+	mounts := make([]corev1.VolumeMount, 0)
+	for i := range nc.Spec.Storaged.DataVolumeClaims {
+		volumeName := storageDataVolume(componentType, i)
+		mountPath := "/usr/local/nebula/data"
+		subPath := "data"
+		if i > 0 {
+			mountPath = fmt.Sprintf("/usr/local/nebula/data%d", i)
+			subPath = fmt.Sprintf("data%d", i)
+		}
+		mount := corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: mountPath,
+			SubPath:   subPath,
+		}
+		mounts = append(mounts, mount)
+	}
+	return mounts
+}
+
 func getClientCertVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
@@ -407,7 +429,7 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 	}
 
 	if nc.IsBREnabled() {
-		if c.ComponentType() != GraphdComponentType {
+		if c.ComponentType() == MetadComponentType {
 			container.VolumeMounts = []corev1.VolumeMount{
 				{
 					Name:      dataVolume(componentType),
@@ -415,6 +437,8 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 					SubPath:   "data",
 				},
 			}
+		} else if c.ComponentType() == StoragedComponentType {
+			container.VolumeMounts = getStoragedDataVolumeMounts(c)
 		}
 
 		container.Ports = []corev1.ContainerPort{
@@ -430,6 +454,69 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		container.VolumeMounts = append(container.VolumeMounts, certMounts...)
 	}
 
+	return container
+}
+
+func genDynamicFlagsContainer(c NebulaClusterComponent) corev1.Container {
+	nc := c.GetNebulaCluster()
+	script := `
+set -exo pipefail
+
+TOKEN=$(cat ${SERVICEACCOUNT}/token)
+CACERT=${SERVICEACCOUNT}/ca.crt
+            
+curl -s --cacert ${CACERT} --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/apis/apps/v1/namespaces/${NAMESPACE}/statefulsets/${PARENT_NAME} | jq .metadata.annotations > /metadata/annotations.json
+jq '."nebula-graph.io/last-applied-dynamic-flags" | fromjson' /metadata/annotations.json > /metadata/flags.json
+cat /metadata/flags.json
+`
+	image := DefaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	container := corev1.Container{
+		Name:    "dynamic-flags",
+		Image:   image,
+		Command: []string{"/bin/sh", "-c"},
+		Args:    []string{`echo "$SCRIPT" > /tmp/dynamic-flags-script && sh /tmp/dynamic-flags-script`},
+		Env: []corev1.EnvVar{
+			{
+				Name: "NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
+				Name:  "PARENT_NAME",
+				Value: c.GetName(),
+			},
+			{
+				Name:  "APISERVER",
+				Value: "https://kubernetes.default.svc",
+			},
+			{
+				Name:  "SERVICEACCOUNT",
+				Value: "/var/run/secrets/kubernetes.io/serviceaccount",
+			},
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "flags",
+				MountPath: "/metadata",
+			},
+		},
+	}
+
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
 	return container
 }
 
@@ -500,6 +587,7 @@ func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 		nodeLabelsContainer := genNodeLabelsContainer(nc)
 		containers = append(containers, nodeLabelsContainer)
 	}
+	containers = append(containers, genDynamicFlagsContainer(c))
 	return containers
 }
 
@@ -554,6 +642,10 @@ func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dy
 			MountPath: "/node",
 		})
 	}
+	mounts = append(mounts, corev1.VolumeMount{
+		Name:      "flags",
+		MountPath: "/metadata",
+	})
 
 	ports := c.GenerateContainerPorts()
 
@@ -599,22 +691,20 @@ func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dy
 	script := `
 set -x
 
+if [ ! -s "metadata/flags.json" ]; then
+ echo "flags.json is empty"
+ exit 0
+fi
 while :
 do
-	curl -i -X PUT -H "Content-Type: application/json" -d ${POST_DATA} -s "http://${MY_IP}:${HTTP_PORT}/flags"
-	if [ $? -eq 0 ]
-	then
-		break
-	fi
-	sleep 1
+  curl -i -X PUT -H "Content-Type: application/json" -d @/metadata/flags.json -s "http://${MY_IP}:${HTTP_PORT}/flags"
+  if [ $? -eq 0 ]
+  then
+    break
+  fi
+  sleep 1
 done
-
 `
-
-	dynamicVal, err := json.Marshal(dynamicFlags)
-	if err != nil {
-		return nil, err
-	}
 
 	if len(dynamicFlags) > 0 {
 		envVars := []corev1.EnvVar{
@@ -629,10 +719,6 @@ done
 			{
 				Name:  "HTTP_PORT",
 				Value: strconv.Itoa(int(ports[1].ContainerPort)),
-			},
-			{
-				Name:  "POST_DATA",
-				Value: string(dynamicVal),
 			},
 			{
 				Name:  "SCRIPT",
@@ -673,7 +759,7 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 
 	nc := c.GetNebulaCluster()
 
-	dynamicFlags, staticFlags := separateFlags(c.GetConfig())
+	dynamicFlags, _ := separateFlags(c.GetConfig())
 
 	cmKey := getCmKey(componentType)
 	initContainers := generateInitContainers(c)
@@ -714,6 +800,15 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		})
 	}
 
+	volumes = append(volumes, corev1.Volume{
+		Name: "flags",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory,
+			},
+		},
+	})
+
 	volumes = mergeVolumes(volumes, c.ComponentSpec().Volumes())
 
 	podSpec := corev1.PodSpec{
@@ -739,10 +834,6 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 	if err != nil {
 		return nil, err
 	}
-	staticVal, err := json.Marshal(staticFlags)
-	if err != nil {
-		return nil, err
-	}
 
 	mergeLabels := mergeStringMaps(true, componentLabel, c.ComponentSpec().PodLabels())
 	replicas := c.ComponentSpec().Replicas()
@@ -752,7 +843,6 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 			Namespace: namespace,
 			Annotations: map[string]string{
 				annotation.AnnLastAppliedDynamicFlagsKey: string(dynamicVal),
-				annotation.AnnLastAppliedStaticFlagsKey:  string(staticVal),
 			},
 			Labels:          componentLabel,
 			OwnerReferences: c.GenerateOwnerReferences(),

@@ -274,6 +274,12 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 				return fmt.Errorf("update zone mappings failed: %v", err)
 			}
 		}
+
+		if len(nc.Status.Storaged.BalancedSpaces) > 0 {
+			if err := c.updateManager.Balance(nc); err != nil {
+				return err
+			}
+		}
 	}
 
 	return extender.UpdateWorkload(c.clientSet.Workload(), newWorkload, oldWorkload)

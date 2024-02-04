@@ -84,7 +84,11 @@ func (g *graphUpdater) Update(
 	return nil
 }
 
-func (g *graphUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error {
+func (g *graphUpdater) RestartPod(_ *v1alpha1.NebulaCluster, ordinal int32) error {
+	return nil
+}
+
+func (g *graphUpdater) Balance(_ *v1alpha1.NebulaCluster) error {
 	return nil
 }
 

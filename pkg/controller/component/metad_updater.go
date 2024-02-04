@@ -76,7 +76,11 @@ func (m *metadUpdater) Update(
 	return nil
 }
 
-func (m *metadUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) error {
+func (m *metadUpdater) RestartPod(_ *v1alpha1.NebulaCluster, ordinal int32) error {
+	return nil
+}
+
+func (m *metadUpdater) Balance(_ *v1alpha1.NebulaCluster) error {
 	return nil
 }
 

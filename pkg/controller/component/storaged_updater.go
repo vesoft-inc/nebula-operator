@@ -148,7 +148,7 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 	}
 	empty := len(spaces) == 0
 
-	if empty || nc.IsForceUpdateEnabled() {
+	if empty || *nc.Spec.Storaged.Replicas < 3 || nc.IsForceUpdateEnabled() {
 		return s.clientSet.Pod().DeletePod(namespace, updatePodName, false)
 	}
 
@@ -205,7 +205,7 @@ func (s *storagedUpdater) Balance(nc *v1alpha1.NebulaCluster) error {
 	}
 	empty := len(spaces) == 0
 
-	if empty || nc.IsForceUpdateEnabled() {
+	if empty {
 		return nil
 	}
 

@@ -37,6 +37,7 @@ log() {
 #########################
 
 help() {
+  echo "### STOP nebula-operator controller-manager WHILE RUN THE SCRIPT ###"
   echo "This script restarts nebula cluster in Kubernetes"
   echo ""
   echo "Options:"
@@ -63,7 +64,7 @@ RETRY_INTERVAL=5
 GRACEFUL_TERMINATING_PERIOD=30
 
 #Loop through options passed
-while getopts :n:N:c:p:i:h optname; do
+while getopts :n:N:c:r:t:h optname; do
   log "Option ${optname} set"
   case $optname in
     n) # set nebula cluster name
@@ -76,7 +77,7 @@ while getopts :n:N:c:p:i:h optname; do
       NEBULA_COMPONENT="${OPTARG}"
       ;;
     r) # set retry interval
-      RESTART_INTERVAL="${OPTARG}"
+      RETRY_INTERVAL="${OPTARG}"
       ;;
     t) # set terminating period
       GRACEFUL_TERMINATING_PERIOD="${OPTARG}"
@@ -102,6 +103,14 @@ if [ -z "${NEBULA_CLUSTER_NAME}" ]; then
 fi
 if [ -z "${NEBULA_COMPONENT}" ]; then
   log "NEBULA_COMPONENT is empty!"
+  help
+fi
+if [ ${RETRY_INTERVAL} -le 0 ]; then
+  log "RETRY_INTERVAL must be a positive number!"
+  help
+fi
+if [ ${GRACEFUL_TERMINATING_PERIOD} -lt 15 ]; then
+  log "RETRY_INTERVAL must be gt 15!"
   help
 fi
 

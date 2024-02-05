@@ -127,8 +127,10 @@ func (cbm *cronBackupManager) canPerformNextBackup(cb *v1alpha1.NebulaCronBackup
 		return err
 	}
 	if condition.IsBackupComplete(backup) || condition.IsBackupFailed(backup) {
-		cb.Status.LastSuccessfulTime = backup.Status.TimeCompleted
-		return nil
+		if backup.Status.TimeCompleted != nil && backup.Status.TimeCompleted.After(cb.Status.LastSuccessfulTime.Time) {
+			cb.Status.LastSuccessfulTime = backup.Status.TimeCompleted
+			return nil
+		}
 	}
 	return utilerrors.ReconcileErrorf("the last backup %s is still running", backup.Name)
 }

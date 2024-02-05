@@ -32,22 +32,6 @@ log() {
   echo \["$(date +%Y/%m/%d-%H:%M:%S)"\] "$1"
 }
 
-cmd_check() {
-  if command -v jq > /dev/null 2>&1; then
-    log "[cmd_check] jq exists"
-  else
-    log "[cmd_check] jq does not exist"
-    exit 1
-  fi
-
-  if command -v kubectl > /dev/null 2>&1; then
-    log "[cmd_check] kubectl exists"
-  else
-    log "[cmd_check] kubectl does not exist"
-    exit 1
-  fi
-}
-
 #########################
 # HELP
 #########################
@@ -63,6 +47,7 @@ help() {
   echo "    -t      graceful terminating period, default: 30"
 
   echo "    -h      view default help content"
+  exit 2
 }
 
 log "Begin execution of nebula cluster restarting script on ${HOSTNAME}"
@@ -75,7 +60,7 @@ NEBULA_CLUSTER_NAMESPACE=""
 NEBULA_CLUSTER_NAME=""
 NEBULA_COMPONENT=""
 RETRY_INTERVAL=5
-GRACEFUL_TERMINATING_PERIOD=20
+GRACEFUL_TERMINATING_PERIOD=30
 
 #Loop through options passed
 while getopts :n:N:c:p:i:h optname; do
@@ -98,19 +83,48 @@ while getopts :n:N:c:p:i:h optname; do
       ;;
     h) #show help
       help
-      exit 2
       ;;
     \?) #unrecognized option - show help
       echo -e \\n"Option -${BOLD}$OPTARG${NORM} not allowed."
       help
-      exit 2
       ;;
   esac
 done
+shift $((OPTIND-1))
+
+if [ -z "${NEBULA_CLUSTER_NAMESPACE}" ]; then
+  log "NEBULA_CLUSTER_NAMESPACE is empty!"
+  help
+fi
+if [ -z "${NEBULA_CLUSTER_NAME}" ]; then
+  log "NEBULA_CLUSTER_NAME is empty!"
+  help
+fi
+if [ -z "${NEBULA_COMPONENT}" ]; then
+  log "NEBULA_COMPONENT is empty!"
+  help
+fi
 
 #########################
 # Functions
 #########################
+
+cmd_check() {
+  if command -v jq > /dev/null 2>&1; then
+    log "[cmd_check] jq exists"
+  else
+    log "[cmd_check] jq does not exist"
+    exit 1
+  fi
+
+  if command -v kubectl > /dev/null 2>&1; then
+    log "[cmd_check] kubectl exists"
+  else
+    log "[cmd_check] kubectl does not exist"
+    exit 1
+  fi
+}
+
 GRAPH_PATCH_FILE=graph_patch.json
 META_PATCH_FILE=meta_patch.json
 STORAGE_PATCH_FILE=storage_patch.json

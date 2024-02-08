@@ -11,9 +11,9 @@ spec:
       imagePullSecrets:
         - name: nebula-image
       containers:
-        - image: reg.vesoft-inc.com/cloud-dev/br-ent:v3.7.0
+        - name: backup
+          image: reg.vesoft-inc.com/cloud-dev/br-ent:v3.7.0
           imagePullPolicy: Always
-          name: backup
           env:
           - name: CA_CERT_PATH
             value: /credentials/ca.crt
@@ -37,8 +37,8 @@ spec:
           - name: credentials
             mountPath: /credentials
         - name: auth-sidecar
-          imagePullPolicy: Always
           image: reg.vesoft-inc.com/cloud-dev/nebula-certs:latest
+          imagePullPolicy: Always
           volumeMounts:
           - name: credentials
             mountPath: /credentials

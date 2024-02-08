@@ -299,6 +299,7 @@ type AgentContainerSpec struct {
 	Image string `json:"image,omitempty"`
 
 	// Version tag for container image.
+	// +kubebuilder:default=latest
 	// +optional
 	Version string `json:"version,omitempty"`
 
@@ -309,9 +310,6 @@ type AgentContainerSpec struct {
 	// Container environment variables.
 	// +optional
 	EnvVars []corev1.EnvVar `json:"env,omitempty"`
-
-	// +optional
-	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
 	// +optional
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
@@ -365,6 +363,13 @@ type SSLCertsSpec struct {
 	// certificate chain and host name.
 	// +optional
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+
+	// ServerName is used to verify the hostname on the returned
+	// certificates unless InsecureSkipVerify is given. It is also included
+	// in the client's handshake to support virtual hosting unless it is
+	// an IP address.
+	// +optional
+	ServerName string `json:"serverName,omitempty"`
 
 	// AutoMountServerCerts controls whether operator mounts server's
 	// certificate from secret.

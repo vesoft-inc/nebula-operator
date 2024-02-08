@@ -8786,6 +8786,8 @@ spec:
                   serverKey:
                     default: tls.key
                     type: string
+                  serverName:
+                    type: string
                   serverSecret:
                     type: string
                 type: object

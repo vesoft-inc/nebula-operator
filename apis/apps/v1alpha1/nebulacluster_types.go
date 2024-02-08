@@ -330,6 +330,13 @@ type SSLCertsSpec struct {
 	// +optional
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 
+	// ServerName is used to verify the hostname on the returned
+	// certificates unless InsecureSkipVerify is given. It is also included
+	// in the client's handshake to support virtual hosting unless it is
+	// an IP address.
+	// +optional
+	ServerName string `json:"serverName,omitempty"`
+
 	// AutoMountServerCerts controls whether operator mounts server's
 	// certificate from secret.
 	// +optional

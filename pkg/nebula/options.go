@@ -72,8 +72,10 @@ func ClientOptions(nc *v1alpha1.NebulaCluster, opts ...Option) ([]Option, error)
 	if err != nil {
 		return nil, fmt.Errorf("load tls config failed: %v", err)
 	}
+	tlsConfig.ServerName = nc.Spec.SSLCerts.ServerName
 	tlsConfig.InsecureSkipVerify = nc.InsecureSkipVerify()
 	tlsConfig.MaxVersion = tls.VersionTLS12
+	klog.V(4).Infof("tls config, ServerName: %s, InsecureSkipVerify: %v, MaxVersion: %d", tlsConfig.ServerName, tlsConfig.InsecureSkipVerify, tlsConfig.MaxVersion)
 	options = append(options, SetTLSConfig(tlsConfig))
 	options = append(options, opts...)
 	return options, nil

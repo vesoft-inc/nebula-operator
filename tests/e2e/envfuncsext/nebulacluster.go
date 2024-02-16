@@ -19,6 +19,7 @@ package envfuncsext
 import (
 	"context"
 	stderrors "errors"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -164,6 +165,16 @@ func WaitNebulaClusterReady(opts ...NebulaClusterOption) env.Func {
 				"namespace", nc.Namespace, "name", nc.Name,
 				"generation", nc.Generation,
 			)
+
+			if nc.Status.Graphd.Phase == appsv1alpha1.RunningPhase && nc.Status.Metad.Phase == appsv1alpha1.RunningPhase && nc.Status.Storaged.Phase == appsv1alpha1.RunningPhase {
+				klog.V(4).Infof("First running phase detected for nc cluster. Trying again after 5 sec to see if nc cluster is really running")
+				time.Sleep(5 * time.Second)
+
+				if err = cfg.Client().Resources().Get(ctx, nc.GetName(), nc.GetNamespace(), nc); err != nil {
+					klog.ErrorS(err, "Get NebulaCluster failed", "namespace", nc.Namespace, "name", nc.Name)
+					return false, err
+				}
+			}
 
 			fns := o.ReadyFuncs
 			if len(fns) == 0 {

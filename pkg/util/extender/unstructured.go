@@ -174,6 +174,8 @@ func PodTemplateEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool 
 			return false
 		}
 		oldPodTemplate, _, _ := unstructured.NestedMap(oldSpec, "template", "spec")
+		//klog.Infof("Old template: %v", oldPodTemplate)
+		//klog.Infof("New template: %v", newPodTemplate)
 		return templateEqual(newPodTemplate, oldPodTemplate)
 	}
 	return false
@@ -183,8 +185,7 @@ func ObjectEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
 	annotations := map[string]string{}
 	for k, v := range oldUnstruct.GetAnnotations() {
 		if k == annotation.AnnLastAppliedConfigKey ||
-			k == annotation.AnnRestartTimestamp ||
-			k == annotation.AnnLastReplicas {
+			k == annotation.AnnRestartTimestamp /* || k == annotation.AnnLastReplicas */ {
 			continue
 		}
 		annotations[k] = v
@@ -231,6 +232,9 @@ func UpdateWorkload(
 			annotations[annotation.AnnRestartTimestamp] = t
 		}
 		w.SetAnnotations(annotations)
+
+		klog.Info("New annotations: %v", w.GetAnnotations())
+
 		var updateStrategy interface{}
 		newSpec := GetSpec(newUnstruct)
 		if newSpec != nil {
@@ -278,6 +282,7 @@ func SetLastReplicasAnnotation(obj *unstructured.Unstructured) error {
 		annotations[k] = v
 	}
 	annotations[annotation.AnnLastReplicas] = strconv.Itoa(int(replicas))
+	klog.Info("Current annotations: %v", annotations)
 	obj.SetAnnotations(annotations)
 	return nil
 }

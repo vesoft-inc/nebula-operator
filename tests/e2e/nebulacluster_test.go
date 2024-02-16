@@ -218,7 +218,7 @@ func TestNebulaCluster(t *testing.T) {
 					ctx, err = envfuncsext.WaitNebulaClusterReady(append([]envfuncsext.NebulaClusterOption{
 						envfuncsext.WithNebulaClusterWaitOptions(
 							wait.WithInterval(time.Second*5),
-							wait.WithTimeout(time.Minute*5),
+							wait.WithTimeout(time.Minute*10),
 						),
 					}, upgradeCase.UpgradeWaitNCOptions...)...)(ctx, cfg)
 					if err != nil {

@@ -64,6 +64,11 @@ func createClusterRole(ctx context.Context, k8sClient client.Client) error {
 				Resources: []string{"pods"},
 				Verbs:     []string{"get", "list"},
 			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"statefulsets"},
+				Verbs:     []string{"get", "list"},
+			},
 		},
 	}
 	if err := k8sClient.Create(ctx, &role); err != nil {

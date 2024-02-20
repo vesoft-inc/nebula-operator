@@ -230,7 +230,6 @@ func UpdateWorkload(
 			annotations[annotation.AnnRestartTimestamp] = t
 		}
 		w.SetAnnotations(annotations)
-
 		var updateStrategy interface{}
 		newSpec := GetSpec(newUnstruct)
 		if newSpec != nil {

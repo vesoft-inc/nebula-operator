@@ -67,3 +67,7 @@ func getPodNameByOrdinal(parentName string, ordinal int) string {
 func getNamespacedName(obj metav1.Object) string {
 	return fmt.Sprintf("%v/%v", obj.GetNamespace(), obj.GetName())
 }
+
+func isPodScheduled(pod *corev1.Pod) bool {
+	return pod != nil && pod.DeletionTimestamp == nil && pod.Spec.NodeName != ""
+}

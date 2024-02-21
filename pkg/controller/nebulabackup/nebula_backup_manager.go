@@ -378,6 +378,9 @@ func (bm *backupManager) getSslFlags(cluster *v1alpha1.NebulaCluster) string {
 	if cluster.InsecureSkipVerify() {
 		flag += " --insecure-skip-verify"
 	}
+	if cluster.SslServerName() != "" {
+		flag += " --server-name=" + cluster.Spec.SSLCerts.ServerName
+	}
 	return flag
 }
 

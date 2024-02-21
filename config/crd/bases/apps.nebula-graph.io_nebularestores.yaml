@@ -22,6 +22,10 @@ spec:
       jsonPath: .status.phase
       name: Status
       type: string
+    - description: The name of restored nebula cluster
+      jsonPath: .status.clusterName
+      name: RESTORED-CLUSTER
+      type: string
     - description: The time at which the restore was started
       jsonPath: .status.timeStarted
       name: Started

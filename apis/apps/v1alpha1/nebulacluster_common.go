@@ -399,6 +399,10 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 			initCmd += " --insecure_skip_verify"
 			brCmd += " --insecure_skip_verify"
 		}
+		if nc.SslServerName() != "" {
+			initCmd += " --server_name=" + nc.Spec.SSLCerts.ServerName
+			brCmd += " --server_name=" + nc.Spec.SSLCerts.ServerName
+		}
 	}
 
 	if init {
@@ -711,33 +715,31 @@ do
 done
 `
 
-	if len(dynamicFlags) > 0 {
-		envVars := []corev1.EnvVar{
-			{
-				Name: "MY_IP",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "status.podIP",
-					},
+	envVars := []corev1.EnvVar{
+		{
+			Name: "MY_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "status.podIP",
 				},
 			},
-			{
-				Name:  "HTTP_PORT",
-				Value: strconv.Itoa(int(ports[1].ContainerPort)),
+		},
+		{
+			Name:  "HTTP_PORT",
+			Value: strconv.Itoa(int(ports[1].ContainerPort)),
+		},
+		{
+			Name:  "SCRIPT",
+			Value: script,
+		},
+	}
+	baseContainer.Env = append(baseContainer.Env, envVars...)
+	baseContainer.Lifecycle = &corev1.Lifecycle{
+		PostStart: &corev1.LifecycleHandler{
+			Exec: &corev1.ExecAction{
+				Command: []string{"/bin/sh", "-c", `echo "$SCRIPT" > /tmp/post-start-script && sh /tmp/post-start-script`},
 			},
-			{
-				Name:  "SCRIPT",
-				Value: script,
-			},
-		}
-		baseContainer.Env = append(baseContainer.Env, envVars...)
-		baseContainer.Lifecycle = &corev1.Lifecycle{
-			PostStart: &corev1.LifecycleHandler{
-				Exec: &corev1.ExecAction{
-					Command: []string{"/bin/sh", "-c", `echo "$SCRIPT" > /tmp/post-start-script && sh /tmp/post-start-script`},
-				},
-			},
-		}
+		},
 	}
 
 	containers = append(containers, baseContainer)

@@ -214,7 +214,7 @@ func (s *storagedUpdater) Balance(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	nc.Status.Storaged.BalancedSpaces = nil
-	return nil
+	return s.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
 }
 
 // nolint: revive

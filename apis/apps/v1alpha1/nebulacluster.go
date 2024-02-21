@@ -130,6 +130,13 @@ func (nc *NebulaCluster) AutoMountServerCerts() bool {
 	return nc.Spec.SSLCerts != nil && pointer.BoolDeref(nc.Spec.SSLCerts.AutoMountServerCerts, false)
 }
 
+func (nc *NebulaCluster) SslServerName() string {
+	if nc.Spec.SSLCerts != nil {
+		return nc.Spec.SSLCerts.ServerName
+	}
+	return ""
+}
+
 func (nc *NebulaCluster) IsGraphdSSLEnabled() bool {
 	return nc.Spec.Graphd.Config["enable_graph_ssl"] == "true"
 }

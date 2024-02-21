@@ -18,4 +18,4 @@ spec:
     gs:
       location: us-central1
       bucket: "nebula-br-test"
-      secretName: "gs-secret"
+      secretName: "gcp-secret"

@@ -399,6 +399,10 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 			initCmd += " --insecure_skip_verify"
 			brCmd += " --insecure_skip_verify"
 		}
+		if nc.SslServerName() != "" {
+			initCmd += " --server_name=" + nc.Spec.SSLCerts.ServerName
+			brCmd += " --server_name=" + nc.Spec.SSLCerts.ServerName
+		}
 	}
 
 	if init {
@@ -411,6 +415,12 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 		Name:    AgentSidecarContainerName,
 		Image:   DefaultAgentImage,
 		Command: cmd,
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          AgentPortNameGRPC,
+				ContainerPort: int32(DefaultAgentPortGRPC),
+			},
+		},
 	}
 	imagePullPolicy := nc.Spec.ImagePullPolicy
 	if imagePullPolicy != nil {
@@ -425,34 +435,33 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 			agentImage = fmt.Sprintf("%s:%s", agentImage, nc.Spec.Agent.Version)
 		}
 		container.Image = agentImage
+		container.Env = nc.Spec.Agent.EnvVars
 		container.Resources = nc.Spec.Agent.Resources
 	}
 
-	if nc.IsBREnabled() {
-		if c.ComponentType() == MetadComponentType {
-			container.VolumeMounts = []corev1.VolumeMount{
-				{
-					Name:      dataVolume(componentType),
-					MountPath: "/usr/local/nebula/data",
-					SubPath:   "data",
-				},
-			}
-		} else if c.ComponentType() == StoragedComponentType {
-			container.VolumeMounts = getStoragedDataVolumeMounts(c)
-		}
-
-		container.Ports = []corev1.ContainerPort{
+	volumeMounts := make([]corev1.VolumeMount, 0)
+	if c.ComponentType() == MetadComponentType {
+		dataVolumeMounts := []corev1.VolumeMount{
 			{
-				Name:          AgentPortNameGRPC,
-				ContainerPort: int32(DefaultAgentPortGRPC),
+				Name:      dataVolume(componentType),
+				MountPath: "/usr/local/nebula/data",
+				SubPath:   "data",
 			},
 		}
+		volumeMounts = append(volumeMounts, dataVolumeMounts...)
+	} else if c.ComponentType() == StoragedComponentType {
+		dataVolumeMounts := getStoragedDataVolumeMounts(c)
+		volumeMounts = append(volumeMounts, dataVolumeMounts...)
 	}
 
-	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && nc.IsBREnabled() && !EnableLocalCerts() {
+	if (nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled()) && !EnableLocalCerts() {
 		certMounts := getClientCertVolumeMounts()
-		container.VolumeMounts = append(container.VolumeMounts, certMounts...)
+		volumeMounts = append(volumeMounts, certMounts...)
 	}
+	if nc.Spec.Agent != nil {
+		volumeMounts = append(volumeMounts, nc.Spec.Agent.VolumeMounts...)
+	}
+	container.VolumeMounts = volumeMounts
 
 	return container
 }
@@ -706,33 +715,31 @@ do
 done
 `
 
-	if len(dynamicFlags) > 0 {
-		envVars := []corev1.EnvVar{
-			{
-				Name: "MY_IP",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "status.podIP",
-					},
+	envVars := []corev1.EnvVar{
+		{
+			Name: "MY_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "status.podIP",
 				},
 			},
-			{
-				Name:  "HTTP_PORT",
-				Value: strconv.Itoa(int(ports[1].ContainerPort)),
+		},
+		{
+			Name:  "HTTP_PORT",
+			Value: strconv.Itoa(int(ports[1].ContainerPort)),
+		},
+		{
+			Name:  "SCRIPT",
+			Value: script,
+		},
+	}
+	baseContainer.Env = append(baseContainer.Env, envVars...)
+	baseContainer.Lifecycle = &corev1.Lifecycle{
+		PostStart: &corev1.LifecycleHandler{
+			Exec: &corev1.ExecAction{
+				Command: []string{"/bin/sh", "-c", `echo "$SCRIPT" > /tmp/post-start-script && sh /tmp/post-start-script`},
 			},
-			{
-				Name:  "SCRIPT",
-				Value: script,
-			},
-		}
-		baseContainer.Env = append(baseContainer.Env, envVars...)
-		baseContainer.Lifecycle = &corev1.Lifecycle{
-			PostStart: &corev1.LifecycleHandler{
-				Exec: &corev1.ExecAction{
-					Command: []string{"/bin/sh", "-c", `echo "$SCRIPT" > /tmp/post-start-script && sh /tmp/post-start-script`},
-				},
-			},
-		}
+		},
 	}
 
 	containers = append(containers, baseContainer)

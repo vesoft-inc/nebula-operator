@@ -4,8 +4,8 @@ metadata:
   name: aws-s3-secret
 type: Opaque
 data:
-  access-key: <ACCESS_KEY>
-  secret-key: <SECRET_KEY>
+  access_key: <ACCESS_KEY>
+  secret_key: <SECRET_KEY>
 ---
 apiVersion: apps.nebula-graph.io/v1alpha1
 kind: NebulaRestore

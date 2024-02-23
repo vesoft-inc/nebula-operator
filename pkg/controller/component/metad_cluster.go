@@ -25,11 +25,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 
-	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/extender"
@@ -183,12 +181,8 @@ func (c *metadCluster) syncMetadWorkload(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	if equal && nc.MetadComponent().IsReady() {
-		if err := c.setVersion(nc); err != nil {
-			return err
-		}
-
 		endpoints := nc.GetMetadEndpoints(v1alpha1.MetadPortNameHTTP)
-		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
+		if err := updateDynamicFlags(endpoints, oldWorkload.GetAnnotations(), newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update metad cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 	}
@@ -226,32 +220,6 @@ func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.C
 
 func (c *metadCluster) syncMetadPVC(nc *v1alpha1.NebulaCluster) error {
 	return syncPVC(nc.MetadComponent(), c.clientSet.PVC())
-}
-
-func (c *metadCluster) setVersion(nc *v1alpha1.NebulaCluster) error {
-	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
-	if err != nil {
-		return err
-	}
-	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints, options...)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = metaClient.Disconnect()
-	}()
-
-	hosts, err := metaClient.ListHosts(meta.ListHostType_META)
-	if err != nil {
-		return err
-	}
-	for _, host := range hosts {
-		version := host.Version
-		nc.Status.Version = string(version)
-		break
-	}
-	return nil
 }
 
 type FakeMetadCluster struct {

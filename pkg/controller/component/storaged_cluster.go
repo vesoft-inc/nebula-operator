@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
@@ -251,14 +252,19 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	oVal, ok := oldWorkload.GetAnnotations()[annotation.AnnRestartPodOrdinal]
 	if ok {
 		ordinal, err := strconv.Atoi(oVal)
-		if err != nil {
-			return err
-		}
-		if err := c.updateManager.RestartPod(nc, int32(ordinal)); err != nil {
-			return err
-		}
-		if err := c.updateManager.Balance(nc); err != nil {
-			return err
+		if err == nil {
+			if ordinal >= 0 && ordinal < int(pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0)) {
+				if err := c.updateManager.RestartPod(nc, int32(ordinal)); err != nil {
+					return err
+				}
+				if err := c.updateManager.Balance(nc); err != nil {
+					return err
+				}
+			} else {
+				klog.Errorf("restart pod with invalid ordinal %s, ignored", oVal)
+			}
+		} else {
+			klog.Errorf("convert pod ordinal failed: %v", err)
 		}
 	}
 
@@ -268,7 +274,7 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 
 	if equal && nc.StoragedComponent().IsReady() {
 		endpoints := nc.GetStoragedEndpoints(v1alpha1.StoragedPortNameHTTP)
-		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
+		if err := updateDynamicFlags(endpoints, oldWorkload.GetAnnotations(), newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update storaged cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 

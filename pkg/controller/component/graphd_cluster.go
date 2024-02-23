@@ -192,7 +192,7 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 			return err
 		}
 		endpoints := nc.GetGraphdEndpoints(v1alpha1.GraphdPortNameHTTP)
-		if err := updateDynamicFlags(endpoints, newWorkload.GetAnnotations()); err != nil {
+		if err := updateDynamicFlags(endpoints, oldWorkload.GetAnnotations(), newWorkload.GetAnnotations()); err != nil {
 			return fmt.Errorf("update graphd cluster %s dynamic flags failed: %v", newWorkload.GetName(), err)
 		}
 	}

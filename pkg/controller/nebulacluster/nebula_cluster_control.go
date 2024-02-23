@@ -19,6 +19,8 @@ package nebulacluster
 import (
 	"context"
 
+	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
+	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	errorutils "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/klog/v2"
@@ -162,6 +164,11 @@ func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaClu
 		return err
 	}
 
+	if err := setClusterVersion(nc); err != nil {
+		klog.Errorf("set cluster version failed: %v", err)
+		return err
+	}
+
 	if err := c.exporter.Reconcile(nc); err != nil {
 		klog.Errorf("reconcile exporter failed: %v", err)
 		return err
@@ -182,6 +189,32 @@ func (c *defaultNebulaClusterControl) updateNebulaCluster(nc *v1alpha1.NebulaClu
 		return err
 	}
 
+	return nil
+}
+
+func setClusterVersion(nc *v1alpha1.NebulaCluster) error {
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
+	if err != nil {
+		return err
+	}
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(endpoints, options...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = metaClient.Disconnect()
+	}()
+
+	hosts, err := metaClient.ListHosts(meta.ListHostType_META)
+	if err != nil {
+		return err
+	}
+	for _, host := range hosts {
+		version := host.Version
+		nc.Status.Version = string(version)
+		break
+	}
 	return nil
 }
 

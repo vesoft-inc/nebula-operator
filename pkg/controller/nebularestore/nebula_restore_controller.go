@@ -73,6 +73,7 @@ func NewRestoreReconciler(mgr ctrl.Manager) (*Reconciler, error) {
 	}, nil
 }
 
+// +kubebuilder:rbac:groups="",resources=pods/log,verbs=get;list
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch;list

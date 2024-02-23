@@ -37,6 +37,8 @@ var servicePort int
 var clusterName string
 var namespace string
 var enableTLS bool
+var insecureSkipVerify bool
+var serverName string
 
 func main() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
@@ -45,6 +47,8 @@ func main() {
 	pflag.StringVar(&clusterName, "cluster-name", "", "nebula cluster name")
 	pflag.StringVar(&namespace, "namespace", "default", "cluster namespace")
 	pflag.BoolVar(&enableTLS, "enable-tls", false, "connect to nebula service enable mTLS")
+	pflag.BoolVar(&insecureSkipVerify, "insecure-skip-verify", false, "a client verifies the server's certificate chain and host name")
+	pflag.StringVar(&serverName, "server-name", "", "server name is used to verify the hostname on the returned certificates")
 	pflag.Parse()
 
 	var tlsConfig *tls.Config
@@ -140,7 +144,8 @@ func getTLSConfig() (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load tls config failed: %v", err)
 	}
-	tlsConfig.InsecureSkipVerify = true
+	tlsConfig.InsecureSkipVerify = insecureSkipVerify
+	tlsConfig.ServerName = serverName
 	tlsConfig.MaxVersion = tls.VersionTLS12
 	return tlsConfig, nil
 }

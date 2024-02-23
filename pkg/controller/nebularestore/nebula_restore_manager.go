@@ -624,7 +624,8 @@ func (r *RestoreAgent) genHostPairs(backup *meta.BackupMeta, restoreHosts []stri
 
 func (r *RestoreAgent) playBackStorageData(metaEndpoints []string, storageHosts []*meta.ServiceInfo) error {
 	group := async.NewGroup(context.TODO(), r.cfg.Concurrency)
-	for _, s := range storageHosts {
+	for i := range storageHosts {
+		s := storageHosts[i]
 		agent, err := r.agentMgr.GetAgent(s.GetAddr())
 		if err != nil {
 			return err
@@ -743,7 +744,7 @@ func (rm *restoreManager) updateClusterAnnotations(namespace, ncName string, ann
 	}
 
 	if needUpdate {
-		klog.Infof("NebulaCluster %s/%s will update annotations %v", namespace, ncName, annotations)
+		klog.Infof("NebulaCluster [%s/%s] will update annotations %v", namespace, ncName, annotations)
 		return rm.clientSet.NebulaCluster().UpdateNebulaCluster(updated)
 	}
 

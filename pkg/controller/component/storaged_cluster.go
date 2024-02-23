@@ -257,6 +257,9 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		if err := c.updateManager.RestartPod(nc, int32(ordinal)); err != nil {
 			return err
 		}
+		if err := c.updateManager.Balance(nc); err != nil {
+			return err
+		}
 	}
 
 	if err := c.syncStoragedPVC(nc); err != nil {
@@ -272,12 +275,6 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 		if nc.IsZoneEnabled() {
 			if err := c.updateZoneMappings(nc, *newReplicas); err != nil {
 				return fmt.Errorf("update zone mappings failed: %v", err)
-			}
-		}
-
-		if len(nc.Status.Storaged.BalancedSpaces) > 0 {
-			if err := c.updateManager.Balance(nc); err != nil {
-				return err
 			}
 		}
 	}

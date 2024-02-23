@@ -23,6 +23,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
@@ -66,9 +67,16 @@ func (c *defaultCronBackupControl) UpdateCronBackup(cronBackup *v1alpha1.NebulaC
 		return nil, err
 	}
 
-	if c.cleanFinishedBackups(cronBackup, backupsToBeReconciled) {
+	if c.cleanupFinishedBackups(cronBackup, backupsToBeReconciled) {
 		cronBackup.Status.BackupCleanTime = &metav1.Time{Time: time.Now()}
 		if err := c.clientSet.NebulaCronBackup().UpdateCronBackupStatus(cronBackup.DeepCopy()); err != nil {
+			return nil, err
+		}
+	}
+
+	if pointer.BoolDeref(cronBackup.Spec.Pause, false) && requeueAfter == nil {
+		requeueAfter, err = c.calculateExpirationTime(cronBackup, backupsToBeReconciled)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -84,7 +92,7 @@ func (c *defaultCronBackupControl) UpdateCronBackup(cronBackup *v1alpha1.NebulaC
 	return nil, nil
 }
 
-func (c *defaultCronBackupControl) cleanFinishedBackups(cronBackup *v1alpha1.NebulaCronBackup, backups []v1alpha1.NebulaBackup) bool {
+func (c *defaultCronBackupControl) cleanupFinishedBackups(cronBackup *v1alpha1.NebulaCronBackup, backups []v1alpha1.NebulaBackup) bool {
 	if cronBackup.Spec.MaxReservedTime == nil {
 		return false
 	}
@@ -95,16 +103,7 @@ func (c *defaultCronBackupControl) cleanFinishedBackups(cronBackup *v1alpha1.Neb
 		return false
 	}
 
-	ascBackups := make([]*v1alpha1.NebulaBackup, 0)
-	for i := range backups {
-		backup := backups[i]
-		if !(condition.IsBackupFailed(&backup) || condition.IsBackupComplete(&backup)) {
-			continue
-		}
-		ascBackups = append(ascBackups, &backup)
-	}
-
-	sort.Sort(byBackupStartTime(ascBackups))
+	ascBackups := sortBackupsByAscOrder(backups)
 	expiredBackups := calculateExpiredBackups(ascBackups, reservedTime)
 	if len(expiredBackups) == 0 {
 		klog.V(4).Infof("cron backup [%s/%s] no expired backups found", cronBackup.Namespace, cronBackup.Name)
@@ -121,7 +120,7 @@ func (c *defaultCronBackupControl) cleanFinishedBackups(cronBackup *v1alpha1.Neb
 			if err := c.clientSet.NebulaBackup().DeleteNebulaBackup(backup.Namespace, backup.Name); err != nil {
 				return err
 			}
-			klog.V(4).Infof("cron backup [%s/%s] clean expired backup %s ago", backup.Namespace, backup.Name, reservedTime.String())
+			klog.V(4).Infof("cron backup [%s/%s] cleanups expired backup %s ago", backup.Namespace, backup.Name, reservedTime.String())
 			return nil
 		}
 
@@ -130,7 +129,7 @@ func (c *defaultCronBackupControl) cleanFinishedBackups(cronBackup *v1alpha1.Neb
 		})
 	}
 	if err := group.Wait(); err != nil {
-		klog.Errorf("cron backup [%s/%s] failed to clean expired backups: %v", cronBackup.Namespace, cronBackup.Name, err)
+		klog.Errorf("cron backup [%s/%s] failed to cleanup expired backups: %v", cronBackup.Namespace, cronBackup.Name, err)
 		return false
 	}
 
@@ -148,6 +147,47 @@ func (c *defaultCronBackupControl) getBackupsToBeReconciled(cronBackup *v1alpha1
 		return nil, err
 	}
 	return backups, nil
+}
+
+func (c *defaultCronBackupControl) calculateExpirationTime(cronBackup *v1alpha1.NebulaCronBackup, backups []v1alpha1.NebulaBackup) (*time.Duration, error) {
+	if cronBackup.Spec.MaxReservedTime == nil {
+		return nil, nil
+	}
+	reservedTime, err := time.ParseDuration(*cronBackup.Spec.MaxReservedTime)
+	if err != nil {
+		return nil, err
+	}
+	ascBackups := sortBackupsByAscOrder(backups)
+	if len(ascBackups) == 0 {
+		return nil, nil
+	}
+	oldestTime := ascBackups[0].CreationTimestamp
+	expiredTime := time.Now().Add(-1 * reservedTime)
+	klog.Infof("oldest backup create time %v, clenaup expired time %v", oldestTime.Time, expiredTime)
+	timeElapsed := oldestTime.Time.Sub(expiredTime)
+	if timeElapsed < 0 {
+		klog.Infof("cleanup the oldest backup [%s/%s] right now", ascBackups[0].Namespace, ascBackups[0].Name)
+		return pointer.Duration(time.Millisecond * 100), nil
+	}
+	klog.Infof("the oldest backup [%s/%s] will be cleanup after %s", ascBackups[0].Namespace, ascBackups[0].Name, timeElapsed.String())
+	return &timeElapsed, nil
+}
+
+func sortBackupsByAscOrder(backups []v1alpha1.NebulaBackup) []*v1alpha1.NebulaBackup {
+	ascBackups := make([]*v1alpha1.NebulaBackup, 0)
+	for i := range backups {
+		backup := backups[i]
+		if !(condition.IsBackupFailed(&backup) || condition.IsBackupComplete(&backup)) {
+			continue
+		}
+		if backup.DeletionTimestamp != nil {
+			continue
+		}
+		ascBackups = append(ascBackups, &backup)
+	}
+
+	sort.Sort(byBackupStartTime(ascBackups))
+	return ascBackups
 }
 
 func calculateExpiredBackups(ascBackups []*v1alpha1.NebulaBackup, reservedTime time.Duration) []*v1alpha1.NebulaBackup {

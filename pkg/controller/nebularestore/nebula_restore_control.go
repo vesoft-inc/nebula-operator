@@ -79,6 +79,7 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) 
 			return nil
 		}
 		for _, pod := range pods {
+			// TODO get pod failed details
 			if pod.Status.Phase == corev1.PodFailed {
 				klog.Infof("NebulaCluster [%s/%s] has failed pod %s.", ns, name, pod.Name)
 				if err := c.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, &v1alpha1.RestoreCondition{

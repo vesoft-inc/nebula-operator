@@ -1,0 +1,50 @@
+apiVersion: apps.nebula-graph.io/v1alpha1
+kind: NebulaBackup
+metadata:
+  name: backup
+spec:
+  image: reg.vesoft-inc.com/cloud-dev/br-ent
+  version: v3.7.0
+  env:
+  - name: CA_CERT_PATH
+    value: /usr/local/certs/root.crt
+  - name: CLIENT_CERT_PATH
+    value: /usr/local/certs/client.crt
+  - name: CLIENT_KEY_PATH
+    value: /usr/local/certs/client.key
+  resources:
+    limits:
+      cpu: "200m"
+      memory: 300Mi
+    requests:
+      cpu: 100m
+      memory: 200Mi
+  imagePullSecrets:
+  - name: nebula-image
+  initContainers:
+  - name: init-auth-sidecar
+    command:
+    - /bin/sh
+    - -c
+    args:
+    - cp -r /certs/* /credentials/
+    imagePullPolicy: Always
+    image: reg.vesoft-inc.com/cloud-dev/nebula-certs:latest
+    volumeMounts:
+    - name: credentials
+      mountPath: /credentials
+  volumes:
+  - name: credentials
+    emptyDir:
+      medium: Memory
+  volumeMounts:
+  - name: credentials
+    mountPath: /usr/local/certs
+  autoRemoveFinished: true
+  cleanBackupData: true
+  config:
+    clusterName: nebula
+    gs:
+      location: "us-central1"
+      bucket: "nebula-test"
+      secretName: "gcp-secret"

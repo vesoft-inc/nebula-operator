@@ -98,6 +98,9 @@ syncPeriod: 0h30m0s
 # e.g. ns1,ns2,ns3
 watchNamespaces: ""
 
+# nebula object selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2).
+nebulaObjectSelector: ""
+
 # The number of NebulaCluster objects that are allowed to sync concurrently. (default 5)
 concurrentNebulaClusterSyncs: 5
 

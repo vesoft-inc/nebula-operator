@@ -151,6 +151,7 @@ func (rm *restoreManager) syncRestoreProcess(nr *v1alpha1.NebulaRestore) error {
 	if err != nil {
 		return err
 	}
+	defer restoreAgent.agentMgr.Close()
 
 	if err := rm.loadCluster(original, restored, restoreAgent, options); err != nil {
 		return err
@@ -760,7 +761,6 @@ func (rm *restoreManager) endpointsConnected(restoreAgent *RestoreAgent, endpoin
 		}
 		agent, err := restoreAgent.agentMgr.GetAgent(host)
 		if err != nil {
-			klog.Error(err)
 			return false
 		}
 		resp, err := agent.HealthCheck(&pb.HealthCheckRequest{})
@@ -802,9 +802,23 @@ func (rm *restoreManager) getRestoredName(nr *v1alpha1.NebulaRestore) (string, e
 			return "", err
 		}
 
-		klog.Infof("generate restored nebula cluster name successfully")
+		klog.Infof("generate [%s/%s] restored nebula cluster name successfully", nr.Namespace, nr.Name)
 		return genName, nil
 	}
 
 	return nr.Status.ClusterName, nil
+}
+
+func getPodTerminateReason(pod corev1.Pod) string {
+	for _, cs := range pod.Status.InitContainerStatuses {
+		if cs.State.Terminated != nil {
+			return cs.State.Terminated.String()
+		}
+	}
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.State.Terminated != nil {
+			return cs.State.Terminated.String()
+		}
+	}
+	return ""
 }

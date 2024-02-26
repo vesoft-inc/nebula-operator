@@ -105,6 +105,7 @@ func (rm *restoreManager) syncRestoreProcess(nr *v1alpha1.NebulaRestore) error {
 	}
 	original, err := rm.clientSet.NebulaCluster().GetNebulaCluster(ns, originalName)
 	if err != nil {
+		klog.Errorf("backup cluster [%s/%s] not found", ns, originalName)
 		return err
 	}
 

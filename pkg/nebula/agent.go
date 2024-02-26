@@ -70,3 +70,10 @@ func (a *AgentManager) GetAgent(agentAddr *nebula.HostAddr) (*Agent, error) {
 	a.agents[agentAddr.Host] = agent
 	return agent, nil
 }
+
+func (a *AgentManager) Close() {
+	for addr, agent := range a.agents {
+		agent.Close()
+		delete(a.agents, addr)
+	}
+}

@@ -33,6 +33,9 @@ spec:
             {{- if .Values.watchNamespaces }}
             - --watch-namespaces={{ .Values.watchNamespaces }}
             {{- end }}
+            {{- if .Values.nebulaObjectSelector }}
+            - --nebula-object-selector={{ .Values.nebulaObjectSelector }}
+            {{- end }}
             - --sync-period={{ .Values.syncPeriod }}
             - --concurrent-nebulacluster-syncs={{ .Values.concurrentNebulaClusterSyncs }}
             - --concurrent-nebularestore-syncs={{ .Values.concurrentNebulaRestoreSyncs }}

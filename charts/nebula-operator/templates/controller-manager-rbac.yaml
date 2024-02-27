@@ -68,6 +68,7 @@ rules:
     verbs:
       - get
       - list
+      - watch
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
@@ -100,9 +101,6 @@ rules:
     verbs:
       - get
       - list
-      - patch
-      - update
-      - watch
   - apiGroups:
       - ""
     resources:
@@ -172,6 +170,13 @@ rules:
       - update
       - watch
   - apiGroups:
+    - ""
+    resources:
+    - pods/log
+    verbs:
+    - get
+    - list
+  - apiGroups:
       - ""
     resources:
       - services
@@ -209,6 +214,18 @@ rules:
       - update
       - watch
   - apiGroups:
+    - batch
+    resources:
+    - jobs
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
       - apps.nebula-graph.io
     resources:
       - nebulaclusters
@@ -234,6 +251,58 @@ rules:
       - get
       - patch
       - update
+  - apiGroups:
+    - apps.nebula-graph.io
+    resources:
+    - nebulabackups
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - apps.nebula-graph.io
+    resources:
+    - nebulabackups/finalizers
+    verbs:
+    - update
+  - apiGroups:
+    - apps.nebula-graph.io
+    resources:
+    - nebulabackups/status
+    verbs:
+    - get
+    - patch
+    - update
+  - apiGroups:
+    - apps.nebula-graph.io
+    resources:
+    - nebulacronbackups
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - apps.nebula-graph.io
+    resources:
+    - nebulacronbackups/finalizers
+    verbs:
+    - update
+  - apiGroups:
+    - apps.nebula-graph.io
+    resources:
+    - nebulacronbackups/status
+    verbs:
+    - get
+    - patch
+    - update
   - apiGroups:
       - apps.nebula-graph.io
     resources:

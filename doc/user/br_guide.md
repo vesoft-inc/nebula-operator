@@ -4,7 +4,7 @@
 
 * The feature is used for enterprise version
 * The NebulaGraph cluster is running
-* Operator version >= 1.4.0
+* Operator version >= 1.8.0
 * Set the field `enableBR` ot __true__
 * Sufficient computational resources can be scheduled to restore NebulaGraph cluster(only restore scenario needed)
 * GCS、S3 credentials 

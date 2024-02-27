@@ -141,6 +141,8 @@ nebula:
       limits:
         cpu: "200m"
         memory: "256Mi"
+    env: []
+    volumeMounts: []
 
   console:
     username: root

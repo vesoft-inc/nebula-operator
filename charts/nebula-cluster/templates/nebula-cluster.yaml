@@ -288,6 +288,14 @@ spec:
     image: {{ .Values.nebula.agent.image }}
     version: {{ .Values.nebula.agent.version }}
     resources: {{ toYaml .Values.nebula.agent.resources | nindent 6 }}
+    {{- with .Values.nebula.agent.env }}
+    env:
+    {{ toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.agent.volumeMounts }}
+    volumeMounts:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
   console:
     username: {{ .Values.nebula.console.username }}
     password: {{ .Values.nebula.console.password }}

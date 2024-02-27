@@ -230,6 +230,7 @@ nebula-storaged-2   1/1     Running   0          19s
 - [PV reclaim](doc/user/pv_reclaim.md)
 - [PV expansion](doc/user/pv_expansion.md)
 - [mTLS](doc/user/ssl_guide.md)
+- [Specified cluster](doc/user/specified_cluster.md)
 - [Security context](doc/user/security_context.md)
 - [ngctl](doc/user/ngctl_guide.md)
 - [nebula-console](doc/user/nebula_console.md)

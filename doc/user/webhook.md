@@ -36,8 +36,8 @@ metadata:
     app.kubernetes.io/instance: nebula-operator
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nebula-operator
-    app.kubernetes.io/version: 1.7.0
-    helm.sh/chart: nebula-operator-1.7.0
+    app.kubernetes.io/version: 1.8.0
+    helm.sh/chart: nebula-operator-1.8.0
   name: nebula-operator-webhook-issuer
   namespace: default
   resourceVersion: "109935202"
@@ -66,8 +66,8 @@ metadata:
     app.kubernetes.io/instance: nebula-operator
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nebula-operator
-    app.kubernetes.io/version: 1.7.0
-    helm.sh/chart: nebula-operator-1.7.0
+    app.kubernetes.io/version: 1.8.0
+    helm.sh/chart: nebula-operator-1.8.0
   name: nebula-operator-webhook-cert
   namespace: default
   resourceVersion: "109935196"
@@ -120,4 +120,11 @@ HA mode
 $ kubectl annotate nc nebula nebula-graph.io/ha-mode=true
 $ kubectl patch nc nebula  --type='merge' --patch '{"spec": {"graphd": {"replicas":1}}}'
 Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: spec.graphd.replicas: Invalid value: 1: should be at least 2 in HA mode
+```
+
+Deletion protection
+```shell
+$ kubectl annotate nc nebula -n nebula-test nebula-graph.io/delete-protection=true
+$ kubectl delete sc nebula -n nebula-test
+Error from server: admission webhook "nebulaclustervalidating.nebula-graph.io" denied the request: metadata.annotations[nebula-graph.io/delete-protection]: Forbidden: protected cluster cannot be deleted
 ```

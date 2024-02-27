@@ -17,10 +17,7 @@ limitations under the License.
 package nebularestore
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -79,14 +76,13 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) 
 			return nil
 		}
 		for _, pod := range pods {
-			// TODO get pod failed details
 			if pod.Status.Phase == corev1.PodFailed {
 				klog.Infof("NebulaCluster [%s/%s] has failed pod %s.", ns, name, pod.Name)
 				if err := c.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, &v1alpha1.RestoreCondition{
 					Type:    v1alpha1.RestoreFailed,
 					Status:  corev1.ConditionTrue,
 					Reason:  "PodFailed",
-					Message: fmt.Sprintf("Pod %s has failed", pod.Name),
+					Message: getPodTerminateReason(pod),
 				}, &kube.RestoreUpdateStatus{
 					ConditionType: v1alpha1.RestoreFailed,
 				}); err != nil {
@@ -102,34 +98,33 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) 
 		}
 	}
 
-	err := c.restoreManager.Sync(nr)
-	if err != nil && !utilerrors.IsReconcileError(err) {
-		if apierrors.IsNotFound(err) {
+	if err := c.restoreManager.Sync(nr); err != nil {
+		if !utilerrors.IsReconcileError(err) {
+			if err := c.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, &v1alpha1.RestoreCondition{
+				Type:    v1alpha1.RestoreFailed,
+				Status:  corev1.ConditionTrue,
+				Reason:  "ExecuteFailed",
+				Message: err.Error(),
+			}, &kube.RestoreUpdateStatus{
+				ConditionType: v1alpha1.RestoreFailed,
+			}); err != nil {
+				klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
+			}
+			updated, err := c.clientSet.NebulaRestore().GetNebulaRestore(ns, nr.Name)
+			if err != nil {
+				klog.Errorf("Fail to get NebulaRestore [%s/%s], %v", ns, name, err)
+			}
+			if nr.Spec.AutoRemoveFailed {
+				if err := c.deleteRestoredCluster(ns, updated.Status.ClusterName); err != nil {
+					klog.Errorf("Fail to delete NebulaCluster %v", err)
+				}
+			}
 			return nil
 		}
-		if err := c.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, &v1alpha1.RestoreCondition{
-			Type:    v1alpha1.RestoreFailed,
-			Status:  corev1.ConditionTrue,
-			Reason:  "ExecuteFailed",
-			Message: err.Error(),
-		}, &kube.RestoreUpdateStatus{
-			ConditionType: v1alpha1.RestoreFailed,
-		}); err != nil {
-			klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
-		}
-		updated, err := c.clientSet.NebulaRestore().GetNebulaRestore(ns, nr.Name)
-		if err != nil {
-			klog.Errorf("Fail to get NebulaRestore [%s/%s], %v", ns, name, err)
-		}
-		if nr.Spec.AutoRemoveFailed {
-			if err := c.deleteRestoredCluster(ns, updated.Status.ClusterName); err != nil {
-				klog.Errorf("Fail to delete NebulaCluster %v", err)
-			}
-		}
-		return nil
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (c *defaultRestoreControl) deleteRestoredCluster(namespace, ncName string) error {

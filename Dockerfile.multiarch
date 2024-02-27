@@ -24,6 +24,8 @@ RUN mv ./kubectl /usr/local/bin
 ADD charts/nebula-operator/crds/nebulaautoscalers.yaml /tmp/nebula-operator/nebulaautoscalers.yaml
 ADD charts/nebula-operator/crds/nebulaclusters.yaml /tmp/nebula-operator/nebulaclusters.yaml
 ADD charts/nebula-operator/crds/nebularestores.yaml /tmp/nebula-operator/nebularestores.yaml
+ADD charts/nebula-operator/crds/nebulabackups.yaml /tmp/nebula-operator/nebulabackups.yaml
+ADD charts/nebula-operator/crds/nebulacronbackups.yaml /tmp/nebula-operator/nebulacronbackups.yaml
 
 ADD bin/${TARGETPLATFORM}/controller-manager /usr/local/bin/controller-manager
 ADD bin/${TARGETPLATFORM}/autoscaler /usr/local/bin/autoscaler

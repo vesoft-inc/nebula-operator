@@ -32,5 +32,7 @@ spec:
           kubectl apply -f /tmp/nebula-operator/nebulaautoscalers.yaml;
           kubectl apply -f /tmp/nebula-operator/nebulaclusters.yaml;
           kubectl apply -f /tmp/nebula-operator/nebularestores.yaml;
+          kubectl apply -f /tmp/nebula-operator/nebulabackups.yaml;
+          kubectl apply -f /tmp/nebula-operator/nebulacronbackups.yaml;
       restartPolicy: OnFailure
 {{- end }}

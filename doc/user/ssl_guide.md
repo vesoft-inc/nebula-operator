@@ -131,6 +131,9 @@ sslCerts:
   caCert: ""
   # InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name
   insecureSkipVerify: false
+  # ServerName is used to verify the hostname on the returned certificates unless InsecureSkipVerify is given. 
+  # It is also included in the client's handshake to support virtual hosting unless it is an IP address.
+  serverName: ""
   # AutoMountServerCerts controls whether operator mounts server's certificate from secret.
   autoMountServerCerts: false
 ```

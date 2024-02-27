@@ -36,24 +36,3 @@ Kubernetes and provides more powerful and efficient features for managing applic
 even images on Node.
 
 Refer to the [openkruise installation documentation](https://openkruise.io/docs/installation) to get started.
-
-## sig-storage-local-static-provisioner
-
-**Note:**
-It is only used in the scenario that you deploy NebulaGraph with local storage, it's not necessary.
-
-[local-static-provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner) manages the
-PersistentVolume lifecycle for pre-allocated disks by detecting and creating PVs for each local disk on the host, and
-cleaning up the disks when released. It does not support dynamic provisioning.
-
-Follow
-the [getting started guide](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/blob/master/docs/getting-started.md)
-to deploy local-volume-provisioner to provision local volumes.
-
-Follow
-the [best practices](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/blob/master/docs/best-practices.md)
-for more information on local PV in Kubernetes.
-
-Follow
-the [mount disks](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/blob/master/docs/operations.md#sharing-a-disk-filesystem-by-multiple-filesystem-pvs)
-to mount the disk.

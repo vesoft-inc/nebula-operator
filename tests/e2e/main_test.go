@@ -37,6 +37,14 @@ import (
 
 const (
 	ImagePullSecretName = "image-pull-secret.e2e"
+	AWSSecretName       = "aws-secret.e2e"
+	AWSRegion           = "us-east-2"
+	AWSBucketName       = "nebula-e2e"
+	AWSBucketEndpoint   = "https://s3.us-east-2.amazonaws.com"
+
+	GSLocation   = "us-east-5"
+	GSSecretName = "gs-secret"
+	GSBucketName = "nebula-cloud-e2e-test-bucket"
 
 	LabelKeyCategory = "category"
 	LabelKeyGroup    = "group"

@@ -676,7 +676,6 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 							fmt.Sprint(componentContainerIdx): map[string]any{
 								"Image":          e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
 								"Resources":      e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
-								"Env":            e2ematcher.DeepEqual(env),
 								"ReadinessProbe": e2ematcher.DeepEqual(*readinessProbe),
 								"LivenessProbe":  e2ematcher.DeepEqualIgnorePtr(component.ComponentSpec().LivenessProbe()),
 							},

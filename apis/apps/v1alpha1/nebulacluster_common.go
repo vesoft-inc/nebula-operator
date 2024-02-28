@@ -388,8 +388,11 @@ func generateAgentContainer(c NebulaClusterComponent, init bool) corev1.Containe
 
 	cmd := []string{"/bin/sh", "-ecx"}
 	initCmd := "sleep 30; exec /usr/local/bin/agent" +
-		fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC) +
-		" --ratelimit=1073741824 --debug"
+		fmt.Sprintf(" --agent=$(hostname).%s:%d", c.GetServiceFQDN(), DefaultAgentPortGRPC) + " --debug"
+	if nc.Spec.Agent != nil {
+		initCmd += fmt.Sprintf(" --ratelimit=%d --hbs=%d", pointer.Int32Deref(nc.Spec.Agent.RateLimit, 0), nc.Spec.Agent.HeartbeatInterval)
+	}
+
 	brCmd := initCmd + " --meta=" + metadAddr
 
 	if nc.IsMetadSSLEnabled() || nc.IsClusterSSLEnabled() {

@@ -493,8 +493,14 @@ spec:
                       - name
                       type: object
                     type: array
+                  heartbeatInterval:
+                    format: int32
+                    type: integer
                   image:
                     type: string
+                  rateLimit:
+                    format: int32
+                    type: integer
                   resources:
                     properties:
                       claims:

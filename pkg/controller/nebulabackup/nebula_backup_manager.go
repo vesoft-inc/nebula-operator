@@ -324,7 +324,7 @@ func (bm *backupManager) runBackupJob(backup *v1alpha1.NebulaBackup, cluster *v1
 	backupType := getBackupType(backup.Spec.Config.BaseBackupName)
 	endpoints := cluster.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)
 	cmd := []string{"/bin/sh", "-ecx"}
-	flags := fmt.Sprintf("exec /usr/local/bin/br-ent backup %s --meta %s", backupType.String(), endpoints[0])
+	flags := fmt.Sprintf("exec /usr/local/bin/br-ent backup %s --meta %s --concurrency %d", backupType.String(), endpoints[0], backup.Spec.Config.Concurrency)
 	if backup.Spec.Config.BaseBackupName != nil {
 		flags += " --base " + *backup.Spec.Config.BaseBackupName
 	}

@@ -92,6 +92,8 @@ type RestoreConfig struct {
 	// The name of the backup file.
 	BackupName string `json:"backupName,omitempty"`
 	// Concurrency is used to control the number of concurrent file downloads during data restoration.
+	// +kubebuilder:default=5
+	// +optional
 	Concurrency int32 `json:"concurrency,omitempty"`
 	// StorageProvider configures where and how backups should be stored.
 	StorageProvider `json:",inline"`

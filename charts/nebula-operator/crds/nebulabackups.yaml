@@ -430,6 +430,10 @@ spec:
                     type: string
                   clusterNamespace:
                     type: string
+                  concurrency:
+                    default: 5
+                    format: int32
+                    type: integer
                   gs:
                     properties:
                       bucket:

@@ -812,13 +812,13 @@ func (rm *restoreManager) getRestoredName(nr *v1alpha1.NebulaRestore) (string, e
 
 func getPodTerminateReason(pod corev1.Pod) string {
 	for _, cs := range pod.Status.InitContainerStatuses {
-		if cs.State.Terminated != nil {
-			return cs.State.Terminated.String()
+		if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+			return fmt.Sprintf("container %s terminated: %s", cs.Name, cs.State.Terminated.String())
 		}
 	}
 	for _, cs := range pod.Status.ContainerStatuses {
-		if cs.State.Terminated != nil {
-			return cs.State.Terminated.String()
+		if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+			return fmt.Sprintf("container %s terminated: %s", cs.Name, cs.State.Terminated.String())
 		}
 	}
 	return ""

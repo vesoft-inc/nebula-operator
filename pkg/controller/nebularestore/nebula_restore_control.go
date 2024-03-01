@@ -17,6 +17,8 @@ limitations under the License.
 package nebularestore
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 
@@ -77,23 +79,21 @@ func (c *defaultRestoreControl) UpdateNebulaRestore(nr *v1alpha1.NebulaRestore) 
 		}
 		for _, pod := range pods {
 			if pod.Status.Phase == corev1.PodFailed {
-				klog.Infof("NebulaCluster [%s/%s] has failed pod %s.", ns, name, pod.Name)
+				terminatedReason := getPodTerminateReason(pod)
 				if err := c.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, &v1alpha1.RestoreCondition{
 					Type:    v1alpha1.RestoreFailed,
-					Status:  corev1.ConditionTrue,
+					Status:  corev1.ConditionUnknown,
 					Reason:  "PodFailed",
-					Message: getPodTerminateReason(pod),
+					Message: terminatedReason,
 				}, &kube.RestoreUpdateStatus{
 					ConditionType: v1alpha1.RestoreFailed,
 				}); err != nil {
 					klog.Errorf("Fail to update the condition of NebulaRestore [%s/%s], %v", ns, name, err)
 				}
-				if nr.Spec.AutoRemoveFailed {
-					if err := c.deleteRestoredCluster(ns, nr.Status.ClusterName); err != nil {
-						klog.Errorf("Fail to delete NebulaCluster [%s/%s], %v", ns, nr.Status.ClusterName, err)
-					}
+				if terminatedReason != "" {
+					klog.Errorf("restored cluster [%s/%s] has failed pod %s, terminated reason: %s", ns, name, pod.Name, terminatedReason)
+					return fmt.Errorf("restored cluster has failed pod: %s", pod.Name)
 				}
-				return nil
 			}
 		}
 	}

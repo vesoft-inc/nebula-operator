@@ -29,6 +29,7 @@ spec:
             - --leader-elect
             - --leader-elect-resource-name={{ .Values.scheduler.schedulerName }}
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
+            - --pod-max-in-unschedulable-pods-duration={{ .Values.scheduler.podMaxInUnschedulablePodsDuration }}
             - --v={{ .Values.scheduler.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.scheduler.env }}
           env:

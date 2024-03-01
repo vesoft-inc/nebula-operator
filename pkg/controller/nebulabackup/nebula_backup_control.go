@@ -132,6 +132,10 @@ func (c *defaultBackupControl) UpdateNebulaBackup(backup *v1alpha1.NebulaBackup)
 }
 
 func (c *defaultBackupControl) addFinalizer(backup *v1alpha1.NebulaBackup) error {
+	if !backup.CleanBackupData() && kube.HasFinalizer(backup, finalizer) {
+		return kube.UpdateFinalizer(context.TODO(), c.client, backup, kube.RemoveFinalizerOpType, finalizer)
+	}
+
 	if needToAddFinalizer(backup) {
 		if err := kube.UpdateFinalizer(context.TODO(), c.client, backup, kube.AddFinalizerOpType, finalizer); err != nil {
 			return fmt.Errorf("add backup [%s/%s] finalizer failed, err: %v", backup.Namespace, backup.Name, err)

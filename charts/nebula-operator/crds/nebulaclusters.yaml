@@ -494,6 +494,7 @@ spec:
                       type: object
                     type: array
                   heartbeatInterval:
+                    default: 60
                     format: int32
                     type: integer
                   image:

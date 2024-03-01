@@ -81,6 +81,7 @@ scheduler:
       cpu: 100m
       memory: 100Mi
   verbosity: 0
+  podMaxInUnschedulablePodsDuration: 10s
   plugins:
     enabled: ["NodeZone"]
     disabled: [] # only in-tree plugins need to be defined here

@@ -33,12 +33,14 @@ import (
 )
 
 type RestoreUpdateStatus struct {
-	TimeStarted   *metav1.Time
-	TimeCompleted *metav1.Time
-	ClusterName   *string
-	ConditionType v1alpha1.RestoreConditionType
-	Partitions    map[string][]*nebula.HostAddr
-	Checkpoints   map[string]map[string]string
+	TimeStarted     *metav1.Time
+	TimeCompleted   *metav1.Time
+	ClusterName     *string
+	ConditionType   v1alpha1.RestoreConditionType
+	Partitions      map[string][]*nebula.HostAddr
+	Checkpoints     map[string]map[string]string
+	MetaDownload    bool
+	StorageDownload bool
 }
 
 type NebulaRestore interface {
@@ -117,12 +119,20 @@ func updateRestoreStatus(status *v1alpha1.RestoreStatus, newStatus *RestoreUpdat
 		status.TimeCompleted = newStatus.TimeCompleted
 		isUpdate = true
 	}
-	if newStatus.Partitions != nil || (status.Partitions != nil && newStatus.Partitions == nil) {
+	if len(status.Partitions) != len(newStatus.Partitions) {
 		status.Partitions = newStatus.Partitions
 		isUpdate = true
 	}
-	if newStatus.Checkpoints != nil || (status.Checkpoints != nil && newStatus.Checkpoints == nil) {
+	if len(status.Checkpoints) != len(newStatus.Checkpoints) {
 		status.Checkpoints = newStatus.Checkpoints
+		isUpdate = true
+	}
+	if newStatus.MetaDownload {
+		status.MetaDownload = newStatus.MetaDownload
+		isUpdate = true
+	}
+	if newStatus.StorageDownload {
+		status.StorageDownload = newStatus.StorageDownload
 		isUpdate = true
 	}
 

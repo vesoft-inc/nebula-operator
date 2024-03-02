@@ -135,6 +135,10 @@ type RestoreStatus struct {
 	Partitions map[string][]*nebula.HostAddr `json:"partitions,omitempty"`
 	// +nullable
 	Checkpoints map[string]map[string]string `json:"checkpoints,omitempty"`
+	// The Metad data files download is complete.
+	MetaDownload bool `json:"metaDownload"`
+	// The Storaged data files download is complete.
+	StorageDownload bool `json:"storageDownload"`
 }
 
 func init() {

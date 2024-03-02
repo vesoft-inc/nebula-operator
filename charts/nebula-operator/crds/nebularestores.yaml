@@ -506,6 +506,8 @@ spec:
                   type: object
                 nullable: true
                 type: array
+              metaDownload:
+                type: boolean
               partitions:
                 additionalProperties:
                   items:
@@ -524,6 +526,8 @@ spec:
                 type: object
               phase:
                 type: string
+              storageDownload:
+                type: boolean
               timeCompleted:
                 format: date-time
                 nullable: true
@@ -532,6 +536,9 @@ spec:
                 format: date-time
                 nullable: true
                 type: string
+            required:
+            - metaDownload
+            - storageDownload
             type: object
         type: object
     served: true

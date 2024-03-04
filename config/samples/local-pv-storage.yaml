@@ -88,8 +88,8 @@ spec:
       serviceAccountName: local-pv-provisioner-sa
       containers:
         - name: local-pv-provisioner
-          image: vesoft/local-pv-provisioner
-          imagePullPolicy: IfNotPresent
+          image: vesoft/local-pv-provisioner:v0.1
+          imagePullPolicy: Always
           command:
             - local-pv-provisioner
           volumeMounts:
@@ -109,7 +109,7 @@ spec:
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: local-pv
+  name: local-nvme
 provisioner: nebula-cloud.io/local-pv
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete

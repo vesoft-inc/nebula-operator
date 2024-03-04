@@ -1,0 +1,11 @@
+FROM alpine:3.18.2
+
+ARG TARGETPLATFORM
+ARG TARGETARCH
+
+RUN apk update \
+  && apk upgrade \
+  && apk add --no-cache \
+    util-linux bash \
+  && rm -rf /var/cache/apk/*
+ADD bin/${TARGETPLATFORM}/local-pv-provisioner /usr/local/bin/local-pv-provisioner

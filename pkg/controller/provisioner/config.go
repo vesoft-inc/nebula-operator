@@ -29,7 +29,7 @@ const (
 	DefaultMountPoint = "/mnt/disks/raid0"
 
 	// DefaultFsType is the filesystem type to mount
-	DefaultFsType = "xfs"
+	DefaultFsType = "ext4"
 
 	// LocalFilesystemEnv will contain the filesystm path when script is invoked
 	LocalFilesystemEnv = "LOCAL_PV_FILESYSTEM"

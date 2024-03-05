@@ -45,7 +45,7 @@ const (
 )
 
 var (
-	taints = []*corev1.Taint{
+	nodeTaints = []*corev1.Taint{
 		{
 			Key:    corev1.TaintNodeUnreachable,
 			Effect: corev1.TaintEffectNoExecute,
@@ -74,8 +74,8 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 	if err != nil {
 		return err
 	}
-	if len(readyPods) == len(nc.Status.Storaged.FailureHosts) {
-		return nil
+	if len(readyPods) > 0 {
+		return utilerrors.ReconcileErrorf("storaged pods [%v] are ready after restarted", readyPods)
 	}
 	if err := s.deleteFailureHost(nc); err != nil {
 		return err
@@ -96,6 +96,7 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 
 func (s *storagedFailover) Recovery(nc *v1alpha1.NebulaCluster) error {
 	nc.Status.Storaged.FailureHosts = nil
+	nc.Status.Storaged.BalancedAfterFailover = nil
 	klog.Infof("clearing storaged cluster [%s/%s] failure hosts", nc.GetNamespace(), nc.GetName())
 	return nil
 }
@@ -378,9 +379,9 @@ func getPodPvcs(clientSet kube.ClientSet, nc *v1alpha1.NebulaCluster, podName st
 }
 
 func isNodeDown(node *corev1.Node) bool {
-	for i := range taints {
-		if taintExists(node.Spec.Taints, taints[i]) {
-			klog.Infof("node %s found taint %s", node.Name, taints[i].Key)
+	for i := range nodeTaints {
+		if taintExists(node.Spec.Taints, nodeTaints[i]) {
+			klog.Infof("node %s found taint %s", node.Name, nodeTaints[i].Key)
 			return true
 		}
 	}

@@ -20,7 +20,6 @@ var DynamicFlags = map[string]string{
 	"minloglevel":                                 "0",
 	"v":                                           "0",
 	"accept_partial_success":                      "false",
-	"session_reclaim_interval_secs":               "60",
 	"max_allowed_query_size":                      "4194304",
 	"system_memory_high_watermark_ratio":          "0.8",
 	"ng_black_box_file_lifetime_seconds":          "1800",

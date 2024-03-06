@@ -25,7 +25,7 @@ The fields in the table is optional.
 | Parameter            | Description                                                               | Default  |
 |:---------------------|:--------------------------------------------------------------------------|:---------|
 | `image`              | backup container image without tag, and use `version` as tag              | ``       |
-| `nebula.version`     | backup image tag                                                          | ``       |
+| `version`            | backup image tag                                                          | ``       |
 | `imagePullPolicy`    | backup image pull policy                                                  | `Always` |
 | `imagePullSecrets`   | The secret to use for pulling the images                                  | `[]`     |
 | `env`                | backup container environment variables                                    | `[]`     |
@@ -76,6 +76,8 @@ spec:
   config:
     # The name of the backup/restore nebula cluster
     clusterName: nebula
+    # Concurrency is used to control the number of concurrent file uploads during data backup.
+    concurrency: 15
     gs:
       # Location in which the gs bucket is located.
       location: "us-central1"
@@ -125,6 +127,7 @@ spec:
     cleanBackupData: true
     config:
       clusterName: nebula
+      concurrency: 15
       gs:
         location: "us-central1"
         bucket: "nebula-test"

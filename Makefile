@@ -6,9 +6,10 @@ LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
 USERNAME ?= ng-user
-IMAGE_TAG ?= v1.7.6
+IMAGE_TAG ?= v1.8.0
+PROVISIONER_IMAGE_TAG ?= v0.1
 
-CHARTS_VERSION ?= 1.7.6
+CHARTS_VERSION ?= 1.8.0
 
 export GO111MODULE := on
 GOOS := $(if $(GOOS),$(GOOS),linux)
@@ -72,11 +73,13 @@ e2e: kind ## Run e2e test.
 	PATH="${GOBIN}:${PATH}" ./hack/e2e.sh $(E2EARGS)
 
 ##@ Build
-build: ## Build binary.
+build-operator: ## Build operator related binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/controller-manager cmd/controller-manager/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/autoscaler cmd/autoscaler/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/scheduler cmd/scheduler/main.go
-	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/provisioner cmd/provisioner/main.go
+
+build-provisioner: ## Build provisioner binary.
+	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/local-pv-provisioner cmd/provisioner/main.go
 
 helm-charts: ## Build helm charts.
 	helm package charts/nebula-operator --version $(CHARTS_VERSION) --app-version $(CHARTS_VERSION)
@@ -97,7 +100,7 @@ PLATFORMS = arm64 amd64
 BUILDX_PLATFORMS = linux/arm64,linux/amd64
 
 docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchitecture docker images and manifest.
-	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build;)
+	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build-operator;)
 	echo "Building and pushing nebula-operator image... $(BUILDX_PLATFORMS)"
 	docker buildx build \
     		--no-cache \
@@ -109,7 +112,7 @@ docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchi
     		--build-arg USERNAME=${USERNAME} \
     		-t "${DOCKER_REPO}/nebula-operator:${IMAGE_TAG}" .
 
-alpine-tools: ## Build and push the alpine-tools docker images and manifest.
+alpine-multiarch: ## Build and push the alpine-tools docker images and manifest.
 	echo "Building and pushing alpine-tools image... $(BUILDX_PLATFORMS)"
 	docker buildx rm alpine-tools || true
 	docker buildx create --driver-opt network=host --use --name=alpine-tools
@@ -121,6 +124,20 @@ alpine-tools: ## Build and push the alpine-tools docker images and manifest.
     		--platform $(BUILDX_PLATFORMS) \
     		--file alpine.multiarch \
     		-t "${DOCKER_REPO}/nebula-alpine:latest" .
+
+provisioner-multiarch: ## Build and push the local-pv-provisioner docker images and manifest.
+	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build-provisioner;)
+	echo "Building and pushing local-pv-provisioner image... $(BUILDX_PLATFORMS)"
+	docker buildx rm provisioner || true
+	docker buildx create --driver-opt network=host --use --name=provisioner
+	docker buildx build \
+    		--no-cache \
+    		--pull \
+    		--push \
+    		--progress plain \
+    		--platform $(BUILDX_PLATFORMS) \
+    		--file provisioner.multiarch \
+    		-t "${DOCKER_REPO}/local-pv-provisioner:${PROVISIONER_IMAGE_TAG}" .
 
 ##@ Deployment
 

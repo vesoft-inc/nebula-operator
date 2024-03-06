@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	defaultProvisionerNamespace = "local-pv-storage"
+	defaultProvisionerNamespace = "local-pv-provisioner"
 )
 
 // NewProvisionerCommand creates a *cobra.Command object with default parameters

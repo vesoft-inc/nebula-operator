@@ -312,6 +312,15 @@ type AgentContainerSpec struct {
 
 	// +optional
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// Limit the file upload and download rate, unit Mbps
+	// +optional
+	RateLimit *int32 `json:"rateLimit,omitempty"`
+
+	// Agent heartbeat interval to nebula meta, in seconds
+	// +kubebuilder:default=60
+	// +optional
+	HeartbeatInterval int32 `json:"heartbeatInterval,omitempty"`
 }
 
 type LicenseSpec struct {

@@ -176,12 +176,17 @@ func (rm *restoreManager) syncRestoreProcess(nr *v1alpha1.NebulaRestore) error {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for metad init agent are connected", ns, restoredName)
 		}
 
-		if err := restoreAgent.downloadMetaData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)); err != nil {
-			klog.Errorf("download metad files failed: %v", err)
-			return err
+		if !nr.Status.MetaDownload {
+			if err := restoreAgent.downloadMetaData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift)); err != nil {
+				klog.Errorf("download metad files failed: %v", err)
+				return err
+			}
+			newStatus := &kube.RestoreUpdateStatus{MetaDownload: true}
+			if err := rm.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, nil, newStatus); err != nil {
+				return err
+			}
+			klog.Infof("restoring [%s/%s] in stage1, download metad files successfully", ns, restoredName)
 		}
-
-		klog.Infof("restoring [%s/%s] in stage1, download metad files successfully", ns, restoredName)
 
 		ready, err = rm.metadReady(ns, restoredName)
 		if err != nil {
@@ -228,13 +233,19 @@ func (rm *restoreManager) syncRestoreProcess(nr *v1alpha1.NebulaRestore) error {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage1, waiting for storaged init agent are connected", ns, restoredName)
 		}
 
-		checkpoints, err := restoreAgent.downloadStorageData(nr.Status.Partitions, restoreAgent.storageHosts)
-		if err != nil {
-			klog.Errorf("download storaged files failed: %v", err)
-			return err
+		checkpoints := make(map[string]map[string]string)
+		if !nr.Status.StorageDownload {
+			checkpoints, err = restoreAgent.downloadStorageData(nr.Status.Partitions, restoreAgent.storageHosts)
+			if err != nil {
+				klog.Errorf("download storaged files failed: %v", err)
+				return err
+			}
+			newStatus := &kube.RestoreUpdateStatus{StorageDownload: true}
+			if err := rm.clientSet.NebulaRestore().UpdateNebulaRestoreStatus(nr, nil, newStatus); err != nil {
+				return err
+			}
+			klog.Infof("restoring [%s/%s] in stage1, download storaged files successfully", ns, restoredName)
 		}
-
-		klog.Infof("restoring [%s/%s] in stage1, download storaged files successfully", ns, restoredName)
 
 		if err := restoreAgent.playBackStorageData(restored.GetMetadEndpoints(v1alpha1.MetadPortNameThrift), restoreAgent.storageHosts); err != nil {
 			return err
@@ -812,13 +823,13 @@ func (rm *restoreManager) getRestoredName(nr *v1alpha1.NebulaRestore) (string, e
 
 func getPodTerminateReason(pod corev1.Pod) string {
 	for _, cs := range pod.Status.InitContainerStatuses {
-		if cs.State.Terminated != nil {
-			return cs.State.Terminated.String()
+		if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+			return fmt.Sprintf("pod %s container %s terminated: %s", pod.Name, cs.Name, cs.State.Terminated.String())
 		}
 	}
 	for _, cs := range pod.Status.ContainerStatuses {
-		if cs.State.Terminated != nil {
-			return cs.State.Terminated.String()
+		if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+			return fmt.Sprintf("pod %s container %s terminated: %s", pod.Name, cs.Name, cs.State.Terminated.String())
 		}
 	}
 	return ""

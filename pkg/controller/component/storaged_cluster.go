@@ -309,6 +309,10 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 		nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
 	}
 
+	if !nc.IsAutoFailoverEnabled() {
+		return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
+	}
+
 	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err
@@ -322,10 +326,6 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 		_ = metaClient.Disconnect()
 	}()
 
-	if !nc.IsAutoFailoverEnabled() {
-		return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
-	}
-
 	hostItems, err := metaClient.ListHosts(meta.ListHostType_STORAGE)
 	if err != nil {
 		return err
@@ -338,8 +338,8 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 			if nc.Status.Storaged.FailureHosts == nil {
 				nc.Status.Storaged.FailureHosts = make(map[string]v1alpha1.StoragedFailureHost)
 			}
-			fh, exits := nc.Status.Storaged.FailureHosts[podName]
-			if exits {
+			fh, exists := nc.Status.Storaged.FailureHosts[podName]
+			if exists {
 				deadline := fh.CreationTime.Add(nc.Spec.FailoverPeriod.Duration)
 				if time.Now().After(deadline) {
 					if fh.ConfirmationTime.IsZero() {
@@ -533,9 +533,10 @@ func (c *storagedCluster) updateZoneMappings(nc *v1alpha1.NebulaCluster, newRepl
 	return nil
 }
 
+// TODO support partially recovery
 func (c *storagedCluster) shouldRecover(nc *v1alpha1.NebulaCluster) (bool, error) {
 	if nc.Status.Storaged.FailureHosts == nil {
-		return false, nil
+		return true, nil
 	}
 
 	fhSet := sets.New[string]()

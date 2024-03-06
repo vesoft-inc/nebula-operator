@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: gs-secret
+  name: gcp-secret
 type: Opaque
 data:
   credentials: <GOOGLE_APPLICATION_CREDENTIALS_JSON>

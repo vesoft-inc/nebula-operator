@@ -1,21 +1,21 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: local-pv-storage
+  name: local-pv-provisioner
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: local-pv-provisioner-sa
-  namespace: local-pv-storage
+  namespace: local-pv-provisioner
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: local-pv-provisioner-role
-  namespace: local-pv-storage
+  namespace: local-pv-provisioner
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -28,14 +28,20 @@ metadata:
   name: local-pv-provisioner-role
 rules:
   - apiGroups: [""]
-    resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+    resources: ["nodes", "configmaps", "pods", "pods/log"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "update", "watch"]
   - apiGroups: [""]
     resources: ["persistentvolumes"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
   - apiGroups: [""]
     resources: ["events"]
-    verbs: ["create", "patch"]
+    verbs: ["watch"]
+  - apiGroups: ["", "events.k8s.io"]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["storageclasses"]
     verbs: ["get", "list", "watch"]
@@ -45,7 +51,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: local-pv-provisioner-bind
-  namespace: local-pv-storage
+  namespace: local-pv-provisioner
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -53,7 +59,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: local-pv-provisioner-sa
-    namespace: local-pv-storage
+    namespace: local-pv-provisioner
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -67,14 +73,14 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: local-pv-provisioner-sa
-    namespace: local-pv-storage
+    namespace: local-pv-provisioner
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: local-pv-provisioner
-  namespace: local-pv-storage
+  namespace: local-pv-provisioner
 spec:
   replicas: 1
   selector:
@@ -88,8 +94,8 @@ spec:
       serviceAccountName: local-pv-provisioner-sa
       containers:
         - name: local-pv-provisioner
-          image: vesoft/local-pv-provisioner
-          imagePullPolicy: IfNotPresent
+          image: vesoft/local-pv-provisioner:v0.1
+          imagePullPolicy: Always
           command:
             - local-pv-provisioner
           volumeMounts:
@@ -109,7 +115,7 @@ spec:
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: local-pv
+  name: local-nvme
 provisioner: nebula-cloud.io/local-pv
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -119,7 +125,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: local-pv-config
-  namespace: local-pv-storage
+  namespace: local-pv-provisioner
 data:
   setup: |-
     #!/bin/bash

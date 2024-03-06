@@ -160,6 +160,10 @@ type BackupConfig struct {
 	NamespacedObjectReference `json:",inline"`
 	// The name of the base backup and only used for incremental backup.
 	BaseBackupName *string `json:"baseBackupName,omitempty"`
+	// Concurrency is used to control the number of concurrent file uploads during data backup.
+	// +kubebuilder:default=5
+	// +optional
+	Concurrency int32 `json:"concurrency,omitempty"`
 	// StorageProvider configures where and how backups should be stored.
 	StorageProvider `json:",inline"`
 }

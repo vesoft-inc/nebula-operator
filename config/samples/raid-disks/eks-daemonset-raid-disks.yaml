@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: eks-raid-disks
+  namespace: default
+  labels:
+    k8s-app: eks-raid-disks
+spec:
+  selector:
+    matchLabels:
+      name: eks-raid-disks
+  template:
+    metadata:
+      labels:
+        name: eks-raid-disks
+    spec:
+      nodeSelector:
+        node.kubernetes.io/instance-type: "m5ad.large"
+      hostPID: true
+      containers:
+      - name: startup-script
+        image: megabyte875/startup-script
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        env:
+        - name: STARTUP_SCRIPT
+          value: |
+            set -o errexit
+            set -o nounset
+            set -o pipefail
+
+            nvme_drives=$(nvme list | grep "Amazon EC2 NVMe Instance Storage" | cut -d " " -f 1 || true)
+            readarray -t nvme_drives <<< "$nvme_drives"
+            num_drives=${#nvme_drives[@]}
+            
+            if [ "${#nvme_drives[@]}" -eq 0 ]; then
+              echo "No NVMe instance storage found."
+              exit 0
+            fi
+
+            seen_arrays=(/dev/md/*)
+            device=${seen_arrays[0]}
+            echo "Setting RAID array with Local SSDs on device ${device}"
+            if [ ! -e "$device" ]; then
+              device="/dev/md/0"
+              echo "y" | mdadm --create "${device}" --level=0 --force --raid-devices=${#nvme_drives[@]} "${nvme_drives[@]}"
+            fi
+
+            if ! tune2fs -l "${device}" ; then
+              echo "Formatting '${device}'"
+              mkfs.ext4 -F "${device}"
+            fi
+
+            mountpoint=/mnt/disks/raid0
+            mkdir -p "${mountpoint}"
+            echo "Mounting '${device}' at '${mountpoint}'"
+            mount -o discard,defaults "${device}" "${mountpoint}"
+            chmod a+w "${mountpoint}"
+            rm -rf /mnt/disks/raid0/*

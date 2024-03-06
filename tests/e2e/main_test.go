@@ -39,15 +39,20 @@ const (
 	ImagePullSecretName = "image-pull-secret.e2e"
 	AWSSecretName       = "aws-secret.e2e"
 	AWSRegion           = "us-east-2"
-	AWSBucketName       = "nebula-e2e"
+	AWSBucketName       = "nebula-operator-e2e-test"
 	AWSBucketEndpoint   = "https://s3.us-east-2.amazonaws.com"
 
 	GSLocation   = "us-east-5"
 	GSSecretName = "gs-secret"
-	GSBucketName = "nebula-cloud-e2e-test-bucket"
+	GSBucketName = "nebula-operator-e2e-test"
 
 	LabelKeyCategory = "category"
 	LabelKeyGroup    = "group"
+
+	Username = "root"
+	Password = "nebula"
+	Space    = "e2e_ldbc_snb"
+	SaName   = "nebula-sa"
 )
 
 var (

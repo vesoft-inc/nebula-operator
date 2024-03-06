@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
@@ -31,8 +32,11 @@ import (
 )
 
 type NebulaCronBackup interface {
+	CreateCronBackup(ncb *v1alpha1.NebulaCronBackup) error
 	GetCronBackup(namespace, name string) (*v1alpha1.NebulaCronBackup, error)
 	UpdateCronBackupStatus(cronBackup *v1alpha1.NebulaCronBackup) error
+	UpdateCronBackup(cronBackup *v1alpha1.NebulaCronBackup) error
+	DeleteCronBackup(namespace, name string) error
 }
 
 type cronBackupClient struct {
@@ -41,6 +45,17 @@ type cronBackupClient struct {
 
 func NewCronNebulaBackup(client client.Client) NebulaCronBackup {
 	return &cronBackupClient{client: client}
+}
+
+func (c *cronBackupClient) CreateCronBackup(ncb *v1alpha1.NebulaCronBackup) error {
+	if err := c.client.Create(context.TODO(), ncb); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			klog.Infof("NebulaCronBackup %s/%s already exists", ncb.Namespace, ncb.Name)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (c *cronBackupClient) GetCronBackup(namespace, name string) (*v1alpha1.NebulaCronBackup, error) {
@@ -54,6 +69,41 @@ func (c *cronBackupClient) GetCronBackup(namespace, name string) (*v1alpha1.Nebu
 		return nil, err
 	}
 	return cronBackup, nil
+}
+
+func (c *cronBackupClient) UpdateCronBackup(cronBackup *v1alpha1.NebulaCronBackup) error {
+	ns := cronBackup.Namespace
+	cronBackupName := cronBackup.Name
+	cronBackupSpec := cronBackup.Spec.DeepCopy()
+	cronBackupLabels := cronBackup.GetLabels()
+	annotations := cronBackup.GetAnnotations()
+
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		// Update the set with the latest resource version for the next poll
+		cronBackupClone, err := c.GetCronBackup(ns, cronBackupName)
+		if err != nil {
+			utilruntime.HandleError(fmt.Errorf("get NebulaCronBackup [%s/%s] failed: %v", ns, cronBackupName, err))
+			return err
+		}
+
+		if reflect.DeepEqual(cronBackupSpec, cronBackupClone.Spec) &&
+			reflect.DeepEqual(cronBackupLabels, cronBackupClone.Labels) &&
+			reflect.DeepEqual(annotations, cronBackupClone.Annotations) {
+			return nil
+		}
+
+		cronBackup = cronBackupClone.DeepCopy()
+		cronBackup.Spec = *cronBackupSpec
+		cronBackup.SetLabels(cronBackupLabels)
+		cronBackup.SetAnnotations(annotations)
+		updateErr := c.client.Update(context.TODO(), cronBackup)
+		if updateErr == nil {
+			klog.Infof("NebulaCronBackup [%s/%s] updated successfully", ns, cronBackupName)
+			return nil
+		}
+		klog.Errorf("update NebulaCronBackup [%s/%s] failed: %v", ns, cronBackupName, updateErr)
+		return updateErr
+	})
 }
 
 func (c *cronBackupClient) UpdateCronBackupStatus(cronBackup *v1alpha1.NebulaCronBackup) error {
@@ -82,4 +132,19 @@ func (c *cronBackupClient) UpdateCronBackupStatus(cronBackup *v1alpha1.NebulaCro
 		klog.Errorf("update NebulaCronBackup [%s/%s] status failed: %v", ns, cbName, updateErr)
 		return updateErr
 	})
+}
+
+func (c *cronBackupClient) DeleteCronBackup(namespace, name string) error {
+	cronBackup, err := c.GetCronBackup(namespace, name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := c.client.Delete(context.TODO(), cronBackup); err != nil {
+		return err
+	}
+	klog.Infof("NebulaCronBackup [%s/%s] deleted successfully", namespace, name)
+	return nil
 }

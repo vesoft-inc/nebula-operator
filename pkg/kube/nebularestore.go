@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -44,8 +45,10 @@ type RestoreUpdateStatus struct {
 }
 
 type NebulaRestore interface {
+	CreateNebulaRestore(nr *v1alpha1.NebulaRestore) error
 	GetNebulaRestore(namespace, name string) (*v1alpha1.NebulaRestore, error)
 	UpdateNebulaRestoreStatus(restore *v1alpha1.NebulaRestore, condition *v1alpha1.RestoreCondition, newStatus *RestoreUpdateStatus) error
+	DeleteNebulaRestore(namespace, name string) error
 }
 
 type restoreClient struct {
@@ -54,6 +57,17 @@ type restoreClient struct {
 
 func NewNebulaRestore(client client.Client) NebulaRestore {
 	return &restoreClient{client: client}
+}
+
+func (r *restoreClient) CreateNebulaRestore(nr *v1alpha1.NebulaRestore) error {
+	if err := r.client.Create(context.TODO(), nr); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			klog.Infof("NebulaRestore %s/%s already exists", nr.Namespace, nr.Name)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *restoreClient) GetNebulaRestore(namespace, name string) (*v1alpha1.NebulaRestore, error) {
@@ -95,6 +109,21 @@ func (r *restoreClient) UpdateNebulaRestoreStatus(restore *v1alpha1.NebulaRestor
 		}
 		return nil
 	})
+}
+
+func (r *restoreClient) DeleteNebulaRestore(namespace, name string) error {
+	restore, err := r.GetNebulaRestore(namespace, name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := r.client.Delete(context.TODO(), restore); err != nil {
+		return err
+	}
+	klog.Infof("NebulaRestore [%s/%s] deleted successfully", namespace, name)
+	return nil
 }
 
 func updateRestoreStatus(status *v1alpha1.RestoreStatus, newStatus *RestoreUpdateStatus) bool {

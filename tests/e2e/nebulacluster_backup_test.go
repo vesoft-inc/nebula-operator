@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/e2e-framework/third_party/helm"
 
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/config"
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2ematcher"
 	"github.com/vesoft-inc/nebula-operator/tests/e2e/envfuncsext"
 
@@ -59,8 +60,8 @@ var storageGS = appsv1alpha1.StorageProvider{
 }
 
 var basicBackupSpec = appsv1alpha1.BackupSpec{
-	Image:   "reg.vesoft-inc.com/cloud-dev/br-ent",
-	Version: "v3.7.0",
+	Image:   config.C.NebulaGraph.BrImage,
+	Version: config.C.NebulaGraph.BrVersion,
 	Resources: corev1.ResourceRequirements{
 		Limits: map[corev1.ResourceName]resource.Quantity{
 			corev1.ResourceCPU:    resource.MustParse("200m"),
@@ -79,6 +80,19 @@ var basicBackupSpec = appsv1alpha1.BackupSpec{
 	AutoRemoveFinished: &disable,
 	CleanBackupData:    &disable,
 	Config: &appsv1alpha1.BackupConfig{
+		StorageProvider: storageS3,
+	},
+}
+
+var cronBackupOps = envfuncsext.NebulaCronBackupOptions{
+	Schedule:  "* * * * *",
+	TestPause: true,
+}
+
+var basicRestoreSpec = appsv1alpha1.RestoreSpec{
+	AutoRemoveFailed: disable,
+	Config: &appsv1alpha1.RestoreConfig{
+		Concurrency:     3,
 		StorageProvider: storageS3,
 	},
 }
@@ -126,6 +140,10 @@ var testCasesBasicBackup = []ncTestCase{
 					Name: "nb-basic-s3",
 					Spec: *basicBackupSpec.DeepCopy(),
 				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-basic-s3",
+					Spec: *basicRestoreSpec.DeepCopy(),
+				},
 			},
 			{
 				Name: "basic backup with S3 and auto delete",
@@ -137,6 +155,10 @@ var testCasesBasicBackup = []ncTestCase{
 					"autoRemoveFinished": &enable,
 					"cleanBackupData":    &enable,
 				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-basic-s3-auto",
+					Spec: *basicRestoreSpec.DeepCopy(),
+				},
 			},
 			{
 				Name: "incremental backup with S3",
@@ -145,6 +167,10 @@ var testCasesBasicBackup = []ncTestCase{
 					Spec: *basicBackupSpec.DeepCopy(),
 				},
 				Incremental: true,
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-incr-s3",
+					Spec: *basicRestoreSpec.DeepCopy(),
+				},
 			},
 			{
 				Name: "basic backup with S3 across namespaces",
@@ -152,6 +178,11 @@ var testCasesBasicBackup = []ncTestCase{
 					Name:      "nb-basic-ns-s3",
 					Namespace: "default",
 					Spec:      *basicBackupSpec.DeepCopy(),
+				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name:      "nb-basic-ns-s3",
+					Namespace: "default",
+					Spec:      *basicRestoreSpec.DeepCopy(),
 				},
 			},
 			{
@@ -162,6 +193,23 @@ var testCasesBasicBackup = []ncTestCase{
 					Spec:      *basicBackupSpec.DeepCopy(),
 				},
 				Incremental: true,
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name:      "nb-incr-ns-s3",
+					Namespace: "default",
+					Spec:      *basicRestoreSpec.DeepCopy(),
+				},
+			},
+			{
+				Name: "cron backup with S3",
+				BackupInstallOptions: envfuncsext.NebulaBackupInstallOptions{
+					Name:          "nb-cron-s3",
+					Spec:          *basicBackupSpec.DeepCopy(),
+					CronBackupOps: &cronBackupOps,
+				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-cron-s3",
+					Spec: *basicRestoreSpec.DeepCopy(),
+				},
 			},
 			{
 				Name: "basic backup with gs",
@@ -171,6 +219,10 @@ var testCasesBasicBackup = []ncTestCase{
 				},
 				BackupUpdateOptions: map[string]any{
 					"storageProvider": storageGS,
+				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-basic-gs",
+					Spec: *basicRestoreSpec.DeepCopy(),
 				},
 			},
 			{
@@ -183,6 +235,10 @@ var testCasesBasicBackup = []ncTestCase{
 					"storageProvider":    storageGS,
 					"autoRemoveFinished": &enable,
 					"cleanBackupData":    &enable,
+				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-basic-gs-auto",
+					Spec: *basicRestoreSpec.DeepCopy(),
 				},
 			},
 			{
@@ -197,6 +253,10 @@ var testCasesBasicBackup = []ncTestCase{
 					"storageProvider":    storageGS,
 				},
 				Incremental: true,
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-incr-gs-auto",
+					Spec: *basicRestoreSpec.DeepCopy(),
+				},
 			},
 			{
 				Name: "basic backup with gs across namespaces",
@@ -207,6 +267,10 @@ var testCasesBasicBackup = []ncTestCase{
 				},
 				BackupUpdateOptions: map[string]any{
 					"storageProvider": storageGS,
+				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-basic-ns-gs",
+					Spec: *basicRestoreSpec.DeepCopy(),
 				},
 			},
 			{
@@ -220,6 +284,25 @@ var testCasesBasicBackup = []ncTestCase{
 					"storageProvider": storageGS,
 				},
 				Incremental: true,
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-incr-ns-gs",
+					Spec: *basicRestoreSpec.DeepCopy(),
+				},
+			},
+			{
+				Name: "cron backup with GCP",
+				BackupInstallOptions: envfuncsext.NebulaBackupInstallOptions{
+					Name:          "nb-cron-gcp",
+					Spec:          *basicBackupSpec.DeepCopy(),
+					CronBackupOps: &cronBackupOps,
+				},
+				BackupUpdateOptions: map[string]any{
+					"storageProvider": storageGS,
+				},
+				RestoreInstallOptions: &envfuncsext.NebulaRestoreInstallOptions{
+					Name: "nb-cron-gcp",
+					Spec: *basicRestoreSpec.DeepCopy(),
+				},
 			},
 		},
 	},

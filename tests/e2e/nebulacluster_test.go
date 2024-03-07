@@ -357,7 +357,20 @@ func TestNebulaCluster(t *testing.T) {
 
 						ctx, err = envfuncsext.DeleteNebulaRestoredCluster()(ctx, cfg)
 						if err != nil {
-							t.Errorf("Deleting restore cluster [%v/%v] failed: %v", namespace, restoreContext.Name, err)
+							t.Errorf("Deleting restore cluster [%v/%v] failed: %v", namespace, restoreContext.RestoreClusterName, err)
+						}
+						return ctx
+					},
+				)
+
+				feature.Assess(fmt.Sprintf("Deleting nebula restore after %v", backupCase.Name),
+					func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+						restoreContext := envfuncsext.GetNebulaRestoreCtxValue(ctx)
+						klog.V(4).InfoS("Deleting nebula restore", "namespace", restoreContext.Namespace, "name", restoreContext.Name)
+
+						ctx, err = envfuncsext.DeleteNebulaRestore()(ctx, cfg)
+						if err != nil {
+							t.Errorf("Deleting nebula restore [%v/%v] failed: %v", restoreContext.Namespace, restoreContext.Name, err)
 						}
 						return ctx
 					},

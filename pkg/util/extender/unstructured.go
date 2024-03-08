@@ -183,7 +183,8 @@ func ObjectEqual(newUnstruct, oldUnstruct *unstructured.Unstructured) bool {
 	annotations := map[string]string{}
 	for k, v := range oldUnstruct.GetAnnotations() {
 		if k == annotation.AnnLastAppliedConfigKey ||
-			k == annotation.AnnRestartTimestamp {
+			k == annotation.AnnRestartTimestamp ||
+			k == annotation.AnnLastReplicas {
 			continue
 		}
 		annotations[k] = v

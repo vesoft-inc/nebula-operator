@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	appspkg "github.com/vesoft-inc/nebula-operator/pkg/kube"
 )
 
 type (
@@ -46,7 +45,7 @@ func DeployNebulaRestore(nbCtx NebulaRestoreInstallOptions) env.Func {
 			namespaceToUse = nbCtx.Namespace
 		}
 
-		nr := appsv1alpha1.NebulaRestore{
+		nr := &appsv1alpha1.NebulaRestore{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nbCtx.Name,
 				Namespace: namespaceToUse,
@@ -54,12 +53,7 @@ func DeployNebulaRestore(nbCtx NebulaRestoreInstallOptions) env.Func {
 			Spec: nbCtx.Spec,
 		}
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		err = client.NebulaRestore().CreateNebulaRestore(&nr)
+		ctx, err := CreateObject(nr)(ctx, cfg)
 		if err != nil {
 			return ctx, fmt.Errorf("error creating nebula restore [%v/%v]: %v", namespaceToUse, nbCtx.Name, err)
 		}
@@ -94,14 +88,9 @@ func WaitNebulaRestoreFinished(opts ...NebulaRestoreOption) env.Func {
 
 		restoreContextValue := GetNebulaRestoreCtxValue(ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		var nr *appsv1alpha1.NebulaRestore
+		nr := &appsv1alpha1.NebulaRestore{}
 		if err := wait.For(func(ctx context.Context) (done bool, err error) {
-			nr, err = client.NebulaRestore().GetNebulaRestore(restoreContextValue.Namespace, restoreContextValue.Name)
+			err = cfg.Client().Resources().Get(ctx, restoreContextValue.Name, restoreContextValue.Namespace, nr)
 			if err != nil {
 				klog.ErrorS(err, "Get NebulaRestore failed", "namespace", restoreContextValue.Namespace, "name", restoreContextValue.Name)
 				return false, err
@@ -156,12 +145,13 @@ func DeleteNebulaRestore() env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		restoreContextValue := GetNebulaRestoreCtxValue(ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
+		nr := &appsv1alpha1.NebulaRestore{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      restoreContextValue.Name,
+				Namespace: restoreContextValue.Namespace,
+			},
 		}
-
-		err = client.NebulaRestore().DeleteNebulaRestore(restoreContextValue.Namespace, restoreContextValue.Name)
+		ctx, err := DeleteObject(nr)(ctx, cfg)
 		if err != nil {
 			return ctx, fmt.Errorf("error deleting nebula restore [%v/%v]: %v", restoreContextValue.Namespace, restoreContextValue.Name, err)
 		}
@@ -174,12 +164,13 @@ func DeleteNebulaRestoredCluster() env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		restoreContextValue := GetNebulaRestoreCtxValue(ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
+		nc := &appsv1alpha1.NebulaCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      restoreContextValue.RestoreClusterName,
+				Namespace: restoreContextValue.RestoreClusterNamespace,
+			},
 		}
-
-		err = client.NebulaCluster().DeleteNebulaCluster(restoreContextValue.RestoreClusterNamespace, restoreContextValue.RestoreClusterName)
+		ctx, err := DeleteObject(nc)(ctx, cfg)
 		if err != nil {
 			return ctx, fmt.Errorf("error deleting nebula restore cluster [%v/%v]: %v", restoreContextValue.RestoreClusterNamespace, restoreContextValue.RestoreClusterName, err)
 		}

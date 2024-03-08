@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	appspkg "github.com/vesoft-inc/nebula-operator/pkg/kube"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -24,7 +23,7 @@ func DeployNebulaCronBackup(incremental bool, nbCtx NebulaBackupInstallOptions) 
 		}
 
 		disable := false
-		ncb := appsv1alpha1.NebulaCronBackup{
+		ncb := &appsv1alpha1.NebulaCronBackup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nbCtx.Name,
 				Namespace: namespaceToUse,
@@ -36,12 +35,7 @@ func DeployNebulaCronBackup(incremental bool, nbCtx NebulaBackupInstallOptions) 
 			},
 		}
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		err = client.NebulaCronBackup().CreateCronBackup(&ncb)
+		ctx, err := CreateObject(ncb)(ctx, cfg)
 		if err != nil {
 			return ctx, fmt.Errorf("error creating nebula cron backup [%v/%v]: %v", namespaceToUse, nbCtx.Name, err)
 		}
@@ -82,15 +76,10 @@ func WaitNebulaCronBackupFinished(incremental bool, opts ...NebulaBackupOption) 
 
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		var ncb *appsv1alpha1.NebulaCronBackup
-		var nb *appsv1alpha1.NebulaBackup
+		ncb := &appsv1alpha1.NebulaCronBackup{}
+		nb := &appsv1alpha1.NebulaBackup{}
 		if err := wait.For(func(ctx context.Context) (done bool, err error) {
-			ncb, err = client.NebulaCronBackup().GetCronBackup(backupContextValue.Namespace, backupContextValue.Name)
+			err = cfg.Client().Resources().Get(ctx, backupContextValue.Name, backupContextValue.Namespace, ncb)
 			if err != nil {
 				klog.ErrorS(err, "Get NebulaCronBackup failed", "namespace", backupContextValue.Namespace, "name", backupContextValue.Name)
 				return true, err
@@ -110,7 +99,7 @@ func WaitNebulaCronBackupFinished(incremental bool, opts ...NebulaBackupOption) 
 				return false, nil
 			}
 
-			nb, err = client.NebulaBackup().GetNebulaBackup(backupContextValue.Namespace, ncb.Status.LastBackup)
+			err = cfg.Client().Resources().Get(ctx, ncb.Status.LastBackup, backupContextValue.Namespace, nb)
 			if err != nil {
 				klog.ErrorS(err, "Get NebulaBackup failed", "namespace", backupContextValue.Namespace, "name", ncb.Status.LastBackup)
 				return true, err
@@ -166,7 +155,7 @@ func SetCronBackupPause(incremental, pause bool) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		ncb := appsv1alpha1.NebulaCronBackup{
+		ncb := &appsv1alpha1.NebulaCronBackup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      backupContextValue.Name,
 				Namespace: backupContextValue.Namespace,
@@ -178,12 +167,7 @@ func SetCronBackupPause(incremental, pause bool) env.Func {
 			},
 		}
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		err = client.NebulaCronBackup().UpdateCronBackup(&ncb)
+		err := cfg.Client().Resources().Update(ctx, ncb)
 		if err != nil {
 			if pause {
 				return ctx, fmt.Errorf("error pausing nebula cron backup [%v/%v]: %v", backupContextValue.Namespace, backupContextValue.Name, err)
@@ -202,15 +186,10 @@ func CheckCronBackupPaused(incremental bool, opts ...NebulaBackupOption) env.Fun
 
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		var ncb *appsv1alpha1.NebulaCronBackup
+		ncb := &appsv1alpha1.NebulaCronBackup{}
 		firstTime := true
 		if err := wait.For(func(ctx context.Context) (done bool, err error) {
-			ncb, err = client.NebulaCronBackup().GetCronBackup(backupContextValue.Namespace, backupContextValue.Name)
+			err = cfg.Client().Resources().Get(ctx, backupContextValue.Name, backupContextValue.Namespace, ncb)
 			if err != nil {
 				klog.ErrorS(err, "Get NebulaCronBackup failed", "namespace", backupContextValue.Namespace, "name", backupContextValue.Name)
 				return true, err
@@ -248,12 +227,13 @@ func DeleteNebulaCronBackup(incremental bool) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
+		ncb := &appsv1alpha1.NebulaCronBackup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      backupContextValue.Name,
+				Namespace: backupContextValue.Namespace,
+			},
 		}
-
-		err = client.NebulaCronBackup().DeleteCronBackup(backupContextValue.Namespace, backupContextValue.Name)
+		ctx, err := DeleteObject(ncb)(ctx, cfg)
 		if err != nil {
 			return ctx, fmt.Errorf("error deleting nebula cron backup [%v/%v]: %v", backupContextValue.Namespace, backupContextValue.Name, err)
 		}
@@ -268,48 +248,11 @@ func WaitForCleanCronBackup(incremental bool, opts ...NebulaBackupOption) env.Fu
 
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
+		ncb := &appsv1alpha1.NebulaCronBackup{}
 		if err := wait.For(func(ctx context.Context) (done bool, err error) {
-			ncb, err := client.NebulaCronBackup().GetCronBackup(backupContextValue.Namespace, backupContextValue.Name)
+			err = cfg.Client().Resources().Get(ctx, backupContextValue.Name, backupContextValue.Namespace, ncb)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
-					if backupContextValue.CleanBackupData {
-						if backupContextValue.StorageType == "S3" {
-							ok, err := checkBackupExistsOnS3(ctx, backupContextValue.Region, backupContextValue.BucketName, backupContextValue.BackupFileName)
-							if err != nil {
-								return true, fmt.Errorf("error checking backup on S3: %v", err)
-							}
-							if ok {
-								klog.V(4).Infof("backup %v is still in S3 bucket %v after 1st check. Will check again.", backupContextValue.BackupFileName, backupContextValue.BucketName)
-								ok, err := checkBackupExistsOnS3(ctx, backupContextValue.Region, backupContextValue.BucketName, backupContextValue.BackupFileName)
-								if err != nil {
-									return true, fmt.Errorf("error checking backup on S3: %v", err)
-								}
-								if ok {
-									return true, fmt.Errorf("backup %v is still in S3 bucket %v after 2nd check even though auto cleanup is enabled", backupContextValue.BackupFileName, backupContextValue.BucketName)
-								}
-							}
-						} else if backupContextValue.StorageType == "GS" {
-							ok, err := checkBackupExistsOnGS(ctx, backupContextValue.BucketName, backupContextValue.BackupFileName)
-							if err != nil {
-								return true, fmt.Errorf("error checking backup on GS: %v", err)
-							}
-							if ok {
-								klog.V(4).Infof("backup %v is still in GS bucket %v after 1st check. Will check again.")
-								ok, err := checkBackupExistsOnGS(ctx, backupContextValue.BucketName, backupContextValue.BackupFileName)
-								if err != nil {
-									return true, fmt.Errorf("error checking backup on GS: %v", err)
-								}
-								if ok {
-									return true, fmt.Errorf("backup %v is still in GS bucket %v even though auto cleanup is enabled", backupContextValue.BackupFileName, backupContextValue.BucketName)
-								}
-							}
-						}
-					}
 					return true, nil
 				}
 				return true, fmt.Errorf("error deleting nebula cron backup [%v/%v]: %v", backupContextValue.Namespace, backupContextValue.Name, err)

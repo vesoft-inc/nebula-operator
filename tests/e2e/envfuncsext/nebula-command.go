@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	nebulaclient "github.com/vesoft-inc/nebula-go/v3"
-	appspkg "github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
+
+	nebulaclient "github.com/vesoft-inc/nebula-go/v3"
+	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/tests/e2e/e2eutils"
 )
 
 type (
@@ -42,57 +44,72 @@ func GetNebulaCommandCtxValue(clusterNamespace, clusterName string, ctx context.
 
 func RunNGCommand(cmdCtx NebulaCommandOptions, cmd string) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
+		nc := &appsv1alpha1.NebulaCluster{}
+		err := cfg.Client().Resources().Get(ctx, cmdCtx.ClusterName, cmdCtx.ClusterNamespace, nc)
 		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
+			klog.ErrorS(err, "Get NebulaCluster failed", "namespace", cmdCtx.ClusterNamespace, "name", cmdCtx.ClusterName)
+			return ctx, err
 		}
 
-		nodes, err := client.Node().ListAllNodes()
-		if err != nil {
-			return ctx, fmt.Errorf("error listing nodes in the cluster: %v", err)
-		}
-		if len(nodes) == 0 {
-			return ctx, fmt.Errorf("error listing nodes in the cluster: node list is empty")
-		}
-
-		service, err := client.Service().GetService(cmdCtx.ClusterNamespace, fmt.Sprintf("%v-graphd-svc", cmdCtx.ClusterName))
-		if err != nil {
-			return ctx, fmt.Errorf("error getting graphd service: %v", err)
-		}
-
-		ports := service.Spec.Ports
-
-		var portNum int
-		for _, port := range ports {
-			if port.Name == "thrift" {
-				portNum = int(port.NodePort)
-			}
-		}
-
-		if portNum <= 0 {
-			return ctx, fmt.Errorf("error getting service port: %v is <= 0", portNum)
-		}
-
-		hostAddress := nebulaclient.HostAddress{Host: nodes[0].Status.Addresses[0].Address, Port: portNum}
-
-		config, err := nebulaclient.NewSessionPoolConf(
-			cmdCtx.Username,
-			cmdCtx.Password,
-			[]nebulaclient.HostAddress{hostAddress},
-			cmdCtx.Space,
+		podName := nc.GraphdComponent().GetPodName(0)
+		thriftPort := int(nc.GraphdComponent().GetPort(appsv1alpha1.GraphdPortNameThrift))
+		localPorts, stopChan, err := e2eutils.PortForward(
+			e2eutils.WithRestConfig(cfg.Client().RESTConfig()),
+			e2eutils.WithPod(nc.GetNamespace(), podName),
+			e2eutils.WithAddress("localhost"),
+			e2eutils.WithPorts(thriftPort),
 		)
 		if err != nil {
-			return ctx, fmt.Errorf("error creating new session pool config: %v", err)
+			klog.ErrorS(err, "Unable to run command. Port forward failed.",
+				"namespace", nc.GetNamespace(),
+				"name", podName,
+				"ports", []int{thriftPort},
+				"command", cmd,
+			)
+			return ctx, err
 		}
+		defer close(stopChan)
 
-		sessionPool, err := nebulaclient.NewSessionPool(*config, nebulaclient.DefaultLogger{})
+		pool, err := nebulaclient.NewSslConnectionPool(
+			[]nebulaclient.HostAddress{{Host: "localhost", Port: localPorts[0]}},
+			nebulaclient.PoolConfig{
+				MaxConnPoolSize: 10,
+			},
+			nil,
+			nebulaclient.DefaultLogger{},
+		)
 		if err != nil {
-			return ctx, fmt.Errorf("error creating new session pool: %v", err)
+			klog.ErrorS(err, "Unable to run command. Create graph connection pool failed",
+				"namespace", nc.GetNamespace(),
+				"name", podName,
+				"ports", []int{thriftPort},
+				"command", cmd,
+			)
+			return ctx, err
 		}
+		defer pool.Close()
 
-		result, err := sessionPool.Execute(cmd)
+		session, err := pool.GetSession("root", "nebula")
 		if err != nil {
-			return ctx, fmt.Errorf("error running command \"%v\": %v", cmd, err)
+			klog.ErrorS(err, "Unable to run command. Create graph connection session failed",
+				"namespace", nc.GetNamespace(),
+				"name", podName,
+				"ports", []int{thriftPort},
+				"command", cmd,
+			)
+			return ctx, err
+		}
+		defer session.Release()
+
+		result, err := session.Execute(cmd)
+		if err != nil {
+			klog.ErrorS(err, "Unable to run command. Graph exec failed",
+				"namespace", nc.GetNamespace(),
+				"name", podName,
+				"ports", []int{thriftPort},
+				"command", cmd,
+			)
+			return ctx, err
 		}
 
 		if result != nil {

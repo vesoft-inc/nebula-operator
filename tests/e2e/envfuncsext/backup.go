@@ -3,28 +3,16 @@ package envfuncsext
 import (
 	"context"
 	"fmt"
-	"log"
 
-	"cloud.google.com/go/storage"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	appspkg "github.com/vesoft-inc/nebula-operator/pkg/kube"
-	e2econfig "github.com/vesoft-inc/nebula-operator/tests/e2e/config"
 )
 
 type (
@@ -74,7 +62,7 @@ func DeployNebulaBackup(incremental bool, nbCtx NebulaBackupInstallOptions) env.
 			namespaceToUse = nbCtx.Namespace
 		}
 
-		nb := appsv1alpha1.NebulaBackup{
+		nb := &appsv1alpha1.NebulaBackup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nbCtx.Name,
 				Namespace: namespaceToUse,
@@ -82,12 +70,7 @@ func DeployNebulaBackup(incremental bool, nbCtx NebulaBackupInstallOptions) env.
 			Spec: nbCtx.Spec,
 		}
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		err = client.NebulaBackup().CreateNebulaBackup(&nb)
+		ctx, err := CreateObject(nb)(ctx, cfg)
 		if err != nil {
 			return ctx, fmt.Errorf("error creating nebula backup [%v/%v]: %v", namespaceToUse, nbCtx.Name, err)
 		}
@@ -117,7 +100,6 @@ func DeployNebulaBackup(incremental bool, nbCtx NebulaBackupInstallOptions) env.
 			CleanBackupData: *nb.Spec.CleanBackupData,
 		}), nil
 	}
-
 }
 
 func GetNebulaBackupCtxValue(incremental bool, ctx context.Context) *NebulaBackupCtxValue {
@@ -137,18 +119,14 @@ func WaitNebulaBackupFinished(incremental bool, opts ...NebulaBackupOption) env.
 
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		var nb *appsv1alpha1.NebulaBackup
+		nb := &appsv1alpha1.NebulaBackup{}
 		if err := wait.For(func(ctx context.Context) (done bool, err error) {
-			nb, err = client.NebulaBackup().GetNebulaBackup(backupContextValue.Namespace, backupContextValue.Name)
+			err = cfg.Client().Resources().Get(ctx, backupContextValue.Name, backupContextValue.Namespace, nb)
 			if err != nil {
 				klog.ErrorS(err, "Get NebulaBackup failed", "namespace", backupContextValue.Namespace, "name", backupContextValue.Name)
 				return true, err
 			}
+
 			klog.V(4).InfoS("Waiting for NebulaBackup to complete",
 				"namespace", nb.Namespace, "name", nb.Name,
 				"generation", nb.Generation,
@@ -158,7 +136,7 @@ func WaitNebulaBackupFinished(incremental bool, opts ...NebulaBackupOption) env.
 				return true, nil
 			}
 
-			if nb.Status.Phase == appsv1alpha1.BackupFailed {
+			if nb.Status.Phase == appsv1alpha1.BackupFailed || nb.Status.Phase == appsv1alpha1.BackupInvalid {
 				return true, fmt.Errorf("nebula backup [%v/%v] has failed", nb.Namespace, nb.Name)
 			}
 
@@ -204,12 +182,14 @@ func DeleteNebulaBackup(incremental bool) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
+		nb := &appsv1alpha1.NebulaBackup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      backupContextValue.Name,
+				Namespace: backupContextValue.Namespace,
+			},
 		}
 
-		err = client.NebulaBackup().DeleteNebulaBackup(backupContextValue.Namespace, backupContextValue.Name)
+		ctx, err := DeleteObject(nb)(ctx, cfg)
 		if err != nil {
 			return ctx, fmt.Errorf("error deleting nebula backup [%v/%v]: %v", backupContextValue.Namespace, backupContextValue.Name, err)
 		}
@@ -224,48 +204,11 @@ func WaitForCleanBackup(incremental bool, opts ...NebulaBackupOption) env.Func {
 
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		client, err := appspkg.NewClientSet(cfg.Client().RESTConfig())
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
+		nb := &appsv1alpha1.NebulaBackup{}
 		if err := wait.For(func(ctx context.Context) (done bool, err error) {
-			nb, err := client.NebulaBackup().GetNebulaBackup(backupContextValue.Namespace, backupContextValue.Name)
+			err = cfg.Client().Resources().Get(ctx, backupContextValue.Name, backupContextValue.Namespace, nb)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
-					if backupContextValue.CleanBackupData {
-						if backupContextValue.StorageType == "S3" {
-							ok, err := checkBackupExistsOnS3(ctx, backupContextValue.Region, backupContextValue.BucketName, backupContextValue.BackupFileName)
-							if err != nil {
-								return true, fmt.Errorf("error checking backup on S3: %v", err)
-							}
-							if ok {
-								klog.V(4).Infof("backup %v is still in S3 bucket %v after 1st check. Will check again.", backupContextValue.BackupFileName, backupContextValue.BucketName)
-								ok, err := checkBackupExistsOnS3(ctx, backupContextValue.Region, backupContextValue.BucketName, backupContextValue.BackupFileName)
-								if err != nil {
-									return true, fmt.Errorf("error checking backup on S3: %v", err)
-								}
-								if ok {
-									return true, fmt.Errorf("backup %v is still in S3 bucket %v after 2nd check even though auto cleanup is enabled", backupContextValue.BackupFileName, backupContextValue.BucketName)
-								}
-							}
-						} else if backupContextValue.StorageType == "GS" {
-							ok, err := checkBackupExistsOnGS(ctx, backupContextValue.BucketName, backupContextValue.BackupFileName)
-							if err != nil {
-								return true, fmt.Errorf("error checking backup on GS: %v", err)
-							}
-							if ok {
-								klog.V(4).Infof("backup %v is still in GS bucket %v after 1st check. Will check again.")
-								ok, err := checkBackupExistsOnGS(ctx, backupContextValue.BucketName, backupContextValue.BackupFileName)
-								if err != nil {
-									return true, fmt.Errorf("error checking backup on GS: %v", err)
-								}
-								if ok {
-									return true, fmt.Errorf("backup %v is still in GS bucket %v even though auto cleanup is enabled", backupContextValue.BackupFileName, backupContextValue.BucketName)
-								}
-							}
-						}
-					}
 					return true, nil
 				}
 				return true, fmt.Errorf("error deleting nebula backup [%v/%v]: %v", backupContextValue.Namespace, backupContextValue.Name, err)
@@ -279,7 +222,7 @@ func WaitForCleanBackup(incremental bool, opts ...NebulaBackupOption) env.Func {
 				return false, nil
 			}
 
-			return true, fmt.Errorf("nebula backup is in invalid phase %v", nb.Status.Phase)
+			return true, fmt.Errorf("nebula backup clean for [%v/%v] has failed", backupContextValue.Namespace, backupContextValue.Name)
 		}, o.WaitOptions...); err != nil {
 			klog.ErrorS(err, "Waiting for NebulaBackup clean to complete failed", "namespace", backupContextValue.Namespace, "name", backupContextValue.Name, "file name", backupContextValue.BackupFileName)
 			return ctx, err
@@ -290,73 +233,16 @@ func WaitForCleanBackup(incremental bool, opts ...NebulaBackupOption) env.Func {
 	}
 }
 
-func checkBackupExistsOnS3(ctx context.Context, awsRegion, bucketName, backupName string) (bool, error) {
-	creds := credentials.NewStaticCredentialsProvider(string(e2econfig.C.AWSAccessKey), string(e2econfig.C.AWSSecretKey), "")
-
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithCredentialsProvider(creds),
-		config.WithRegion(awsRegion),
-	)
-	if err != nil {
-		return false, fmt.Errorf("error loading AWS credentials: %v", err)
-	}
-
-	client := s3.NewFromConfig(cfg)
-
-	input := &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucketName),
-		Prefix: aws.String(backupName),
-	}
-
-	result, err := client.ListObjectsV2(ctx, input)
-	if err != nil {
-		return false, fmt.Errorf("error listing objects: %v", err)
-	}
-
-	if len(result.Contents) == 0 {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func checkBackupExistsOnGS(ctx context.Context, bucketName, backupName string) (bool, error) {
-	client, err := storage.NewClient(ctx, option.WithCredentialsJSON(e2econfig.C.GSSecret))
-	if err != nil {
-		log.Fatalf("error creating GS client: %v", err)
-	}
-	defer client.Close()
-
-	it := client.Bucket(bucketName).Objects(ctx, &storage.Query{
-		Prefix: backupName + "/",
-	})
-
-	_, err = it.Next()
-	if err == iterator.Done {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
 func CreateServiceAccount(namespace, name string) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-		client, err := client.New(cfg.Client().RESTConfig(), client.Options{})
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
-		}
-
-		sa := corev1.ServiceAccount{
+		sa := &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
 			},
 		}
 
-		if err := client.Create(ctx, &sa); err != nil {
+		if ctx, err := CreateObject(sa)(ctx, cfg); err != nil {
 			if apierrors.IsAlreadyExists(err) {
 				klog.Infof("service account [%s/%s] already exists", sa.Namespace, sa.Name)
 				return ctx, nil
@@ -371,24 +257,14 @@ func CreateServiceAccount(namespace, name string) env.Func {
 
 func DeleteServiceAccount(namespace, name string) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
-		client, err := client.New(cfg.Client().RESTConfig(), client.Options{})
-		if err != nil {
-			return ctx, fmt.Errorf("error getting kube clientset: %v", err)
+		sa := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
 		}
 
-		sa := &corev1.ServiceAccount{}
-		err = client.Get(ctx, types.NamespacedName{
-			Name:      name,
-			Namespace: namespace,
-		}, sa)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return ctx, nil
-			}
-			return ctx, err
-		}
-
-		if err := client.Delete(ctx, sa); err != nil {
+		if err := cfg.Client().Resources().Delete(ctx, sa); err != nil {
 			return ctx, err
 		}
 

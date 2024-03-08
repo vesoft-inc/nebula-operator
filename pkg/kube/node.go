@@ -27,7 +27,6 @@ import (
 
 type Node interface {
 	GetNode(nodeName string) (*corev1.Node, error)
-	ListAllNodes() ([]corev1.Node, error)
 }
 
 type nodeClient struct {
@@ -46,13 +45,4 @@ func (pd *nodeClient) GetNode(nodeName string) (*corev1.Node, error) {
 		return nil, err
 	}
 	return node, nil
-}
-
-func (pd *nodeClient) ListAllNodes() ([]corev1.Node, error) {
-	nodeList := &corev1.NodeList{}
-	if err := pd.kubecli.List(context.TODO(), nodeList, &client.ListOptions{}); err != nil {
-		return nil, err
-	}
-
-	return nodeList.Items, nil
 }

@@ -38,9 +38,9 @@ import (
 const (
 	ImagePullSecretName = "image-pull-secret.e2e"
 	AWSSecretName       = "aws-secret.e2e"
-	AWSRegion           = "us-east-2"
+	AWSRegion           = "default"
 	AWSBucketName       = "nebula-operator-e2e-test"
-	AWSBucketEndpoint   = "https://s3.us-east-2.amazonaws.com"
+	AWSBucketEndpoint   = "http://oss.vesoft-inc.com:9000"
 
 	GSLocation   = "us-east-5"
 	GSSecretName = "gs-secret"

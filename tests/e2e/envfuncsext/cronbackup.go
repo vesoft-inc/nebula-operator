@@ -155,19 +155,16 @@ func SetCronBackupPause(incremental, pause bool) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
 		backupContextValue := GetNebulaBackupCtxValue(incremental, ctx)
 
-		ncb := &appsv1alpha1.NebulaCronBackup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      backupContextValue.Name,
-				Namespace: backupContextValue.Namespace,
-			},
-			Spec: appsv1alpha1.CronBackupSpec{
-				Schedule:       backupContextValue.Schedule,
-				Pause:          &pause,
-				BackupTemplate: backupContextValue.BackupSpec,
-			},
+		ncb := &appsv1alpha1.NebulaCronBackup{}
+		err := cfg.Client().Resources().Get(ctx, backupContextValue.Name, backupContextValue.Namespace, ncb)
+		if err != nil {
+			klog.ErrorS(err, "Get NebulaCronBackup failed", "namespace", backupContextValue.Namespace, "name", backupContextValue.Name)
+			return ctx, err
 		}
 
-		err := cfg.Client().Resources().Update(ctx, ncb)
+		ncb.Spec.Pause = &pause
+
+		err = cfg.Client().Resources().Update(ctx, ncb)
 		if err != nil {
 			if pause {
 				return ctx, fmt.Errorf("error pausing nebula cron backup [%v/%v]: %v", backupContextValue.Namespace, backupContextValue.Name, err)

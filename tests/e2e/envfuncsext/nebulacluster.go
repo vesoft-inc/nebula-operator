@@ -155,7 +155,6 @@ func WaitNebulaClusterReady(opts ...NebulaClusterOption) env.Func {
 			nc.Namespace = value.Namespace
 		}
 
-		first := true
 		if err := wait.For(func(ctx context.Context) (done bool, err error) {
 			if err = cfg.Client().Resources().Get(ctx, nc.GetName(), nc.GetNamespace(), nc); err != nil {
 				klog.ErrorS(err, "Get NebulaCluster failed", "namespace", nc.Namespace, "name", nc.Name)
@@ -165,19 +164,6 @@ func WaitNebulaClusterReady(opts ...NebulaClusterOption) env.Func {
 				"namespace", nc.Namespace, "name", nc.Name,
 				"generation", nc.Generation,
 			)
-
-			if nc.Status.Graphd.Phase == appsv1alpha1.RunningPhase && nc.Status.Metad.Phase == appsv1alpha1.RunningPhase && nc.Status.Storaged.Phase == appsv1alpha1.RunningPhase && first {
-				klog.V(4).Infof("First running phase detected for nc cluster. Trying again to see if nc cluster is really running")
-				first = false
-
-				if err = cfg.Client().Resources().Get(ctx, nc.GetName(), nc.GetNamespace(), nc); err != nil {
-					klog.ErrorS(err, "Get NebulaCluster failed", "namespace", nc.Namespace, "name", nc.Name)
-					return false, err
-				}
-				return false, nil
-			} else {
-				first = true
-			}
 
 			fns := o.ReadyFuncs
 			if len(fns) == 0 {

@@ -25,6 +25,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -578,8 +579,45 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 
 	env := component.ComponentSpec().PodEnvVars()
 	if len(env) == 0 {
-		env = nil
+		script := `
+set -x
+
+if [ ! -s "metadata/flags.json" ]; then
+ echo "flags.json is empty"
+ exit 0
+fi
+while :
+do
+  curl -i -X PUT -H "Content-Type: application/json" -d @/metadata/flags.json -s "http://${MY_IP}:${HTTP_PORT}/flags"
+  if [ $? -eq 0 ]
+  then
+    break
+  fi
+  sleep 1
+done
+`
+		ports := component.GenerateContainerPorts()
+		env = []corev1.EnvVar{
+			{
+				Name: "MY_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "status.podIP",
+					},
+				},
+			},
+			{
+				Name:  "HTTP_PORT",
+				Value: strconv.Itoa(int(ports[1].ContainerPort)),
+			},
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+		}
 	}
+
 	nodeSelector := component.ComponentSpec().NodeSelector()
 	if len(nodeSelector) == 0 {
 		nodeSelector = nil
@@ -676,6 +714,7 @@ func isComponentStatefulSetExpected(ctx context.Context, cfg *envconf.Config, co
 							fmt.Sprint(componentContainerIdx): map[string]any{
 								"Image":          e2ematcher.ValidatorEq(component.ComponentSpec().PodImage()),
 								"Resources":      e2ematcher.DeepEqual(*component.ComponentSpec().Resources()),
+								"Env":            e2ematcher.DeepEqual(env),
 								"ReadinessProbe": e2ematcher.DeepEqual(*readinessProbe),
 								"LivenessProbe":  e2ematcher.DeepEqualIgnorePtr(component.ComponentSpec().LivenessProbe()),
 							},

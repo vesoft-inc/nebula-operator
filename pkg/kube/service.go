@@ -47,7 +47,6 @@ func NewService(kubecli client.Client) Service {
 func (s *serviceClient) CreateService(service *corev1.Service) error {
 	if err := s.kubecli.Create(context.TODO(), service); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			klog.Infof("service [%s/%s] already exists", service.Namespace, service.Name)
 			return nil
 		}
 		return err

@@ -35,7 +35,6 @@ import (
 )
 
 type PersistentVolumeClaim interface {
-	CreatePVC(pvc *corev1.PersistentVolumeClaim) error
 	GetPVC(namespace, name string) (*corev1.PersistentVolumeClaim, error)
 	UpdateMetaInfo(pvc *corev1.PersistentVolumeClaim, pod *corev1.Pod, isReclaimEnabled bool) error
 	UpdatePVC(pvc *corev1.PersistentVolumeClaim) error
@@ -49,10 +48,6 @@ type pvcClient struct {
 
 func NewPVC(kubecli client.Client) PersistentVolumeClaim {
 	return &pvcClient{kubecli: kubecli}
-}
-
-func (p *pvcClient) CreatePVC(pvc *corev1.PersistentVolumeClaim) error {
-	return p.kubecli.Create(context.TODO(), pvc)
 }
 
 func (p *pvcClient) GetPVC(namespace, name string) (*corev1.PersistentVolumeClaim, error) {

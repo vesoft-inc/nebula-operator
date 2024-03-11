@@ -66,7 +66,6 @@ func (w *workloadClient) GetWorkload(namespace, name string, gvk schema.GroupVer
 func (w *workloadClient) CreateWorkload(obj *unstructured.Unstructured) error {
 	if err := w.kubecli.Create(context.TODO(), obj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			klog.Error(err, "workload already exists")
 			return nil
 		}
 		return err

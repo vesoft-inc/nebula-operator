@@ -36,7 +36,6 @@ import (
 )
 
 type PersistentVolume interface {
-	CreatePersistentVolume(pv *corev1.PersistentVolume) error
 	GetPersistentVolume(name string) (*corev1.PersistentVolume, error)
 	PatchPVReclaimPolicy(pv *corev1.PersistentVolume, policy corev1.PersistentVolumeReclaimPolicy) error
 	UpdateMetaInfo(obj runtime.Object, pv *corev1.PersistentVolume) error
@@ -49,10 +48,6 @@ type pvClient struct {
 
 func NewPV(kubecli client.Client) PersistentVolume {
 	return &pvClient{kubecli: kubecli}
-}
-
-func (p *pvClient) CreatePersistentVolume(pv *corev1.PersistentVolume) error {
-	return p.kubecli.Create(context.TODO(), pv)
 }
 
 func (p *pvClient) GetPersistentVolume(name string) (*corev1.PersistentVolume, error) {

@@ -32,7 +32,7 @@ const (
 	AWSSecretKeyEnv = "AWS_SECRET_ACCESS_KEY"
 
 	GSCredentialsKey = "credentials"
-	GSCredentialsEnv = "GS_CREDENTIALS"
+	GSCredentialsEnv = "GOOGLE_APPLICATION_CREDENTIALS_JSON"
 )
 
 func GetStorageType(provider v1alpha1.StorageProvider) v1alpha1.ObjectStorageType {

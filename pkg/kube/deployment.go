@@ -32,7 +32,6 @@ func NewDeployment(kubecli client.Client) Deployment {
 func (d *deployClient) CreateDeployment(deploy *appsv1.Deployment) error {
 	if err := d.kubecli.Create(context.TODO(), deploy); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			klog.Infof("deployment [%s/%s] already exists", deploy.Namespace, deploy.Name)
 			return nil
 		}
 		return err

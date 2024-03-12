@@ -58,6 +58,9 @@ type CommonConfig struct {
 	// DockerConfigJsonSecret is the docker config file.
 	// export E2E_DOCKER_CONFIG_JSON_SECRET=`cat ~/.docker/config.json| base64 -w 0`
 	DockerConfigJsonSecret Base64Value `env:"E2E_DOCKER_CONFIG_JSON_SECRET"`
+	AWSAccessKey           Base64Value `env:"E2E_AWS_ACCESS_KEY_ID"`
+	AWSSecretKey           Base64Value `env:"E2E_AWS_SECRET_ACCESS_KEY"`
+	GSSecret               Base64Value `env:"E2E_GOOGLE_APPLICATION_CREDENTIALS"`
 }
 
 type ClusterConfig struct {
@@ -75,6 +78,10 @@ type OperatorConfig struct {
 type NebulaClusterConfig struct {
 	ChartPath         string   `env:"E2E_NC_CHART_PATH,notEmpty,required" envDefault:"../../charts/nebula-cluster"`
 	Version           string   `env:"E2E_NC_VERSION"`
+	AgentImage        string   `env:"E2E_NC_AGENT_IMAGE"`
+	AgentVersion      string   `env:"E2E_NC_AGENT_VERSION"`
+	BrImage           string   `env:"E2E_BR_IMAGE"`
+	BrVersion         string   `env:"E2E_BR_VERSION"`
 	GraphdImage       string   `env:"E2E_NC_GRAPHD_IMAGE"`
 	MetadImage        string   `env:"E2E_NC_METAD_IMAGE"`
 	StoragedImage     string   `env:"E2E_NC_STORAGED_IMAGE"`

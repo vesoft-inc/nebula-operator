@@ -37,9 +37,22 @@ import (
 
 const (
 	ImagePullSecretName = "image-pull-secret.e2e"
+	AWSSecretName       = "aws-secret.e2e"
+	AWSRegion           = "default"
+	AWSBucketName       = "nebula-operator-e2e-test"
+	AWSBucketEndpoint   = "http://oss.vesoft-inc.com:9000"
+
+	GSLocation   = "us-east-5"
+	GSSecretName = "gs-secret"
+	GSBucketName = "nebula-operator-e2e-test"
 
 	LabelKeyCategory = "category"
 	LabelKeyGroup    = "group"
+
+	Username = "root"
+	Password = "nebula"
+	Space    = "e2e_ldbc_snb"
+	SaName   = "nebula-sa"
 )
 
 var (

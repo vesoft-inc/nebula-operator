@@ -54,6 +54,21 @@ func allWorkloadsAreUpToDate(nc *v1alpha1.NebulaCluster) bool {
 	return updated
 }
 
+func allVolumesAreProvisionedDone(nc *v1alpha1.NebulaCluster) bool {
+	isProvisioned := func(status *v1alpha1.VolumeStatus, requireExist bool) bool {
+		if status == nil {
+			return !requireExist
+		}
+		return status.ProvisionedDone
+	}
+
+	done := (isProvisioned(nc.Status.Metad.Volume, false)) &&
+		(isProvisioned(nc.Status.Storaged.Volume, false)) &&
+		(isProvisioned(nc.Status.Graphd.Volume, false))
+
+	return done
+}
+
 func (u *nebulaClusterConditionUpdater) updateReadyCondition(nc *v1alpha1.NebulaCluster) {
 	status := corev1.ConditionFalse
 	var reason string
@@ -72,6 +87,9 @@ func (u *nebulaClusterConditionUpdater) updateReadyCondition(nc *v1alpha1.Nebula
 	case !nc.GraphdComponent().IsReady():
 		reason = condition.GraphdUnhealthy
 		message = "Graphd is not healthy"
+	case !allVolumesAreProvisionedDone(nc):
+		reason = condition.VolumeNotProvisioning
+		message = "Volume is provisioning"
 	default:
 		status = corev1.ConditionTrue
 		reason = condition.WorkloadReady

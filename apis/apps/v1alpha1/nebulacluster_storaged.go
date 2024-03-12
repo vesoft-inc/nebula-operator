@@ -364,6 +364,10 @@ func (c *storagedComponent) SetWorkloadStatus(status *WorkloadStatus) {
 	c.nc.Status.Storaged.Workload = status
 }
 
+func (c *storagedComponent) SetVolumeStatus(status *VolumeStatus) {
+	c.nc.Status.Storaged.Volume = status
+}
+
 func (c *storagedComponent) GetPhase() ComponentPhase {
 	return c.nc.Status.Storaged.Phase
 }

@@ -17,24 +17,29 @@ limitations under the License.
 package component
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog/v2"
 	podutils "k8s.io/kubernetes/pkg/api/v1/pod"
+	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/codec"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/config"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/errors"
@@ -52,6 +57,8 @@ var suspendOrder = []v1alpha1.ComponentType{
 
 const (
 	InPlaceGracePeriodSeconds = 60
+
+	SyncVolumeConcurrency = 5
 )
 
 func syncComponentStatus(
@@ -498,35 +505,116 @@ func updateSinglePod(clientSet kube.ClientSet, newPod, oldPod *corev1.Pod) error
 	return clientSet.Pod().CreatePod(newPod)
 }
 
-func syncPVC(component v1alpha1.NebulaClusterComponent, pvcClient kube.PersistentVolumeClaim) error {
+func syncPVC(component v1alpha1.NebulaClusterComponent, scClient kube.StorageClass, pvcClient kube.PersistentVolumeClaim) (*v1alpha1.VolumeStatus, error) {
 	replicas := int(component.ComponentSpec().Replicas())
 	volumeClaims, err := component.GenerateVolumeClaim()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for _, volumeClaim := range volumeClaims {
+	if len(volumeClaims) == 0 {
+		return nil, nil
+	}
+
+	volumeProvisioned := make(map[string]bool)
+	volumes := make(map[string]v1alpha1.ProvisionedVolume)
+	var lock sync.Mutex
+	for i := range volumeClaims {
+		volumeClaim := volumeClaims[i]
+		group := async.NewGroup(context.TODO(), SyncVolumeConcurrency)
 		for i := 0; i < replicas; i++ {
 			pvcName := fmt.Sprintf("%s-%s-%d", volumeClaim.Name, component.GetName(), i)
-			oldPVC, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
-			if err != nil {
-				if !apierrors.IsNotFound(err) {
-					return err
+			worker := func() error {
+				oldPVC, err := pvcClient.GetPVC(component.GetNamespace(), pvcName)
+				if err != nil {
+					if !apierrors.IsNotFound(err) {
+						return err
+					}
 				}
-			}
-			if oldPVC == nil {
-				continue
-			}
-			if volumeClaim.Spec.Resources.Requests.Storage().Cmp(*oldPVC.Spec.Resources.Requests.Storage()) == 1 {
-				klog.Infof("expand PVC %s size to %s", pvcName, volumeClaim.Spec.Resources.Requests.Storage().String())
-				// only update storage
-				oldPVC.Spec.Resources.Requests = volumeClaim.Spec.Resources.Requests
-				if err = pvcClient.UpdatePVC(oldPVC); err != nil {
-					return err
+				if oldPVC == nil {
+					return nil
 				}
+
+				lock.Lock()
+				volumes[pvcName] = v1alpha1.ProvisionedVolume{
+					VolumeName:   oldPVC.Spec.VolumeName,
+					StorageClass: pointer.StringDeref(oldPVC.Spec.StorageClassName, "default"),
+					Capacity:     oldPVC.Status.Capacity.Storage().String(),
+				}
+				volumeProvisioned[pvcName] = false
+				lock.Unlock()
+
+				cmpVal := volumeClaim.Spec.Resources.Requests.Storage().Cmp(*oldPVC.Spec.Resources.Requests.Storage())
+				if cmpVal == 0 {
+					lock.Lock()
+					volumeProvisioned[pvcName] = true
+					lock.Unlock()
+					return nil
+				}
+
+				if cmpVal < 0 {
+					klog.Warningf("skip to resize PVC %s: storage request cannot be shrunk to %s",
+						pvcName, volumeClaim.Spec.Resources.Requests.Storage().String())
+					return nil
+				}
+
+				var sc *storagev1.StorageClass
+				scName := pointer.StringDeref(volumeClaim.Spec.StorageClassName, "")
+				if scName != "" {
+					sc, err = scClient.GetStorageClass(scName)
+					if err != nil {
+						return err
+					}
+				} else {
+					sc, err = scClient.GetDefaultStorageClass()
+					if err != nil {
+						return err
+					}
+				}
+				if !isVolumeExpansionSupported(sc) {
+					klog.V(4).Infof("storageclass %s does not allow volume expansion", scName)
+					return nil
+				}
+
+				if cmpVal > 0 {
+					klog.Infof("expand PVC %s size to %s", pvcName, volumeClaim.Spec.Resources.Requests.Storage().String())
+					// only update storage
+					oldPVC.Spec.Resources.Requests = volumeClaim.Spec.Resources.Requests
+					if err = pvcClient.UpdatePVC(oldPVC); err != nil {
+						return err
+					}
+				}
+				return nil
 			}
+
+			group.Add(func(stopCh chan interface{}) {
+				stopCh <- worker()
+			})
+		}
+
+		if err := group.Wait(); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+
+	volumeStatus := &v1alpha1.VolumeStatus{
+		ProvisionedVolumes: volumes,
+		ProvisionedDone:    true,
+	}
+	for _, p := range volumeProvisioned {
+		if !p {
+			volumeStatus.ProvisionedDone = false
+			break
+		}
+	}
+
+	return volumeStatus, nil
+}
+
+func isVolumeExpansionSupported(sc *storagev1.StorageClass) bool {
+	if sc.AllowVolumeExpansion == nil {
+		return false
+	}
+	return *sc.AllowVolumeExpansion
 }
 
 func suspendComponent(

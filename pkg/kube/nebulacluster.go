@@ -50,7 +50,6 @@ func NewNebulaCluster(client client.Client) NebulaCluster {
 func (c *nebulaClusterClient) CreateNebulaCluster(nc *v1alpha1.NebulaCluster) error {
 	if err := c.client.Create(context.TODO(), nc); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			klog.Infof("NebulaCluster %s/%s already exists", nc.Namespace, nc.Name)
 			return nil
 		}
 		return err

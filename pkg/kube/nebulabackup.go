@@ -62,7 +62,6 @@ func NewNebulaBackup(client client.Client) NebulaBackup {
 func (b *backupClient) CreateNebulaBackup(nb *v1alpha1.NebulaBackup) error {
 	if err := b.client.Create(context.TODO(), nb); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			klog.Infof("NebulaBackup %s/%s already exists", nb.Namespace, nb.Name)
 			return nil
 		}
 		return err

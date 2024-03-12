@@ -171,7 +171,8 @@ func (nc *NebulaCluster) IsStoragedAvailable() bool {
 	return nc.StoragedComponent().IsReady() &&
 		nc.Status.Storaged.BalancedSpaces == nil &&
 		nc.Status.Storaged.RemovedSpaces == nil &&
-		nc.Status.Storaged.LastBalanceJob == nil
+		nc.Status.Storaged.LastBalanceJob == nil &&
+		nc.Status.Storaged.FailureHosts == nil
 }
 
 func (nc *NebulaCluster) IsConditionReady() bool {

@@ -33,6 +33,8 @@ const (
 	StoragedUnhealthy = "StoragedUnhealthy"
 	// GraphdUnhealthy is added when one of graphd pods is unhealthy.
 	GraphdUnhealthy = "GraphdUnhealthy"
+	// VolumeNotProvisioning is added when one of the workloads volume is not provisioning.
+	VolumeNotProvisioning = "VolumeNotProvisioning"
 )
 
 func NewNebulaClusterCondition(

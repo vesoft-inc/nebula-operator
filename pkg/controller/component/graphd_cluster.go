@@ -271,7 +271,12 @@ func (c *graphdCluster) syncGraphdConfigMap(nc *v1alpha1.NebulaCluster) (*corev1
 }
 
 func (c *graphdCluster) syncGraphdPVC(nc *v1alpha1.NebulaCluster) error {
-	return syncPVC(nc.GraphdComponent(), c.clientSet.PVC())
+	volumeStatus, err := syncPVC(nc.GraphdComponent(), c.clientSet.StorageClass(), c.clientSet.PVC())
+	if err != nil {
+		return err
+	}
+	nc.GraphdComponent().SetVolumeStatus(volumeStatus)
+	return nil
 }
 
 func (c *graphdCluster) setTopologyZone(nc *v1alpha1.NebulaCluster, newReplicas int32) error {
@@ -329,5 +334,9 @@ func (f *FakeGraphdCluster) SetReconcileError(err error) {
 }
 
 func (f *FakeGraphdCluster) Reconcile(_ *v1alpha1.NebulaCluster) error {
+	return f.err
+}
+
+func (f *FakeGraphdCluster) Delete(_ *v1alpha1.NebulaCluster) error {
 	return f.err
 }

@@ -11787,6 +11787,28 @@ spec:
                     type: string
                   version:
                     type: string
+                  volume:
+                    properties:
+                      provisionedDone:
+                        type: boolean
+                      provisionedVolumes:
+                        additionalProperties:
+                          properties:
+                            capacity:
+                              type: string
+                            storageClass:
+                              type: string
+                            volumeName:
+                              type: string
+                          required:
+                          - capacity
+                          - storageClass
+                          - volumeName
+                          type: object
+                        type: object
+                    required:
+                    - provisionedDone
+                    type: object
                   workload:
                     properties:
                       availableReplicas:
@@ -11826,6 +11848,28 @@ spec:
                     type: string
                   version:
                     type: string
+                  volume:
+                    properties:
+                      provisionedDone:
+                        type: boolean
+                      provisionedVolumes:
+                        additionalProperties:
+                          properties:
+                            capacity:
+                              type: string
+                            storageClass:
+                              type: string
+                            volumeName:
+                              type: string
+                          required:
+                          - capacity
+                          - storageClass
+                          - volumeName
+                          type: object
+                        type: object
+                    required:
+                    - provisionedDone
+                    type: object
                   workload:
                     properties:
                       availableReplicas:
@@ -11919,6 +11963,28 @@ spec:
                     type: array
                   version:
                     type: string
+                  volume:
+                    properties:
+                      provisionedDone:
+                        type: boolean
+                      provisionedVolumes:
+                        additionalProperties:
+                          properties:
+                            capacity:
+                              type: string
+                            storageClass:
+                              type: string
+                            volumeName:
+                              type: string
+                          required:
+                          - capacity
+                          - storageClass
+                          - volumeName
+                          type: object
+                        type: object
+                    required:
+                    - provisionedDone
+                    type: object
                   workload:
                     properties:
                       availableReplicas:

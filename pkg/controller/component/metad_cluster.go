@@ -219,7 +219,12 @@ func (c *metadCluster) syncMetadConfigMap(nc *v1alpha1.NebulaCluster) (*corev1.C
 }
 
 func (c *metadCluster) syncMetadPVC(nc *v1alpha1.NebulaCluster) error {
-	return syncPVC(nc.MetadComponent(), c.clientSet.PVC())
+	volumeStatus, err := syncPVC(nc.MetadComponent(), c.clientSet.StorageClass(), c.clientSet.PVC())
+	if err != nil {
+		return nil
+	}
+	nc.MetadComponent().SetVolumeStatus(volumeStatus)
+	return nil
 }
 
 type FakeMetadCluster struct {
@@ -235,5 +240,9 @@ func (f *FakeMetadCluster) SetReconcileError(err error) {
 }
 
 func (f *FakeMetadCluster) Reconcile(_ *v1alpha1.NebulaCluster) error {
+	return f.err
+}
+
+func (f *FakeMetadCluster) Delete(_ *v1alpha1.NebulaCluster) error {
 	return f.err
 }

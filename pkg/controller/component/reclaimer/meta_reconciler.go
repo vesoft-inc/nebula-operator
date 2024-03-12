@@ -150,3 +150,7 @@ func (f *FakeMetaReconciler) SetReconcileError(err error) {
 func (f *FakeMetaReconciler) Reconcile(_ *v1alpha1.NebulaCluster) error {
 	return f.err
 }
+
+func (f *FakeMetaReconciler) Delete(_ *v1alpha1.NebulaCluster) error {
+	return f.err
+}

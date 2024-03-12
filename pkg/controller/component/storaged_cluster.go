@@ -386,7 +386,12 @@ func (c *storagedCluster) syncStoragedConfigMap(nc *v1alpha1.NebulaCluster) (*co
 }
 
 func (c *storagedCluster) syncStoragedPVC(nc *v1alpha1.NebulaCluster) error {
-	return syncPVC(nc.StoragedComponent(), c.clientSet.PVC())
+	volumeStatus, err := syncPVC(nc.StoragedComponent(), c.clientSet.StorageClass(), c.clientSet.PVC())
+	if err != nil {
+		return err
+	}
+	nc.StoragedComponent().SetVolumeStatus(volumeStatus)
+	return nil
 }
 
 func (c *storagedCluster) addStorageHosts(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
@@ -598,5 +603,9 @@ func (f *FakeStoragedCluster) SetReconcileError(err error) {
 }
 
 func (f *FakeStoragedCluster) Reconcile(_ *v1alpha1.NebulaCluster) error {
+	return f.err
+}
+
+func (f *FakeStoragedCluster) Delete(_ *v1alpha1.NebulaCluster) error {
 	return f.err
 }

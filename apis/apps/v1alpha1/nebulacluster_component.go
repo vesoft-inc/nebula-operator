@@ -224,6 +224,7 @@ type NebulaClusterComponent interface {
 	IsSuspended() bool
 	IsAutoFailovering() bool
 	SetWorkloadStatus(status *WorkloadStatus)
+	SetVolumeStatus(status *VolumeStatus)
 	UpdateComponentStatus(status *ComponentStatus)
 }
 

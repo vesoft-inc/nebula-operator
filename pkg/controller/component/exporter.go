@@ -249,3 +249,7 @@ func (f *FakeNebulaExporter) SetReconcileError(err error) {
 func (f *FakeNebulaExporter) Reconcile(_ *v1alpha1.NebulaCluster) error {
 	return f.err
 }
+
+func (f *FakeNebulaExporter) Delete(_ *v1alpha1.NebulaCluster) error {
+	return f.err
+}

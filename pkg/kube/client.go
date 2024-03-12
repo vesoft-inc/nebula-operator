@@ -39,6 +39,7 @@ type ClientSet interface {
 	NebulaCronBackup() NebulaCronBackup
 	NebulaRestore() NebulaRestore
 	NebulaAutoscaler() NebulaAutoscaler
+	StorageClass() StorageClass
 }
 
 type clientSet struct {
@@ -58,6 +59,7 @@ type clientSet struct {
 	cronBackupClient NebulaCronBackup
 	restoreClient    NebulaRestore
 	autoscalerClient NebulaAutoscaler
+	scClient         StorageClass
 }
 
 func NewClientSet(config *rest.Config) (ClientSet, error) {
@@ -82,6 +84,7 @@ func NewClientSet(config *rest.Config) (ClientSet, error) {
 		cronBackupClient: NewCronNebulaBackup(c),
 		restoreClient:    NewNebulaRestore(c),
 		autoscalerClient: NewNebulaAutoscaler(c),
+		scClient:         NewStorageClass(c),
 	}, nil
 }
 
@@ -147,4 +150,8 @@ func (c *clientSet) NebulaRestore() NebulaRestore {
 
 func (c *clientSet) NebulaAutoscaler() NebulaAutoscaler {
 	return c.autoscalerClient
+}
+
+func (c *clientSet) StorageClass() StorageClass {
+	return c.scClient
 }

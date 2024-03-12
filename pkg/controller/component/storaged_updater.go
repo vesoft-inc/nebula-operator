@@ -44,8 +44,8 @@ const (
 	// TransLeaderTimeout is the timeout limit of trans leader
 	TransLeaderTimeout = 30 * time.Minute
 
-	// Concurrency is the count of goroutines to transfer partition leader
-	Concurrency = 3
+	// TransferPartitionLeaderConcurrency is the count of goroutines to transfer partition leader
+	TransferPartitionLeaderConcurrency = 3
 )
 
 type storagedUpdater struct {
@@ -356,7 +356,7 @@ func (s *storagedUpdater) concurrentTransLeader(nc *v1alpha1.NebulaCluster, mc n
 		spaceID := key
 		spaceWorker := func() error {
 			partItems := spaceItems[spaceID]
-			group := async.NewGroup(context.TODO(), Concurrency)
+			group := async.NewGroup(context.TODO(), TransferPartitionLeaderConcurrency)
 			for i := range partItems {
 				partItem := partItems[i]
 				worker := func() error {

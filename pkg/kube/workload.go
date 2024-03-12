@@ -70,7 +70,6 @@ func (w *workloadClient) CreateWorkload(obj *unstructured.Unstructured) error {
 		}
 		return err
 	}
-	klog.Infof("workload %s/%s created successfully", obj.GetNamespace(), obj.GetName())
 	return nil
 }
 

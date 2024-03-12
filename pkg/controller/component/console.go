@@ -224,3 +224,7 @@ func (f *FakeNebulaConsole) SetReconcileError(err error) {
 func (f *FakeNebulaConsole) Reconcile(_ *v1alpha1.NebulaCluster) error {
 	return f.err
 }
+
+func (f *FakeNebulaConsole) Delete(_ *v1alpha1.NebulaCluster) error {
+	return f.err
+}

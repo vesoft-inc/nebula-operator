@@ -403,6 +403,10 @@ func (c *metadComponent) SetWorkloadStatus(status *WorkloadStatus) {
 	c.nc.Status.Metad.Workload = status
 }
 
+func (c *metadComponent) SetVolumeStatus(status *VolumeStatus) {
+	c.nc.Status.Metad.Volume = status
+}
+
 func (c *metadComponent) GetPhase() ComponentPhase {
 	return c.nc.Status.Metad.Phase
 }

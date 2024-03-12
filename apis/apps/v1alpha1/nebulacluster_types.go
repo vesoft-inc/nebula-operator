@@ -138,6 +138,7 @@ type ComponentStatus struct {
 	Version  string          `json:"version,omitempty"`
 	Phase    ComponentPhase  `json:"phase,omitempty"`
 	Workload *WorkloadStatus `json:"workload,omitempty"`
+	Volume   *VolumeStatus   `json:"volume,omitempty"`
 }
 
 // StoragedStatus describes the status and version of nebula storaged.
@@ -149,12 +150,32 @@ type StoragedStatus struct {
 	LastBalanceJob        *BalanceJob                    `json:"lastBalanceJob,omitempty"`
 	BalancedAfterFailover *bool                          `json:"balancedAfterFailover,omitempty"`
 	FailureHosts          map[string]StoragedFailureHost `json:"failureHosts,omitempty"`
+	Volume                *VolumeStatus                  `json:"volume,omitempty"`
 }
 
 // BalanceJob describes the admin job for balance data.
 type BalanceJob struct {
 	SpaceID int32 `json:"spaceID,omitempty"`
 	JobID   int32 `json:"jobID,omitempty"`
+}
+
+// VolumeStatus describes the observed state of volumes.
+type VolumeStatus struct {
+	ProvisionedVolumes map[string]ProvisionedVolume `json:"provisionedVolumes,omitempty"`
+
+	// All volumes have been provisioned with the desired resources.
+	ProvisionedDone bool `json:"provisionedDone"`
+}
+
+type ProvisionedVolumes map[string]ProvisionedVolume
+
+// ProvisionedVolume describes the status of a specified PVC.
+type ProvisionedVolume struct {
+	VolumeName string `json:"volumeName"`
+
+	StorageClass string `json:"storageClass"`
+
+	Capacity string `json:"capacity"`
 }
 
 type EmptyStruct struct{}

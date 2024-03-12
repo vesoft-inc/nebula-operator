@@ -325,6 +325,10 @@ func (c *graphdComponent) SetWorkloadStatus(status *WorkloadStatus) {
 	c.nc.Status.Graphd.Workload = status
 }
 
+func (c *graphdComponent) SetVolumeStatus(status *VolumeStatus) {
+	c.nc.Status.Graphd.Volume = status
+}
+
 func (c *graphdComponent) GetPhase() ComponentPhase {
 	return c.nc.Status.Graphd.Phase
 }

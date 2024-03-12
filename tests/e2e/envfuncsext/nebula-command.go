@@ -131,7 +131,7 @@ func RunGetStats(ctx context.Context, cfg *envconf.Config, space string, ngOptio
 		return nil, fmt.Errorf("failed to submit stats job: %v", err)
 	}
 
-	time.Sleep(2 * time.Second) //sleep 2 seconds to allow stats job to finish running
+	time.Sleep(3 * time.Second) //sleep 3 seconds to allow stats job to finish running
 
 	ctx, err = RunNGCommand(ngOptions, fmt.Sprintf("USE %v;show stats", space))(ctx, cfg)
 	if err != nil {

@@ -123,6 +123,8 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 		return err
 	}
 
+	klog.Infof("storaged cluster [%s/%s] scale in, old replicas %d, new replicas %d", ns, componentName, oldReplicas, newReplicas)
+
 	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return err

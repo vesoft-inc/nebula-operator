@@ -40,7 +40,7 @@ spec:
             - --concurrent-nebulacluster-syncs={{ .Values.concurrentNebulaClusterSyncs }}
             - --concurrent-nebularestore-syncs={{ .Values.concurrentNebulaRestoreSyncs }}
             - --concurrent-nebulacronbackup-syncs={{ .Values.concurrentNebulaCronBackupSyncs }}
-            - --concurrent-nebulabackup-sync={{ .Values.concurrentNebulaBackupSyncs }}
+            - --concurrent-nebulabackup-syncs={{ .Values.concurrentNebulaBackupSyncs }}
             - --leader-elect
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
             - --enable-admission-webhook={{ .Values.admissionWebhook.create }}

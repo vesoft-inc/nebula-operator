@@ -25,7 +25,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: build
+all: generate manifests build-operator
 
 ##@ General
 
@@ -48,8 +48,10 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(GOBIN)/controller-gen $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(GOBIN)/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+generate: controller-gen defaulter-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	$(GOBIN)/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./apis/..."
+	mkdir -p tmp.gen && $(GOBIN)/defaulter-gen --go-header-file "hack/boilerplate.go.txt" --input-dirs "./apis/autoscaling/v1alpha1" --output-base "./tmp.gen/"
+	cp -f tmp.gen/github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1/zz_generated.defaults.go apis/autoscaling/v1alpha1/ && rm -rf ./tmp.gen
 
 check: fmt vet lint ## Run check against code.
 
@@ -156,7 +158,7 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 
 ##@ Tools
 
-tools: golangci-lint controller-gen kustomize ginkgo kind ## Download all go tools locally if necessary.
+tools: golangci-lint controller-gen defaulter-gen kustomize ginkgo kind ## Download all go tools locally if necessary.
 
 golangci-lint:
 	@[ -f $(GOBIN)/golangci-lint ] || { \
@@ -166,6 +168,9 @@ golangci-lint:
 
 controller-gen:
 	$(call go-get-tool,$(GOBIN)/controller-gen,sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3)
+
+defaulter-gen:
+	$(call go-get-tool,$(GOBIN)/default-gen,k8s.io/code-generator/cmd/defaulter-gen@v0.27.10)
 
 kustomize:
 	$(call go-get-tool,$(GOBIN)/kustomize,sigs.k8s.io/kustomize/kustomize/v4@v4.5.7)

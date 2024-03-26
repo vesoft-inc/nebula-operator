@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains v1alpha1 version's types in autoscaling.nebula-graph.io group.
-//
-// +groupName=autoscaling.nebula-graph.io
-// +k8s:defaulter-gen=TypeMeta
-// +k8s:defaulter-gen-input=github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1
 package v1alpha1
+
+func init() {
+	// We only register manually written functions here. The registration of the
+	// generated functions takes place in the generated files. The separation
+	// makes the code compile even when the generated files are missing.
+	localSchemeBuilder := SchemeBuilder.Register(&NebulaAutoscaler{}, &NebulaAutoscalerList{})
+	localSchemeBuilder.SchemeBuilder.Register(addDefaultingFuncs)
+}

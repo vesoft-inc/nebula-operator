@@ -54,14 +54,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/scheme"
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 )
 
 const (
-	defaultTimeout   = 5 * time.Second
-	reconcileTimeOut = 10 * time.Second
+	defaultTimeout = 5 * time.Second
 
 	controllerName = "nebula-autoscaler"
 )
@@ -214,21 +214,22 @@ func (a *HorizontalController) Reconcile(ctx context.Context, request ctrl.Reque
 	if err := a.client.Get(ctx, request.NamespacedName, &hpa); err != nil {
 		if apierrors.IsNotFound(err) {
 			klog.Infof("Skipping because NebulaAutoscaler [%s] has been deleted", key)
+			a.recommendationsLock.Lock()
+			delete(a.recommendations, key)
+			a.recommendationsLock.Unlock()
+
+			a.scaleUpEventsLock.Lock()
+			delete(a.scaleUpEvents, key)
+			a.scaleUpEventsLock.Unlock()
+
+			a.scaleDownEventsLock.Lock()
+			delete(a.scaleDownEvents, key)
+			a.scaleDownEventsLock.Unlock()
 		}
-		a.recommendationsLock.Lock()
-		delete(a.recommendations, key)
-		a.recommendationsLock.Unlock()
-
-		a.scaleUpEventsLock.Lock()
-		delete(a.scaleUpEvents, key)
-		a.scaleUpEventsLock.Unlock()
-
-		a.scaleDownEventsLock.Lock()
-		delete(a.scaleDownEvents, key)
-		a.scaleDownEventsLock.Unlock()
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	scheme.Scheme.Default(&hpa)
 	if err := a.reconcileAutoscaler(ctx, &hpa, key); err != nil {
 		if err == errNebulaClusterNotFound {
 			klog.Infof("Skipping because NebulaCluster [%s] has been deleted", hpa.Spec.NebulaClusterRef.Name)
@@ -591,8 +592,7 @@ type NormalizationArg struct {
 // 3. Apply the constraints period (i.e. add no more than 4 pods per minute)
 // 4. Apply the stabilization (i.e. add no more than 4 pods per minute, and pick the smallest recommendation during last 5 minutes)
 func (a *HorizontalController) normalizeDesiredReplicasWithBehaviors(hpa *v1alpha1.NebulaAutoscaler, key string, currentReplicas, prenormalizedDesiredReplicas, minReplicas int32) int32 {
-	a.maybeInitStabilizationWindow(hpa)
-	a.maybeInitSelectPolicy(hpa)
+	a.maybeInitScaleDownStabilizationWindow(hpa)
 	normalizationArg := NormalizationArg{
 		Key:               key,
 		ScaleUpBehavior:   hpa.Spec.GraphdPolicy.Behavior.ScaleUp,
@@ -619,36 +619,11 @@ func (a *HorizontalController) normalizeDesiredReplicasWithBehaviors(hpa *v1alph
 	return desiredReplicas
 }
 
-func (a *HorizontalController) maybeInitStabilizationWindow(hpa *v1alpha1.NebulaAutoscaler) {
+func (a *HorizontalController) maybeInitScaleDownStabilizationWindow(hpa *v1alpha1.NebulaAutoscaler) {
 	behavior := hpa.Spec.GraphdPolicy.Behavior
-	if behavior != nil {
-		if behavior.ScaleDown == nil {
-			hpa.Spec.GraphdPolicy.Behavior.ScaleDown = &autoscalingv2.HPAScalingRules{}
-		}
-		if behavior.ScaleDown.StabilizationWindowSeconds == nil {
-			behavior.ScaleDown.StabilizationWindowSeconds = pointer.Int32(int32(a.downscaleStabilisationWindow.Seconds()))
-		}
-
-		if behavior.ScaleUp == nil {
-			hpa.Spec.GraphdPolicy.Behavior.ScaleUp = &autoscalingv2.HPAScalingRules{}
-		}
-		if behavior.ScaleUp.StabilizationWindowSeconds == nil {
-			behavior.ScaleUp.StabilizationWindowSeconds = pointer.Int32(0)
-		}
-	}
-}
-
-func (a *HorizontalController) maybeInitSelectPolicy(hpa *v1alpha1.NebulaAutoscaler) {
-	behavior := hpa.Spec.GraphdPolicy.Behavior
-	if behavior != nil {
-		if behavior.ScaleUp != nil && behavior.ScaleUp.SelectPolicy == nil {
-			selectPolicy := autoscalingv2.MaxChangePolicySelect
-			hpa.Spec.GraphdPolicy.Behavior.ScaleUp.SelectPolicy = &selectPolicy
-		}
-		if behavior.ScaleDown != nil && behavior.ScaleDown.SelectPolicy == nil {
-			selectPolicy := autoscalingv2.MaxChangePolicySelect
-			hpa.Spec.GraphdPolicy.Behavior.ScaleDown.SelectPolicy = &selectPolicy
-		}
+	if behavior != nil && behavior.ScaleDown != nil && behavior.ScaleDown.StabilizationWindowSeconds == nil {
+		stabilizationWindowSeconds := (int32)(a.downscaleStabilisationWindow.Seconds())
+		hpa.Spec.GraphdPolicy.Behavior.ScaleDown.StabilizationWindowSeconds = &stabilizationWindowSeconds
 	}
 }
 
@@ -842,7 +817,7 @@ func (a *HorizontalController) convertDesiredReplicasWithBehaviorRate(args Norma
 	return args.DesiredReplicas, "DesiredWithinRange", "the desired count is within the acceptable range"
 }
 
-// convertDesiredReplicas performs the actual normalization, without depending on `HorizontalController` or `NebulaAutoscaler`
+// convertDesiredReplicasWithRules performs the actual normalization, without depending on `HorizontalController` or `NebulaAutoscaler`
 func convertDesiredReplicasWithRules(currentReplicas, desiredReplicas, hpaMinReplicas, hpaMaxReplicas int32) (int32, string, string) {
 
 	var minimumAllowedReplicas int32

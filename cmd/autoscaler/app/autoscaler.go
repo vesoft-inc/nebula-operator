@@ -21,9 +21,6 @@ import (
 	"flag"
 
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
@@ -32,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	appsv1alpha1 "github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
+	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/scheme"
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/cmd/autoscaler/app/options"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/autoscaler"
@@ -40,19 +37,6 @@ import (
 	profileflag "github.com/vesoft-inc/nebula-operator/pkg/flag/profile"
 	"github.com/vesoft-inc/nebula-operator/pkg/version"
 )
-
-var (
-	scheme = runtime.NewScheme()
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(clientgoscheme.Scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	utilruntime.Must(appsv1alpha1.AddToScheme(clientgoscheme.Scheme))
-	utilruntime.Must(appsv1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
-}
 
 // NewAutoscalerCommand creates a *cobra.Command object with default parameters
 func NewAutoscalerCommand(ctx context.Context) *cobra.Command {
@@ -97,7 +81,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 	}
 
 	ctrlOptions := ctrlruntime.Options{
-		Scheme:                     scheme,
+		Scheme:                     scheme.Scheme,
 		Logger:                     klog.Background(),
 		LeaderElection:             opts.LeaderElection.LeaderElect,
 		LeaderElectionID:           opts.LeaderElection.ResourceName,

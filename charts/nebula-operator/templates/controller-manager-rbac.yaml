@@ -362,7 +362,6 @@ rules:
     verbs:
       - get
       - list
-      - watch
   - apiGroups:
       - apiextensions.k8s.io
     resources:
@@ -374,6 +373,20 @@ rules:
       - update
       - patch
       - create
+  - apiGroups:
+      - custom.metrics.k8s.io
+    resources:
+      - '*'
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -390,4 +403,18 @@ subjects:
     name: {{ template "controller-manager.name" . }}-sa
     namespace: {{ template "nebula-operator.namespace" . }}
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "controller-manager.name" . }}:system:auth-delegator
+  labels:
+  {{- include "controller-manager.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: {{ template "controller-manager.name" . }}-sa
+  namespace: {{ template "nebula-operator.namespace" . }}
 {{- end }}

@@ -28,6 +28,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - get
@@ -280,13 +288,19 @@ rules:
   - update
   - watch
 - apiGroups:
+  - custom.metrics.k8s.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+- apiGroups:
   - metrics.k8s.io
   resources:
   - pods
   verbs:
   - get
   - list
-  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

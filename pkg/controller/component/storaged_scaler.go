@@ -112,7 +112,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 	nc.Status.Storaged.BalancedSpaces = nil
 	nc.Status.Storaged.LastBalanceJob = nil
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
-	return nil
+	return ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
 }
 
 func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newReplicas int32) error {
@@ -233,5 +233,5 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	nc.Status.Storaged.RemovedSpaces = nil
 	nc.Status.Storaged.LastBalanceJob = nil
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
-	return nil
+	return ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
 }

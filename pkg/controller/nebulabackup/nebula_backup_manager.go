@@ -34,8 +34,8 @@ import (
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
+	"github.com/vesoft-inc/nebula-operator/pkg/credentials"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	"github.com/vesoft-inc/nebula-operator/pkg/remote"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/maputil"
 )
@@ -88,7 +88,7 @@ func (bm *backupManager) Clean(backup *v1alpha1.NebulaBackup) error {
 	}
 
 	if backup.Status.BackupName == "" {
-		klog.Infof("backup [%s/%s] remote backup is empty", backup.Namespace, backup.Name)
+		klog.Infof("backup [%s/%s] credentials backup is empty", backup.Namespace, backup.Name)
 		return bm.clientSet.NebulaBackup().UpdateNebulaBackupStatus(backup, &v1alpha1.BackupCondition{
 			Type:   v1alpha1.BackupClean,
 			Status: corev1.ConditionTrue,
@@ -243,7 +243,7 @@ func (bm *backupManager) ensureBackupJobFinished(backup *v1alpha1.NebulaBackup) 
 	}
 
 	if backup.Status.BackupName == "" {
-		klog.Infof("backup [%s/%s] job %s is running, cleaner need sync remote backup", backup.Namespace, backup.Name, backupJobName)
+		klog.Infof("backup [%s/%s] job %s is running, cleaner need sync credentials backup", backup.Namespace, backup.Name, backupJobName)
 		return false, nil
 	}
 
@@ -386,21 +386,21 @@ func (bm *backupManager) getSslFlags(cluster *v1alpha1.NebulaCluster) string {
 
 func (bm *backupManager) getStorageFlags(namespace string, provider v1alpha1.StorageProvider) (string, error) {
 	var storageFlags string
-	storageType := remote.GetStorageType(provider)
+	storageType := credentials.GetStorageType(provider)
 	switch storageType {
 	case v1alpha1.ObjectStorageS3:
-		accessKey, secretKey, err := remote.GetS3Key(bm.clientSet, namespace, provider.S3.SecretName)
+		accessKey, secretKey, err := credentials.GetS3Key(bm.clientSet, namespace, provider.S3.SecretName)
 		if err != nil {
 			return "", fmt.Errorf("get S3 key failed: %v", err)
 		}
 		storageFlags = fmt.Sprintf(" --storage s3://%s --s3.region %s --s3.endpoint %s --s3.access_key %s --s3.secret_key %s",
 			provider.S3.Bucket, provider.S3.Region, provider.S3.Endpoint, accessKey, secretKey)
 	case v1alpha1.ObjectStorageGS:
-		credentials, err := remote.GetGsCredentials(bm.clientSet, namespace, provider.GS.SecretName)
+		gsCredentials, err := credentials.GetGsCredentials(bm.clientSet, namespace, provider.GS.SecretName)
 		if err != nil {
 			return "", fmt.Errorf("get GS credentials failed: %v", err)
 		}
-		storageFlags = fmt.Sprintf(` --storage gs://%s --gs.credentials '%s'`, provider.GS.Bucket, credentials)
+		storageFlags = fmt.Sprintf(` --storage gs://%s --gs.credentials '%s'`, provider.GS.Bucket, gsCredentials)
 	default:
 		return "", fmt.Errorf("unknown storage type: %s", storageType)
 	}

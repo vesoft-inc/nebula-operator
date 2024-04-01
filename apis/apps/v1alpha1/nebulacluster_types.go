@@ -135,22 +135,22 @@ type NebulaClusterStatus struct {
 
 // ComponentStatus is the status and version of a nebula component.
 type ComponentStatus struct {
-	Version  string          `json:"version,omitempty"`
-	Phase    ComponentPhase  `json:"phase,omitempty"`
-	Workload *WorkloadStatus `json:"workload,omitempty"`
-	Volume   *VolumeStatus   `json:"volume,omitempty"`
+	Version      string                 `json:"version,omitempty"`
+	Phase        ComponentPhase         `json:"phase,omitempty"`
+	Workload     *WorkloadStatus        `json:"workload,omitempty"`
+	FailureHosts map[string]FailureHost `json:"failureHosts,omitempty"`
+	Volume       *VolumeStatus          `json:"volume,omitempty"`
 }
 
 // StoragedStatus describes the status and version of nebula storaged.
 type StoragedStatus struct {
-	ComponentStatus       `json:",inline"`
-	HostsAdded            bool                           `json:"hostsAdded,omitempty"`
-	RemovedSpaces         []int32                        `json:"removedSpaces,omitempty"`
-	BalancedSpaces        []int32                        `json:"balancedSpaces,omitempty"`
-	LastBalanceJob        *BalanceJob                    `json:"lastBalanceJob,omitempty"`
-	BalancedAfterFailover *bool                          `json:"balancedAfterFailover,omitempty"`
-	FailureHosts          map[string]StoragedFailureHost `json:"failureHosts,omitempty"`
-	Volume                *VolumeStatus                  `json:"volume,omitempty"`
+	ComponentStatus `json:",inline"`
+	HostsAdded      bool                   `json:"hostsAdded,omitempty"`
+	RemovedSpaces   []int32                `json:"removedSpaces,omitempty"`
+	BalancedSpaces  []int32                `json:"balancedSpaces,omitempty"`
+	LastBalanceJob  *BalanceJob            `json:"lastBalanceJob,omitempty"`
+	FailureHosts    map[string]FailureHost `json:"failureHosts,omitempty"`
+	Volume          *VolumeStatus          `json:"volume,omitempty"`
 }
 
 // BalanceJob describes the admin job for balance data.
@@ -180,11 +180,12 @@ type ProvisionedVolume struct {
 
 type EmptyStruct struct{}
 
-// StoragedFailureHost is the storaged failure host information.
-type StoragedFailureHost struct {
+// FailureHost is the failure host information.
+type FailureHost struct {
 	Host             string                    `json:"host,omitempty"`
 	PVCSet           map[types.UID]EmptyStruct `json:"pvcSet,omitempty"`
-	HostDeleted      bool                      `json:"hostDeleted,omitempty"`
+	HostDeleted      *bool                     `json:"hostDeleted,omitempty"`
+	DataBalanced     *bool                     `json:"dataBalanced,omitempty"`
 	PodRestarted     bool                      `json:"podRestarted,omitempty"`
 	PodRebuilt       bool                      `json:"podRebuilt,omitempty"`
 	NodeDown         bool                      `json:"nodeDown,omitempty"`

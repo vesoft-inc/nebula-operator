@@ -11783,6 +11783,36 @@ spec:
                 type: array
               graphd:
                 properties:
+                  failureHosts:
+                    additionalProperties:
+                      properties:
+                        confirmationTime:
+                          format: date-time
+                          type: string
+                        creationTime:
+                          format: date-time
+                          type: string
+                        dataBalanced:
+                          type: boolean
+                        deletionTime:
+                          format: date-time
+                          type: string
+                        host:
+                          type: string
+                        hostDeleted:
+                          type: boolean
+                        nodeDown:
+                          type: boolean
+                        podRebuilt:
+                          type: boolean
+                        podRestarted:
+                          type: boolean
+                        pvcSet:
+                          additionalProperties:
+                            type: object
+                          type: object
+                      type: object
+                    type: object
                   phase:
                     type: string
                   version:
@@ -11844,6 +11874,36 @@ spec:
                 type: object
               metad:
                 properties:
+                  failureHosts:
+                    additionalProperties:
+                      properties:
+                        confirmationTime:
+                          format: date-time
+                          type: string
+                        creationTime:
+                          format: date-time
+                          type: string
+                        dataBalanced:
+                          type: boolean
+                        deletionTime:
+                          format: date-time
+                          type: string
+                        host:
+                          type: string
+                        hostDeleted:
+                          type: boolean
+                        nodeDown:
+                          type: boolean
+                        podRebuilt:
+                          type: boolean
+                        podRestarted:
+                          type: boolean
+                        pvcSet:
+                          additionalProperties:
+                            type: object
+                          type: object
+                      type: object
+                    type: object
                   phase:
                     type: string
                   version:
@@ -11908,8 +11968,6 @@ spec:
                 type: integer
               storaged:
                 properties:
-                  balancedAfterFailover:
-                    type: boolean
                   balancedSpaces:
                     items:
                       format: int32
@@ -11924,6 +11982,8 @@ spec:
                         creationTime:
                           format: date-time
                           type: string
+                        dataBalanced:
+                          type: boolean
                         deletionTime:
                           format: date-time
                           type: string

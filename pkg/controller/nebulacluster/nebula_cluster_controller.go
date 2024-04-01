@@ -67,6 +67,8 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 	graphdUpdater := component.NewGraphdUpdater(clientSet.Pod())
 	metadUpdater := component.NewMetadUpdater(clientSet.Pod())
 	storagedUpdater := component.NewStoragedUpdater(clientSet)
+	graphdFailover := component.NewGraphdFailover(mgr.GetClient(), clientSet)
+	metadFailover := component.NewMetadFailover(mgr.GetClient(), clientSet)
 	storagedFailover := component.NewStoragedFailover(mgr.GetClient(), clientSet)
 
 	dm, err := discutil.New(mgr.GetConfig())
@@ -103,11 +105,13 @@ func NewClusterReconciler(mgr ctrl.Manager, enableKruise bool) (*ClusterReconcil
 				clientSet,
 				dm,
 				graphdUpdater,
+				graphdFailover,
 				recorder),
 			component.NewMetadCluster(
 				clientSet,
 				dm,
 				metadUpdater,
+				metadFailover,
 				recorder),
 			component.NewStoragedCluster(
 				clientSet,

@@ -22,39 +22,17 @@ import (
 	"time"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
-	podutils "k8s.io/kubernetes/pkg/api/v1/pod"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
-	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
-	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
-)
-
-const (
-	PVCProtectionFinalizer = "kubernetes.io/pvc-protection"
-	RestartTolerancePeriod = time.Minute * 2
-)
-
-var (
-	nodeTaints = []*corev1.Taint{
-		{
-			Key:    corev1.TaintNodeUnreachable,
-			Effect: corev1.TaintEffectNoExecute,
-		},
-		{
-			Key:    corev1.TaintNodeNotReady,
-			Effect: corev1.TaintEffectNoExecute,
-		},
-	}
 )
 
 type storagedFailover struct {
@@ -74,8 +52,31 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 	if err != nil {
 		return err
 	}
+
 	if len(readyPods) > 0 {
-		return utilerrors.ReconcileErrorf("storaged pods [%v] are ready after restarted", readyPods)
+		options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
+		if err != nil {
+			return err
+		}
+		endpoints := []string{nc.GetMetadThriftConnAddress()}
+		metaClient, err := nebula.NewMetaClient(endpoints, options...)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := metaClient.Disconnect()
+			if err != nil {
+				klog.Errorf("meta client disconnect failed: %v", err)
+			}
+		}()
+
+		spaces, err := metaClient.ListSpaces()
+		if err != nil {
+			return err
+		}
+		if len(spaces) == 0 {
+			return utilerrors.ReconcileErrorf("storaged pods [%v] are ready after restarted", readyPods)
+		}
 	}
 	if err := s.deleteFailureHost(nc); err != nil {
 		return err
@@ -86,18 +87,17 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 	if err := s.checkPendingPod(nc); err != nil {
 		return err
 	}
-	if !pointer.BoolDeref(nc.Status.Storaged.BalancedAfterFailover, false) {
-		if err := s.balanceData(nc); err != nil {
-			return err
-		}
+	if err := s.balanceData(nc); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (s *storagedFailover) Recovery(nc *v1alpha1.NebulaCluster) error {
-	nc.Status.Storaged.FailureHosts = nil
-	nc.Status.Storaged.BalancedAfterFailover = nil
-	klog.Infof("clearing storaged cluster [%s/%s] failure hosts", nc.GetNamespace(), nc.GetName())
+func (s *storagedFailover) Recovery(nc *v1alpha1.NebulaCluster, hosts []string) error {
+	for _, host := range hosts {
+		delete(nc.Status.Storaged.FailureHosts, host)
+		klog.Infof("clearing storaged cluster [%s/%s] failure host %s", nc.GetNamespace(), nc.GetName(), host)
+	}
 	return nil
 }
 
@@ -105,6 +105,21 @@ func (s *storagedFailover) tryRestartPod(nc *v1alpha1.NebulaCluster) error {
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
 		if fh.PodRestarted {
 			continue
+		}
+		pod, err := s.clientSet.Pod().GetPod(nc.Namespace, podName)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		if pod == nil || isPodPending(pod) {
+			continue
+		}
+		node, err := s.clientSet.Node().GetNode(pod.Spec.NodeName)
+		if err != nil {
+			klog.Errorf("get node %s failed: %v", pod.Spec.NodeName, err)
+			return err
+		}
+		if isNodeDown(node) {
+			fh.NodeDown = true
 		}
 		if err := s.clientSet.Pod().DeletePod(nc.Namespace, podName, true); err != nil {
 			return err
@@ -119,24 +134,14 @@ func (s *storagedFailover) tryRestartPod(nc *v1alpha1.NebulaCluster) error {
 func (s *storagedFailover) toleratePods(nc *v1alpha1.NebulaCluster) ([]string, error) {
 	readyPods := make([]string, 0)
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
-		if fh.HostDeleted {
+		if fh.PodRebuilt {
 			continue
 		}
 		pod, err := s.clientSet.Pod().GetPod(nc.Namespace, podName)
-		if err != nil {
+		if err != nil && !apierrors.IsNotFound(err) {
 			return nil, err
 		}
 		if pod != nil && isPodTerminating(pod) {
-			node, err := s.clientSet.Node().GetNode(pod.Spec.NodeName)
-			if err != nil {
-				klog.Errorf("get node %s failed: %v", pod.Spec.NodeName, err)
-				return nil, err
-			}
-			if isNodeDown(node) {
-				fh.NodeDown = true
-				nc.Status.Storaged.FailureHosts[podName] = fh
-				continue
-			}
 			return nil, utilerrors.ReconcileErrorf("failure storaged pod [%s/%s] is deleting", nc.Namespace, podName)
 		}
 		if isPodHealthy(pod) {
@@ -172,7 +177,7 @@ func (s *storagedFailover) deleteFailureHost(nc *v1alpha1.NebulaCluster) error {
 
 	hosts := make([]*nebulago.HostAddr, 0)
 	for _, fh := range nc.Status.Storaged.FailureHosts {
-		if fh.HostDeleted {
+		if pointer.BoolDeref(fh.HostDeleted, false) {
 			continue
 		}
 		count, err := metaClient.GetLeaderCount(fh.Host)
@@ -196,12 +201,16 @@ func (s *storagedFailover) deleteFailureHost(nc *v1alpha1.NebulaCluster) error {
 	if err != nil {
 		return err
 	}
-
-	if len(spaces) > 0 {
-		if nc.Status.Storaged.RemovedSpaces == nil {
-			nc.Status.Storaged.RemovedSpaces = make([]int32, 0, len(spaces))
+	if len(spaces) == 0 {
+		for podName, fh := range nc.Status.Storaged.FailureHosts {
+			fh.HostDeleted = pointer.Bool(true)
+			nc.Status.Storaged.FailureHosts[podName] = fh
 		}
-		nc.Status.Storaged.BalancedAfterFailover = pointer.Bool(false)
+		return utilerrors.ReconcileErrorf("try to remove storaged cluster [%s/%s] failure host for recovery", ns, componentName)
+	}
+
+	if nc.Status.Storaged.RemovedSpaces == nil {
+		nc.Status.Storaged.RemovedSpaces = make([]int32, 0, len(spaces))
 	}
 	for _, space := range spaces {
 		if contains(nc.Status.Storaged.RemovedSpaces, *space.Id.SpaceID) {
@@ -215,10 +224,8 @@ func (s *storagedFailover) deleteFailureHost(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
-		if fh.HostDeleted {
-			continue
-		}
-		fh.HostDeleted = true
+		fh.HostDeleted = pointer.Bool(true)
+		fh.DataBalanced = pointer.Bool(false)
 		nc.Status.Storaged.FailureHosts[podName] = fh
 	}
 
@@ -228,11 +235,12 @@ func (s *storagedFailover) deleteFailureHost(nc *v1alpha1.NebulaCluster) error {
 }
 
 func (s *storagedFailover) deleteFailurePodAndPVC(nc *v1alpha1.NebulaCluster) error {
+	cl := label.New().Cluster(nc.GetClusterName()).Storaged()
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
 		if fh.PodRebuilt {
 			continue
 		}
-		pod, pvcs, err := s.getPodAndPvcs(nc, podName)
+		pod, pvcs, err := getPodAndPvcs(s.clientSet, nc, cl, podName)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
@@ -272,8 +280,9 @@ func (s *storagedFailover) deleteFailurePodAndPVC(nc *v1alpha1.NebulaCluster) er
 }
 
 func (s *storagedFailover) checkPendingPod(nc *v1alpha1.NebulaCluster) error {
+	cl := label.New().Cluster(nc.GetClusterName()).Storaged()
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
-		pod, pvcs, err := s.getPodAndPvcs(nc, podName)
+		pod, pvcs, err := getPodAndPvcs(s.clientSet, nc, cl, podName)
 		if err != nil {
 			return err
 		}
@@ -302,27 +311,23 @@ func (s *storagedFailover) checkPendingPod(nc *v1alpha1.NebulaCluster) error {
 	return nil
 }
 
-func (s *storagedFailover) getPodAndPvcs(nc *v1alpha1.NebulaCluster, podName string) (*corev1.Pod, []corev1.PersistentVolumeClaim, error) {
-	pod, err := s.clientSet.Pod().GetPod(nc.Namespace, podName)
-	if err != nil {
-		return nil, nil, err
-	}
-	pvcs, err := getPodPvcs(s.clientSet, nc, podName)
-	if err != nil {
-		return pod, nil, err
-	}
-	return pod, pvcs, nil
-}
-
 func (s *storagedFailover) balanceData(nc *v1alpha1.NebulaCluster) error {
-	for podName := range nc.Status.Storaged.FailureHosts {
+	podNames := make([]string, 0)
+	for podName, fh := range nc.Status.Storaged.FailureHosts {
+		if pointer.BoolDeref(fh.DataBalanced, true) {
+			continue
+		}
 		pod, err := s.clientSet.Pod().GetPod(nc.Namespace, podName)
 		if err != nil {
 			return err
 		}
-		if !podutils.IsPodReady(pod) {
-			return utilerrors.ReconcileErrorf("rebuilt storaged pod [%s/%s] is not ready", nc.Namespace, podName)
+		if !isPodHealthy(pod) {
+			return utilerrors.ReconcileErrorf("rebuilt storaged pod [%s/%s] is not healthy", nc.Namespace, podName)
 		}
+		podNames = append(podNames, podName)
+	}
+	if len(podNames) == 0 {
+		return nil
 	}
 
 	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
@@ -346,7 +351,11 @@ func (s *storagedFailover) balanceData(nc *v1alpha1.NebulaCluster) error {
 	if err != nil {
 		return err
 	}
-	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
+	if len(spaces) == 0 {
+		return utilerrors.ReconcileErrorf("storaged cluster [%s/%s] data balanced for recovery", nc.Namespace, nc.Name)
+	}
+
+	if nc.Status.Storaged.BalancedSpaces == nil {
 		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
 	}
 	for _, space := range spaces {
@@ -358,49 +367,12 @@ func (s *storagedFailover) balanceData(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 
+	for podName, fh := range nc.Status.Storaged.FailureHosts {
+		fh.DataBalanced = pointer.Bool(true)
+		nc.Status.Storaged.FailureHosts[podName] = fh
+	}
+
 	nc.Status.Storaged.BalancedSpaces = nil
 	nc.Status.Storaged.LastBalanceJob = nil
-	nc.Status.Storaged.BalancedAfterFailover = pointer.Bool(true)
-	return s.clientSet.NebulaCluster().UpdateNebulaCluster(nc)
-}
-
-func getPodPvcs(clientSet kube.ClientSet, nc *v1alpha1.NebulaCluster, podName string) ([]corev1.PersistentVolumeClaim, error) {
-	cl := label.New().Cluster(nc.GetClusterName()).Storaged()
-	cl[annotation.AnnPodNameKey] = podName
-	pvcSelector, err := cl.Selector()
-	if err != nil {
-		return nil, err
-	}
-	pvcs, err := clientSet.PVC().ListPVCs(nc.Namespace, pvcSelector)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-	return pvcs, nil
-}
-
-func isNodeDown(node *corev1.Node) bool {
-	for i := range nodeTaints {
-		if taintExists(node.Spec.Taints, nodeTaints[i]) {
-			klog.Infof("node %s found taint %s", node.Name, nodeTaints[i].Key)
-			return true
-		}
-	}
-	if condition.IsNodeReadyFalseOrUnknown(&node.Status) {
-		klog.Infof("node %s is not ready", node.Name)
-		conditions := condition.GetNodeTrueConditions(&node.Status)
-		for i := range conditions {
-			klog.Infof("node %s condition type %s is true", conditions[i].Type)
-		}
-		return true
-	}
-	return false
-}
-
-func taintExists(taints []corev1.Taint, taintToFind *corev1.Taint) bool {
-	for _, taint := range taints {
-		if taint.MatchTaint(taintToFind) {
-			return true
-		}
-	}
-	return false
+	return utilerrors.ReconcileErrorf("storaged cluster [%s/%s] data balanced for recovery", nc.Namespace, nc.Name)
 }

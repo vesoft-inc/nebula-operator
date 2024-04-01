@@ -352,6 +352,13 @@ func (c *graphdComponent) IsSuspended() bool {
 }
 
 func (c *graphdComponent) IsAutoFailovering() bool {
-	//TODO implement me
+	if len(c.nc.Status.Graphd.FailureHosts) == 0 {
+		return false
+	}
+	for _, failureHost := range c.nc.Status.Graphd.FailureHosts {
+		if !failureHost.ConfirmationTime.IsZero() {
+			return true
+		}
+	}
 	return false
 }

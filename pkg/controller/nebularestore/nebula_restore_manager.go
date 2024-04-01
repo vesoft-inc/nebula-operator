@@ -37,9 +37,9 @@ import (
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
+	"github.com/vesoft-inc/nebula-operator/pkg/credentials"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
-	"github.com/vesoft-inc/nebula-operator/pkg/remote"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/async"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
@@ -363,7 +363,7 @@ func (rm *restoreManager) genNebulaCluster(restoredName string, nr *v1alpha1.Neb
 
 func initRestoreAgent(clientSet kube.ClientSet, restore *v1alpha1.NebulaRestore) (*RestoreAgent, error) {
 	backend := &pb.Backend{}
-	storageType := remote.GetStorageType(restore.Spec.Config.StorageProvider)
+	storageType := credentials.GetStorageType(restore.Spec.Config.StorageProvider)
 	switch storageType {
 	case v1alpha1.ObjectStorageS3:
 		if err := backend.SetUri(fmt.Sprintf("s3://%s", restore.Spec.Config.S3.Bucket)); err != nil {
@@ -371,7 +371,7 @@ func initRestoreAgent(clientSet kube.ClientSet, restore *v1alpha1.NebulaRestore)
 		}
 		backend.GetS3().Region = restore.Spec.Config.S3.Region
 		backend.GetS3().Endpoint = restore.Spec.Config.S3.Endpoint
-		accessKey, secretKey, err := remote.GetS3Key(clientSet, restore.Namespace, restore.Spec.Config.S3.SecretName)
+		accessKey, secretKey, err := credentials.GetS3Key(clientSet, restore.Namespace, restore.Spec.Config.S3.SecretName)
 		if err != nil {
 			return nil, fmt.Errorf("get S3 key failed: %v", err)
 		}
@@ -381,11 +381,11 @@ func initRestoreAgent(clientSet kube.ClientSet, restore *v1alpha1.NebulaRestore)
 		if err := backend.SetUri(fmt.Sprintf("gs://%s", restore.Spec.Config.GS.Bucket)); err != nil {
 			return nil, err
 		}
-		credentials, err := remote.GetGsCredentials(clientSet, restore.Namespace, restore.Spec.Config.GS.SecretName)
+		gsCredentials, err := credentials.GetGsCredentials(clientSet, restore.Namespace, restore.Spec.Config.GS.SecretName)
 		if err != nil {
 			return nil, fmt.Errorf("get GS credentials failed: %v", err)
 		}
-		backend.GetGs().Credentials = credentials
+		backend.GetGs().Credentials = gsCredentials
 	default:
 		return nil, fmt.Errorf("unknown storage type: %s", storageType)
 	}

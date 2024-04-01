@@ -52,6 +52,8 @@ type UpdateManager interface {
 }
 
 type FailoverManager interface {
+	// Failover moves the offline state host to a ready node
 	Failover(nc *v1alpha1.NebulaCluster) error
-	Recovery(nc *v1alpha1.NebulaCluster) error
+	// Recovery clears the failure hosts in nc status
+	Recovery(nc *v1alpha1.NebulaCluster, hosts []string) error
 }

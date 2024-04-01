@@ -430,6 +430,13 @@ func (c *metadComponent) IsSuspended() bool {
 }
 
 func (c *metadComponent) IsAutoFailovering() bool {
-	//TODO implement me
+	if len(c.nc.Status.Metad.FailureHosts) == 0 {
+		return false
+	}
+	for _, failureHost := range c.nc.Status.Metad.FailureHosts {
+		if !failureHost.ConfirmationTime.IsZero() {
+			return true
+		}
+	}
 	return false
 }

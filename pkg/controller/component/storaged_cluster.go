@@ -36,6 +36,7 @@ import (
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
+	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
@@ -217,12 +218,12 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 	}
 
 	if nc.IsAutoFailoverEnabled() {
-		r, err := c.shouldRecover(nc)
+		r, hosts, err := c.shouldRecover(nc)
 		if err != nil {
 			return err
 		}
 		if r {
-			if err := c.failoverManager.Recovery(nc); err != nil {
+			if err := c.failoverManager.Recovery(nc, hosts); err != nil {
 				return err
 			}
 		} else if nc.StoragedComponent().IsAutoFailovering() {
@@ -309,7 +310,9 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 		nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
 	}
 
-	if !nc.IsAutoFailoverEnabled() {
+	workloadReplicas := getWorkloadReplicas(nc.Status.Storaged.Workload)
+	if !nc.IsAutoFailoverEnabled() ||
+		pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) != workloadReplicas {
 		return syncComponentStatus(nc.StoragedComponent(), &nc.Status.Storaged.ComponentStatus, oldWorkload)
 	}
 
@@ -335,8 +338,12 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 		host := hostItems[i]
 		if host.Status == meta.HostStatus_OFFLINE && host.HostAddr.Port == thriftPort {
 			podName := strings.Split(host.HostAddr.Host, ".")[0]
+			ordinal := getPodOrdinal(podName)
+			if int32(ordinal) >= pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) {
+				continue
+			}
 			if nc.Status.Storaged.FailureHosts == nil {
-				nc.Status.Storaged.FailureHosts = make(map[string]v1alpha1.StoragedFailureHost)
+				nc.Status.Storaged.FailureHosts = make(map[string]v1alpha1.FailureHost)
 			}
 			fh, exists := nc.Status.Storaged.FailureHosts[podName]
 			if exists {
@@ -344,7 +351,8 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 				if time.Now().After(deadline) {
 					if fh.ConfirmationTime.IsZero() {
 						fh.ConfirmationTime = metav1.Time{Time: time.Now()}
-						pvcs, err := getPodPvcs(c.clientSet, nc, podName)
+						cl := label.New().Cluster(nc.GetClusterName()).Storaged()
+						_, pvcs, err := getPodAndPvcs(c.clientSet, nc, cl, podName)
 						if err != nil {
 							return err
 						}
@@ -354,23 +362,17 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 						}
 						fh.PVCSet = pvcSet
 						nc.Status.Storaged.FailureHosts[podName] = fh
-						if err := c.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
-							return err
-						}
 						klog.Infof("storaged pod [%s/%s] failover period exceeds %s", nc.Namespace, podName, nc.Spec.FailoverPeriod.Duration.String())
 					}
 				}
 				continue
 			}
-			failureHost := v1alpha1.StoragedFailureHost{
+			failureHost := v1alpha1.FailureHost{
 				Host:         host.HostAddr.Host,
 				CreationTime: metav1.Time{Time: time.Now()},
 			}
 			nc.Status.Storaged.FailureHosts[podName] = failureHost
-			if err := c.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
-				return err
-			}
-			klog.Infof("failure storage host %s found", host.HostAddr.Host)
+			klog.Infof("offline storage host %s found", host.HostAddr.Host)
 		}
 	}
 
@@ -538,56 +540,64 @@ func (c *storagedCluster) updateZoneMappings(nc *v1alpha1.NebulaCluster, newRepl
 	return nil
 }
 
-// TODO support partially recovery
-func (c *storagedCluster) shouldRecover(nc *v1alpha1.NebulaCluster) (bool, error) {
+func (c *storagedCluster) shouldRecover(nc *v1alpha1.NebulaCluster) (bool, []string, error) {
 	if nc.Status.Storaged.FailureHosts == nil {
-		return true, nil
+		return true, nil, nil
 	}
 
-	fhSet := sets.New[string]()
+	m := make(map[string]string)
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
 		pod, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
-		if err != nil {
-			klog.Errorf("storaged pod [%s/%s] does not exist: %v", nc.Namespace, podName, err)
-			return false, err
+		if err != nil && !apierrors.IsNotFound(err) {
+			return false, nil, err
 		}
-		if !isPodHealthy(pod) {
-			return false, nil
+		if pod == nil {
+			continue
 		}
-		fhSet.Insert(fh.Host)
+		if isPodHealthy(pod) {
+			m[fh.Host] = podName
+		}
+	}
+	if len(m) == 0 {
+		return false, nil, nil
 	}
 
 	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	hosts := []string{nc.GetMetadThriftConnAddress()}
 	metaClient, err := nebula.NewMetaClient(hosts, options...)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	defer func() {
 		_ = metaClient.Disconnect()
 	}()
+	spaces, err := metaClient.ListSpaces()
+	if err != nil {
+		return false, nil, err
+	}
 
+	onlineHosts := make([]string, 0)
 	hostItems, err := metaClient.ListHosts(meta.ListHostType_STORAGE)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	thriftPort := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 	for _, host := range hostItems {
-		if fhSet.Has(host.HostAddr.Host) &&
-			host.Status != meta.HostStatus_ONLINE &&
-			host.HostAddr.Port == thriftPort {
-			return false, nil
+		podName, ok := m[host.HostAddr.Host]
+		fh, exists := nc.Status.Storaged.FailureHosts[podName]
+		balanced := pointer.BoolDeref(fh.DataBalanced, true)
+		if ok && host.Status == meta.HostStatus_ONLINE && host.HostAddr.Port == thriftPort {
+			if exists && len(spaces) > 0 && !balanced {
+				continue
+			}
+			onlineHosts = append(onlineHosts, podName)
 		}
 	}
-
-	if nc.Status.Storaged.BalancedAfterFailover != nil && !*nc.Status.Storaged.BalancedAfterFailover {
-		return false, nil
-	}
-
-	return true, nil
+	r := len(onlineHosts) > 0
+	return r, onlineHosts, nil
 }
 
 type FakeStoragedCluster struct {

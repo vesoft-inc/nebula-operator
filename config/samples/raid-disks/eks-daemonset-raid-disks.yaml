@@ -19,7 +19,7 @@ spec:
       hostPID: true
       containers:
       - name: startup-script
-        image: megabyte875/startup-script
+        image: vesoft/startup-script
         imagePullPolicy: Always
         securityContext:
           privileged: true

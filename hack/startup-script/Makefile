@@ -1,4 +1,4 @@
-TAG=v1
+TAG=v0.1
 IMAGE=vesoft/startup-script
 
 .PHONY: build push

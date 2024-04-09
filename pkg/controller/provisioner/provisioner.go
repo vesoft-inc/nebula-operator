@@ -46,7 +46,7 @@ const (
 	helperScriptDir        = "/tmp"
 	helperDiskVolName      = "disk"
 	helperScriptVolName    = "script"
-	cmdTimeoutSeconds      = 120
+	cmdTimeoutSeconds      = 30
 	helperPodNameMaxLength = 128
 	nodeNameAnnotationKey  = "local.pv.provisioner/selected-node"
 )

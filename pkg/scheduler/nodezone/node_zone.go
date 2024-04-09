@@ -245,7 +245,10 @@ func (pl *NodeZone) Filter(ctx context.Context, cycleState *framework.CycleState
 		klog.V(5).Infof("Anchor pod %s zone %s shift %d", anchorName, anchorZone, shift)
 		idealZone := zones[(shift+remainder)%AvailableZones]
 		if idealZone != nodeZone {
-			klog.V(5).Infof("Pod [%s/%s] not fit node %s in zone %s, ideal zone %s", pod.Namespace, pod.Name, nodeInfo.Node().Name, nodeZone, idealZone)
+			klog.V(5).Infof("Pod [%s/%s] fit node %s in zone %s, ideal zone %s", pod.Namespace, pod.Name, nodeInfo.Node().Name, nodeZone, idealZone)
+		}
+		if anchorZone == nodeZone {
+			klog.V(5).Infof("Anchor pod [%s/%s] exists in zone %s", pod.Namespace, anchorPod.Name, anchorZone)
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNotMatch)
 		}
 	}
@@ -302,23 +305,51 @@ func (pl *NodeZone) Permit(ctx context.Context, cycleState *framework.CycleState
 		}
 	}
 	if !isPodScheduled(anchorPod) {
-		klog.InfoS("Pod is waiting to be scheduled to node", "pod", klog.KObj(pod), "nodeName", nodeName)
+		klog.InfoS("Anchor pod is waiting to be scheduled to node", "pod", anchorName, "namespace", pod.Namespace, "nodeName", nodeName)
 		return framework.NewStatus(framework.Wait), WaitTime
 	}
+
+	assumedNode, err := pl.getNode(nodeName)
+	if s := getErrorAsStatus(err); !s.IsSuccess() {
+		return s, 0
+	}
+	assumedZone := assumedNode.GetLabels()[corev1.LabelTopologyZone]
 
 	anchorNode, err := pl.getNode(anchorPod.Spec.NodeName)
 	if s := getErrorAsStatus(err); !s.IsSuccess() {
 		return s, 0
 	}
 	anchorZone := anchorNode.GetLabels()[corev1.LabelTopologyZone]
-	assumedNode, err := pl.getNode(nodeName)
-	if s := getErrorAsStatus(err); !s.IsSuccess() {
-		return s, 0
-	}
-	assumedZone := assumedNode.GetLabels()[corev1.LabelTopologyZone]
 	if anchorZone == assumedZone {
 		klog.V(5).Infof("Zone conflict, anchor pod [%s/%s] exists in zone %s", pod.Namespace, anchorName, anchorZone)
 		return framework.NewStatus(framework.Unschedulable, ErrReasonNotMatch), 0
+	}
+
+	if remainder == 2 {
+		siblingOrdinal := ordinal - 1
+		siblingName := getPodNameByOrdinal(parentName, siblingOrdinal)
+		siblingPod, err := pl.getPod(siblingName, pod.Namespace)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return framework.AsStatus(err), 0
+			}
+		}
+		if !isPodScheduled(siblingPod) {
+			klog.InfoS("Sibling pod is waiting to be scheduled to node", "pod", siblingName, "namespace", pod.Namespace, "nodeName", nodeName)
+			return framework.NewStatus(framework.Wait), WaitTime
+		}
+		siblingNode, err := pl.getNode(siblingPod.Spec.NodeName)
+		if s := getErrorAsStatus(err); !s.IsSuccess() {
+			return s, 0
+		}
+		siblingZone, ok := siblingNode.GetLabels()[corev1.LabelTopologyZone]
+		if !ok {
+			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNoLabelTopologyZone), 0
+		}
+		if siblingZone == assumedZone {
+			klog.V(5).Infof("Zone conflict, sibling pod [%s/%s] exists in zone %s", pod.Namespace, siblingName, siblingZone)
+			return framework.NewStatus(framework.Unschedulable, ErrReasonNotMatch), 0
+		}
 	}
 
 	klog.V(3).InfoS("Permit allows", "pod", klog.KObj(pod))

@@ -101,7 +101,7 @@ ensure-buildx:
 PLATFORMS = arm64 amd64
 BUILDX_PLATFORMS = linux/arm64,linux/amd64
 
-docker-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchitecture docker images and manifest.
+operator-multiarch: ensure-buildx ## Build and push the nebula-operator multiarchitecture docker images and manifest.
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; GOARCH=$(PLATFORM) make build-operator;)
 	echo "Building and pushing nebula-operator image... $(BUILDX_PLATFORMS)"
 	docker buildx build \

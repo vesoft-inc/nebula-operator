@@ -11,6 +11,8 @@ spec:
   dnsNames:
     - {{ template "admission-webhook.name" . }}-service.{{ template "nebula-operator.namespace" . }}.svc
     - {{ template "admission-webhook.name" . }}-service.{{ template "nebula-operator.namespace" . }}.svc.{{ default "cluster.local" .Values.kubernetesClusterDomain }}
+    - {{ template "autoscaler-admission-webhook.name" . }}-service.{{ template "nebula-operator.namespace" . }}.svc
+    - {{ template "autoscaler-admission-webhook.name" . }}-service.{{ template "nebula-operator.namespace" . }}.svc.{{ default "cluster.local" .Values.kubernetesClusterDomain }}
   issuerRef:
     kind: Issuer
     name: {{ template "admission-webhook.name" . }}-issuer

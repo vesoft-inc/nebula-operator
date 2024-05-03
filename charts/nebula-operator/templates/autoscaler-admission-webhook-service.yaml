@@ -1,0 +1,17 @@
+{{- if .Values.admissionWebhook.create }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "autoscaler-admission-webhook.name" . }}-service
+  namespace: {{ template "nebula-operator.namespace" . }}
+  labels:
+  {{- include "admission-webhook.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 443
+      targetPort: 9448
+  selector:
+  {{- include "admission-webhook.matchLabels" . | nindent 4 }}
+{{- end }}
+

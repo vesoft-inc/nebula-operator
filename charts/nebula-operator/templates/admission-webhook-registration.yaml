@@ -32,5 +32,28 @@ webhooks:
         scope: "*"
     sideEffects: None
     timeoutSeconds: 3
+
+  - name: nebulaautoscalingvalidating.nebula-graph.io
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: {{ template "autoscaler-admission-webhook.name" . }}-service
+        namespace: {{ template "nebula-operator.namespace" . }}
+        path: /validate-nebulaautoscaler
+    failurePolicy: Fail
+    rules:
+      - apiGroups:
+          - autoscaling.nebula-graph.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - nebulaautoscalers
+        scope: "*"
+    sideEffects: None
+    timeoutSeconds: 3
 {{- end }}
 

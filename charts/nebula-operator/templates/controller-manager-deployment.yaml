@@ -100,6 +100,8 @@ spec:
             - --leader-elect
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
             - --v={{ .Values.controllerManager.verbosity }}
+            - --enable-admission-webhook={{ .Values.admissionWebhook.create }}
+            - --webhook-secure-port={{ .Values.autoscalerAdmissionWebhook.webhookBindPort }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
           {{- if .Values.kubernetesClusterDomain }}
@@ -107,6 +109,12 @@ spec:
               value: {{ .Values.kubernetesClusterDomain }}
           {{- end }}
           {{- if .Values.controllerManager.env }}{{ toYaml .Values.controllerManager.env | nindent 12 }}{{- end }}
+          {{- end }}
+          {{- if .Values.admissionWebhook.create }}
+          ports:
+            - containerPort: {{ .Values.autoscalerAdmissionWebhook.webhookBindPort | default 9448 }}
+              name: webhook-server
+              protocol: TCP
           {{- end }}
           resources:
           {{- toYaml .Values.controllerManager.resources | nindent 12 }}
@@ -124,6 +132,14 @@ spec:
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false
+          {{- if .Values.admissionWebhook.create }}
+          volumeMounts:
+          {{- if .Values.admissionWebhook.create }}
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+          {{- end }}
+          {{- end }}
     {{- with .Values.controllerManager.sidecarContainers }}
       {{- range $name, $spec :=  $.Values.controllerManager.sidecarContainers }}
         - name: {{ $name }}
@@ -153,9 +169,9 @@ spec:
       tolerations:
       {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if or .Values.controllerManager.extraVolumes .Values.admissionWebhook.create }}
+      {{- if or .Values.controllerManager.extraVolumes .Values.admissionWebhook.create}}
       volumes:
-      {{- if .Values.admissionWebhook.create }}
+      {{- if .Values.admissionWebhook.create}}
       - name: cert
         secret:
           defaultMode: 420

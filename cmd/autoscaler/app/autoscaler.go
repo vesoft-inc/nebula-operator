@@ -19,6 +19,7 @@ package app
 import (
 	"context"
 	"flag"
+	"net/http"
 
 	"github.com/spf13/cobra"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -28,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/scheme"
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1"
@@ -36,6 +39,7 @@ import (
 	klogflag "github.com/vesoft-inc/nebula-operator/pkg/flag/klog"
 	profileflag "github.com/vesoft-inc/nebula-operator/pkg/flag/profile"
 	"github.com/vesoft-inc/nebula-operator/pkg/version"
+	nawebhook "github.com/vesoft-inc/nebula-operator/pkg/webhook/autoscaler"
 )
 
 // NewAutoscalerCommand creates a *cobra.Command object with default parameters
@@ -106,6 +110,17 @@ func Run(ctx context.Context, opts *options.Options) error {
 		},
 	}
 
+	if opts.EnableAdmissionWebhook {
+		ctrlOptions.WebhookServer = webhook.NewServer(webhook.Options{
+			Host:          opts.WebhookOpts.BindAddress,
+			Port:          opts.WebhookOpts.SecurePort,
+			CertDir:       opts.WebhookOpts.CertDir,
+			CertName:      opts.WebhookOpts.CertName,
+			KeyName:       opts.WebhookOpts.KeyName,
+			TLSMinVersion: opts.WebhookOpts.TLSMinVersion,
+		})
+	}
+
 	mgr, err := ctrlruntime.NewManager(cfg, ctrlOptions)
 	if err != nil {
 		klog.Errorf("Failed to build nebula-autoscaler: %v", err)
@@ -124,6 +139,15 @@ func Run(ctx context.Context, opts *options.Options) error {
 	if err := controller.SetupWithManager(mgr); err != nil {
 		klog.Errorf("failed to set up NebulaAutoscaler controller: %v", err)
 		return err
+	}
+
+	if opts.EnableAdmissionWebhook {
+		decoder := admission.NewDecoder(mgr.GetScheme())
+		klog.Info("Registering webhooks to nebula-auto-scaler")
+		hookServer := mgr.GetWebhookServer()
+		hookServer.Register("/validate-nebulaautoscaler",
+			&webhook.Admission{Handler: &nawebhook.ValidatingAdmission{Decoder: decoder}})
+		hookServer.WebhookMux().Handle("/readyz/", http.StripPrefix("/readyz/", &healthz.Handler{}))
 	}
 
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {

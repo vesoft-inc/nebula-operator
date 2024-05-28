@@ -169,7 +169,7 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 				return err
 			}
 			if isPodPending(pod) {
-				klog.Infof("skip  host for pod [%s/%s] status is Pending", pod.Namespace, pod.Name)
+				klog.Infof("skip host for pod [%s/%s] status is Pending", pod.Namespace, pod.Name)
 				continue
 			}
 			host := nc.StoragedComponent().GetPodFQDN(i)

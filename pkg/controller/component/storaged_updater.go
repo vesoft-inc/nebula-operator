@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
@@ -61,7 +62,7 @@ func (s *storagedUpdater) Update(
 	oldUnstruct, newUnstruct *unstructured.Unstructured,
 	gvk schema.GroupVersionKind,
 ) error {
-	if *nc.Spec.Storaged.Replicas == int32(0) {
+	if pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) == 0 {
 		return nil
 	}
 
@@ -148,7 +149,7 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 	}
 	empty := len(spaces) == 0
 
-	if empty || *nc.Spec.Storaged.Replicas < 3 || nc.IsForceUpdateEnabled() {
+	if empty || pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) < 3 || nc.IsForceUpdateEnabled() {
 		return s.clientSet.Pod().DeletePod(namespace, updatePodName, false)
 	}
 
@@ -235,7 +236,7 @@ func (s *storagedUpdater) updateStoragedPod(
 		return err
 	}
 
-	if empty || *nc.Spec.Storaged.Replicas < 3 || nc.IsForceUpdateEnabled() {
+	if empty || pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) < 3 || nc.IsForceUpdateEnabled() {
 		return setPartition(newUnstruct, int64(ordinal), advanced)
 	}
 
@@ -428,7 +429,7 @@ func (s *storagedUpdater) transLeader(
 }
 
 func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaces []*meta.IdName) error {
-	if len(spaces) == 0 || *nc.Spec.Storaged.Replicas == 1 {
+	if len(spaces) == 0 || pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) == 1 {
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}

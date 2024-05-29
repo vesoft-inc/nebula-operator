@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
@@ -63,7 +64,7 @@ func (ss *storageScaler) ScaleOut(nc *v1alpha1.NebulaCluster) error {
 		return err
 	}
 
-	if !nc.StoragedComponent().IsReady() {
+	if !isStoragedCreatedPodReady(nc) {
 		klog.Infof("storaged cluster [%s/%s] status not ready", ns, componentName)
 		return nil
 	}
@@ -234,4 +235,11 @@ func (ss *storageScaler) ScaleIn(nc *v1alpha1.NebulaCluster, oldReplicas, newRep
 	nc.Status.Storaged.LastBalanceJob = nil
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return ss.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc)
+}
+
+func isStoragedCreatedPodReady(nc *v1alpha1.NebulaCluster) bool {
+	if nc.Status.Storaged.Workload == nil {
+		return false
+	}
+	return pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) == nc.Status.Storaged.Workload.ReadyReplicas
 }

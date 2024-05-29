@@ -306,7 +306,8 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 		return err
 	}
 
-	if updating && nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
+	if updating && !strings.Contains(string(nc.Status.Storaged.Phase), "Scale") &&
+		nc.Status.Metad.Phase != v1alpha1.UpdatePhase {
 		nc.Status.Storaged.Phase = v1alpha1.UpdatePhase
 	}
 

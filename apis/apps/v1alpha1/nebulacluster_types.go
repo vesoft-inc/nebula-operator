@@ -497,7 +497,7 @@ type StoragedSpec struct {
 // ComponentSpec is a common set of k8s resource configs for nebula components.
 type ComponentSpec struct {
 	// K8S deployment replicas setting.
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// K8S resources settings.

@@ -144,13 +144,14 @@ type ComponentStatus struct {
 
 // StoragedStatus describes the status and version of nebula storaged.
 type StoragedStatus struct {
-	ComponentStatus `json:",inline"`
-	HostsAdded      bool                   `json:"hostsAdded,omitempty"`
-	RemovedSpaces   []int32                `json:"removedSpaces,omitempty"`
-	BalancedSpaces  []int32                `json:"balancedSpaces,omitempty"`
-	LastBalanceJob  *BalanceJob            `json:"lastBalanceJob,omitempty"`
-	FailureHosts    map[string]FailureHost `json:"failureHosts,omitempty"`
-	Volume          *VolumeStatus          `json:"volume,omitempty"`
+	ComponentStatus  `json:",inline"`
+	HostsAdded       bool                   `json:"hostsAdded,omitempty"`
+	RemovedSpaces    []int32                `json:"removedSpaces,omitempty"`
+	BalancedSpaces   []int32                `json:"balancedSpaces,omitempty"`
+	LastBalancedTime *metav1.Time           `json:"lastBalancedTime,omitempty"`
+	LastBalanceJob   *BalanceJob            `json:"lastBalanceJob,omitempty"`
+	FailureHosts     map[string]FailureHost `json:"failureHosts,omitempty"`
+	Volume           *VolumeStatus          `json:"volume,omitempty"`
 }
 
 // BalanceJob describes the admin job for balance data.

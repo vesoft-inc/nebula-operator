@@ -12014,6 +12014,9 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  lastBalancedTime:
+                    format: date-time
+                    type: string
                   phase:
                     type: string
                   removedSpaces:

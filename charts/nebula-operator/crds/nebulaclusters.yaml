@@ -1813,7 +1813,7 @@ spec:
                     type: object
                   replicas:
                     format: int32
-                    minimum: 0
+                    minimum: 1
                     type: integer
                   resources:
                     properties:
@@ -4553,7 +4553,7 @@ spec:
                     type: object
                   replicas:
                     format: int32
-                    minimum: 0
+                    minimum: 1
                     type: integer
                   resources:
                     properties:
@@ -7378,7 +7378,7 @@ spec:
                     type: object
                   replicas:
                     format: int32
-                    minimum: 0
+                    minimum: 1
                     type: integer
                   resources:
                     properties:
@@ -10228,7 +10228,7 @@ spec:
                     type: object
                   replicas:
                     format: int32
-                    minimum: 0
+                    minimum: 1
                     type: integer
                   resources:
                     properties:
@@ -12014,6 +12014,9 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  lastBalancedTime:
+                    format: date-time
+                    type: string
                   phase:
                     type: string
                   removedSpaces:

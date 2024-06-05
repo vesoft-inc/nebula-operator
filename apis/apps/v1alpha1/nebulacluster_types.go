@@ -144,13 +144,14 @@ type ComponentStatus struct {
 
 // StoragedStatus describes the status and version of nebula storaged.
 type StoragedStatus struct {
-	ComponentStatus `json:",inline"`
-	HostsAdded      bool                   `json:"hostsAdded,omitempty"`
-	RemovedSpaces   []int32                `json:"removedSpaces,omitempty"`
-	BalancedSpaces  []int32                `json:"balancedSpaces,omitempty"`
-	LastBalanceJob  *BalanceJob            `json:"lastBalanceJob,omitempty"`
-	FailureHosts    map[string]FailureHost `json:"failureHosts,omitempty"`
-	Volume          *VolumeStatus          `json:"volume,omitempty"`
+	ComponentStatus  `json:",inline"`
+	HostsAdded       bool                   `json:"hostsAdded,omitempty"`
+	RemovedSpaces    []int32                `json:"removedSpaces,omitempty"`
+	BalancedSpaces   []int32                `json:"balancedSpaces,omitempty"`
+	LastBalancedTime *metav1.Time           `json:"lastBalancedTime,omitempty"`
+	LastBalanceJob   *BalanceJob            `json:"lastBalanceJob,omitempty"`
+	FailureHosts     map[string]FailureHost `json:"failureHosts,omitempty"`
+	Volume           *VolumeStatus          `json:"volume,omitempty"`
 }
 
 // BalanceJob describes the admin job for balance data.
@@ -497,7 +498,7 @@ type StoragedSpec struct {
 // ComponentSpec is a common set of k8s resource configs for nebula components.
 type ComponentSpec struct {
 	// K8S deployment replicas setting.
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// K8S resources settings.

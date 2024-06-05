@@ -114,14 +114,37 @@ func (rm *restoreManager) syncRestoreProcess(nr *v1alpha1.NebulaRestore) error {
 		return err
 	}
 
+	options, err := nebula.ClientOptions(original, nebula.SetIsMeta(true))
+	if err != nil {
+		return err
+	}
+
+	restored := rm.genNebulaCluster(restoredName, nr, original)
+
 	nc, _ := rm.clientSet.NebulaCluster().GetNebulaCluster(ns, restoredName)
 	if nc != nil && annotation.IsInRestoreStage2(nc.Annotations) {
 		if !nc.IsReady() {
 			return utilerrors.ReconcileErrorf("restoring [%s/%s] in stage2, waiting for cluster ready", ns, restoredName)
 		}
+
+		mc, err := nebula.NewMetaClient([]string{restored.GetMetadThriftConnAddress()}, options...)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := mc.Disconnect(); err != nil {
+				klog.Errorf("meta client disconnect failed: %v", err)
+			}
+		}()
+
+		if err := balanceLeader(mc, nc); err != nil {
+			return err
+		}
+
 		nc.Annotations = nil
 		nc.Spec.Storaged.EnableForceUpdate = nil
 		nc.Spec.EnableAutoFailover = original.Spec.EnableAutoFailover
+		nc.Status.Storaged.BalancedSpaces = nil
 		if err := rm.clientSet.NebulaCluster().UpdateNebulaCluster(nc); err != nil {
 			return fmt.Errorf("remove cluster [%s/%s] annotations failed: %v", ns, restoredName, err)
 		}
@@ -138,12 +161,6 @@ func (rm *restoreManager) syncRestoreProcess(nr *v1alpha1.NebulaRestore) error {
 			})
 	}
 
-	options, err := nebula.ClientOptions(original, nebula.SetIsMeta(true))
-	if err != nil {
-		return err
-	}
-
-	restored := rm.genNebulaCluster(restoredName, nr, original)
 	if err := rm.clientSet.NebulaCluster().CreateNebulaCluster(restored); err != nil {
 		return err
 	}
@@ -303,6 +320,11 @@ func (rm *restoreManager) loadCluster(original, restored *v1alpha1.NebulaCluster
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := mc.Disconnect(); err != nil {
+			klog.Errorf("meta client disconnect failed: %v", err)
+		}
+	}()
 
 	resp, err := mc.ListCluster()
 	if err != nil {
@@ -833,4 +855,38 @@ func getPodTerminateReason(pod corev1.Pod) string {
 		}
 	}
 	return ""
+}
+
+func balanceLeader(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster) error {
+	spaces, err := mc.ListSpaces()
+	if err != nil {
+		return err
+	}
+	if len(spaces) == 0 || pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) == 1 {
+		return nil
+	}
+
+	if nc.Status.Storaged.BalancedSpaces == nil {
+		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
+	}
+
+	contains := func(ss []int32, lookingFor int32) bool {
+		for _, s := range ss {
+			if lookingFor == s {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, space := range spaces {
+		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
+			continue
+		}
+		if err := mc.BalanceLeader(*space.Id.SpaceID); err != nil {
+			return err
+		}
+		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
+	}
+	return nil
 }

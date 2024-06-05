@@ -23,9 +23,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 
 	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
@@ -39,13 +41,18 @@ import (
 )
 
 const (
-	// TransLeaderBeginTime is the key of trans Leader begin time
+	// TransLeaderBeginTime is the key of transfer Leader begin time
 	TransLeaderBeginTime = "transLeaderBeginTime"
-	// TransLeaderTimeout is the timeout limit of trans leader
+	// TransLeaderTimeout is the timeout limit of transfer leader
 	TransLeaderTimeout = 30 * time.Minute
 
 	// TransferPartitionLeaderConcurrency is the count of goroutines to transfer partition leader
 	TransferPartitionLeaderConcurrency = 3
+
+	// BalanceLeaderInterval is the interval to balance the partition leader
+	BalanceLeaderInterval = 15
+	// BalanceWaitingTime is the waiting time to balance the partition leader
+	BalanceWaitingTime = 30
 )
 
 type storagedUpdater struct {
@@ -61,7 +68,7 @@ func (s *storagedUpdater) Update(
 	oldUnstruct, newUnstruct *unstructured.Unstructured,
 	gvk schema.GroupVersionKind,
 ) error {
-	if *nc.Spec.Storaged.Replicas == int32(0) {
+	if pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) == 0 {
 		return nil
 	}
 
@@ -148,7 +155,7 @@ func (s *storagedUpdater) RestartPod(nc *v1alpha1.NebulaCluster, ordinal int32) 
 	}
 	empty := len(spaces) == 0
 
-	if empty || *nc.Spec.Storaged.Replicas < 3 || nc.IsForceUpdateEnabled() {
+	if empty || pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) < 3 || nc.IsForceUpdateEnabled() {
 		return s.clientSet.Pod().DeletePod(namespace, updatePodName, false)
 	}
 
@@ -235,7 +242,7 @@ func (s *storagedUpdater) updateStoragedPod(
 		return err
 	}
 
-	if empty || *nc.Spec.Storaged.Replicas < 3 || nc.IsForceUpdateEnabled() {
+	if empty || pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) < 3 || nc.IsForceUpdateEnabled() {
 		return setPartition(newUnstruct, int64(ordinal), advanced)
 	}
 
@@ -428,7 +435,7 @@ func (s *storagedUpdater) transLeader(
 }
 
 func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alpha1.NebulaCluster, spaces []*meta.IdName) error {
-	if len(spaces) == 0 || *nc.Spec.Storaged.Replicas == 1 {
+	if len(spaces) == 0 || pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) == 1 {
 		nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 		return nil
 	}
@@ -438,6 +445,7 @@ func (s *storagedUpdater) updateRunningPhase(mc nebula.MetaInterface, nc *v1alph
 	}
 
 	nc.Status.Storaged.BalancedSpaces = nil
+	nc.Status.Storaged.LastBalancedTime = nil
 	nc.Status.Storaged.Phase = v1alpha1.RunningPhase
 	return nil
 }
@@ -451,13 +459,20 @@ func (s *storagedUpdater) balanceLeader(mc nebula.MetaInterface, nc *v1alpha1.Ne
 		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
 			continue
 		}
+		lastBalancedTime := nc.Status.Storaged.LastBalancedTime
+		if lastBalancedTime == nil {
+			nc.Status.Storaged.LastBalancedTime = &metav1.Time{Time: time.Now().Add(BalanceWaitingTime * time.Second)}
+			return utilerrors.ReconcileErrorf("waiting for the partition leaders balancing")
+		}
+		if time.Now().Before(lastBalancedTime.Add(BalanceLeaderInterval * time.Second)) {
+			return utilerrors.ReconcileErrorf("partition leader is balancing")
+		}
 		if err := mc.BalanceLeader(*space.Id.SpaceID); err != nil {
 			return err
 		}
 		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
-		if err := s.clientSet.NebulaCluster().UpdateNebulaClusterStatus(nc); err != nil {
-			return err
-		}
+		nc.Status.Storaged.LastBalancedTime = &metav1.Time{Time: time.Now()}
+		return utilerrors.ReconcileErrorf("space %d need to be synced", *space.Id.SpaceID)
 	}
 	return nil
 }

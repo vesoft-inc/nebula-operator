@@ -1,9 +1,9 @@
-{{- if .Values.admissionWebhook.create }}
+{{- if .Values.admissionWebhook.contollerManagerAdmissionWebhook.create }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "admission-webhook.name" . }}-service
+  name: {{ template "controller-manager-admission-webhook.name" . }}-service
   namespace: {{ template "nebula-operator.namespace" . }}
   labels:
   {{- include "admission-webhook.labels" . | nindent 4 }}

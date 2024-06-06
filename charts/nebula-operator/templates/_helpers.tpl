@@ -98,6 +98,20 @@ Admission webhook name of the chart.
 {{- end }}
 
 {{/*
+Controller Manager Admission webhook name.
+*/}}
+{{- define "controller-manager-admission-webhook.name" -}}
+controller-manager-{{ include "nebula-operator.name" . }}-webhook
+{{- end }}
+
+{{/*
+Autoscaler Admission webhook name.
+*/}}
+{{- define "autoscaler-admission-webhook.name" -}}
+autoscaler-{{ include "nebula-operator.name" . }}-webhook
+{{- end }}
+
+{{/*
 Admission webhook selector labels
 */}}
 {{- define "admission-webhook.matchLabels" -}}

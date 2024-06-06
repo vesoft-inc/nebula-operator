@@ -1,10 +1,12 @@
-{{- if .Values.admissionWebhook.create }}
+{{- if or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
+  {{- if .Values.admissionWebhook.useCertManager }}
   annotations:
     cert-manager.io/inject-ca-from: {{ template "nebula-operator.namespace" . }}/{{ template "admission-webhook.name" . }}-cert
+  {{- end }}
   name: {{ template "admission-webhook.name" . }}-validating
   labels:
   {{- include "admission-webhook.labels" . | nindent 4 }}
@@ -14,7 +16,7 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: {{ template "admission-webhook.name" . }}-service
+        name: {{ template "controller-manager-admission-webhook.name" . }}-service
         namespace: {{ template "nebula-operator.namespace" . }}
         path: /validate-nebulacluster
     failurePolicy: Fail

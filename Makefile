@@ -79,6 +79,7 @@ build-operator: ## Build operator related binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/controller-manager cmd/controller-manager/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/autoscaler cmd/autoscaler/main.go
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/scheduler cmd/scheduler/main.go
+	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/certificate-generator cmd/certificate-generator/main.go
 
 build-provisioner: ## Build provisioner binary.
 	$(GO_BUILD) -ldflags '$(LDFLAGS)' -o bin/$(TARGETDIR)/local-pv-provisioner cmd/provisioner/main.go

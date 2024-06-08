@@ -23,13 +23,11 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/pem"
 	"flag"
 	"fmt"
 	"math/big"
 	"os"
-	"path/filepath"
 	"time"
 
 	cron "github.com/robfig/cron/v3"
@@ -177,7 +175,7 @@ func doCertRotation(clientset *kubernetes.Clientset, opts *options.Options) erro
 	klog.Infof("Certificates generated successfully for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
 
 	klog.Infof("Updating ca bundle for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
-	err = updateWebhookConfiguration(clientset, opts)
+	err = updateWebhookConfiguration(clientset, opts, caCert)
 	if err != nil {
 		klog.Errorf("Error updating ca bundle for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 		return err
@@ -287,21 +285,14 @@ func updateSecret(clientset *kubernetes.Clientset, certPEM, keyPEM, caPEM []byte
 }
 
 // Update the webhook configuration with the new CA bundle
-func updateWebhookConfiguration(client *kubernetes.Clientset, opts *options.Options) error {
-	caCert, err := os.ReadFile(filepath.Join(opts.CertDir, "ca.crt"))
-	if err != nil {
-		return fmt.Errorf("failed to read CA certificate: %v", err)
-	}
-
-	caBundle := base64.StdEncoding.EncodeToString(caCert)
-
+func updateWebhookConfiguration(client *kubernetes.Clientset, opts *options.Options, caCert []byte) error {
 	webhook, err := client.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.Background(), opts.WebhookServerName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get webhook configuration: %v", err)
 	}
 
 	for i := range webhook.Webhooks {
-		webhook.Webhooks[i].ClientConfig.CABundle = []byte(caBundle)
+		webhook.Webhooks[i].ClientConfig.CABundle = caCert
 	}
 
 	_, err = client.AdmissionregistrationV1().ValidatingWebhookConfigurations().Update(context.Background(), webhook, metav1.UpdateOptions{})

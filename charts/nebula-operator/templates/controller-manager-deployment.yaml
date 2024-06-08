@@ -37,6 +37,34 @@ spec:
       {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
+        {{- if and (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) (not .Values.admissionWebhook.useCertManager) }}
+        - name: cert-rotation
+          image: {{ .Values.image.nebulaOperator.image }}
+          imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
+          command:
+            - /usr/local/bin/certificate-generator
+          args:
+            - --leader-elect
+            - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
+            - --v={{ .Values.controllerManager.verbosity }}
+            - --webhook-namespace={{ template "nebula-operator.namespace" . }}
+            - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
+            - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
+            - --certificate-dir=/tmp/k8s-webhook-server/serving-certs
+            - --certificate-validity=1
+            - --secret-namespace={{ template "nebula-operator.namespace" . }}
+            - --secret-name={{ template "admission-webhook.name" . }}-secret
+            - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}
+          env:
+            {{- if .Values.kubernetesClusterDomain }}
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.kubernetesClusterDomain }}
+            {{- end }}
+          volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+        {{- end}}
         - name: controller-manager
           image: {{ .Values.image.nebulaOperator.image }}
           imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
@@ -147,40 +175,10 @@ spec:
             allowPrivilegeEscalation: false
           {{- if .Values.admissionWebhook.autoscalerAdmissionWebhook.create }}
           volumeMounts:
-          {{- if .Values.admissionWebhook.autoscalerAdmissionWebhook.create }}
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
               readOnly: true
           {{- end }}
-          {{- end }}
-        {{- if and (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) (not .Values.admissionWebhook.useCertManager) }}
-        - name: cert-rotation
-          image: {{ .Values.image.nebulaOperator.image }}
-          imagePullPolicy: {{ .Values.image.nebulaOperator.imagePullPolicy }}
-          command:
-            - /usr/local/bin/certificate-generator
-          args:
-            - --leader-elect
-            - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
-            - --v={{ .Values.controllerManager.verbosity }}
-            - --webhook-namespace={{ template "nebula-operator.namespace" . }}
-            - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
-            - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
-            - --certificate-dir=/tmp/k8s-webhook-server/serving-certs
-            - --certificate-validity=1
-            - --secret-namespace={{ template "nebula-operator.namespace" . }}
-            - --secret-name={{ template "admission-webhook.name" . }}-secret
-            - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}
-          env:
-            {{- if .Values.kubernetesClusterDomain }}
-            - name: KUBERNETES_CLUSTER_DOMAIN
-              value: {{ .Values.kubernetesClusterDomain }}
-            {{- end }}
-          volumeMounts:
-            - mountPath: /tmp/k8s-webhook-server/serving-certs
-              name: cert
-              readOnly: true
-        {{- end}}
     {{- with .Values.controllerManager.sidecarContainers }}
       {{- range $name, $spec :=  $.Values.controllerManager.sidecarContainers }}
         - name: {{ $name }}

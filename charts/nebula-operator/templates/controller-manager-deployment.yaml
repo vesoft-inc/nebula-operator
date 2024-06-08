@@ -1,4 +1,17 @@
 {{- if .Values.controllerManager.create }}
+{{- if and (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) (not .Values.admissionWebhook.useCertManager) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ template "admission-webhook.name" . }}-secret
+  namespace: {{ template "nebula-operator.namespace" . }}
+type: kubernetes.io/tls
+data:
+  tls.crt: ""
+  tls.key: ""
+  ca.crt: ""
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -151,9 +164,13 @@ spec:
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
             - --v={{ .Values.controllerManager.verbosity }}
             - --webhook-namespace={{ template "nebula-operator.namespace" . }}
-            - --webhook-name={{ template "admission-webhook.name" . }}-validating
+            - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
+            - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
             - --certificate-dir=/tmp/k8s-webhook-server/serving-certs
             - --certificate-validity=1
+            - --secret-namespace={{ template "nebula-operator.namespace" . }}
+            - --secret-name={{ template "admission-webhook.name" . }}-secret
+            - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}
           env:
             {{- if .Values.kubernetesClusterDomain }}
             - name: KUBERNETES_CLUSTER_DOMAIN
@@ -162,7 +179,7 @@ spec:
           volumeMounts:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
-              readOnly: false
+              readOnly: true
         {{- end}}
     {{- with .Values.controllerManager.sidecarContainers }}
       {{- range $name, $spec :=  $.Values.controllerManager.sidecarContainers }}
@@ -196,15 +213,10 @@ spec:
       {{- if or .Values.controllerManager.extraVolumes (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) }}
       volumes:
       {{- if or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create}}
-      {{- if .Values.admissionWebhook.useCertManager }}
       - name: cert
         secret:
           defaultMode: 420
           secretName: {{ template "admission-webhook.name" . }}-secret
-      {{- else}}
-      - name: cert
-        emptyDir: {}
-      {{- end}}
       {{- end }}
       {{- if .Values.controllerManager.extraVolumes }}
       {{- toYaml .Values.controllerManager.extraVolumes | nindent 8 }}

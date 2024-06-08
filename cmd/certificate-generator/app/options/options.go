@@ -40,10 +40,13 @@ type Options struct {
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection cbc.LeaderElectionConfiguration
 
-	// Webhook name represents the name of the webhook server associated with the certificate.
-	WebhookName string
+	// WebhookNames represents the names of the webhooks in the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)
+	WebhookNames *[]string
 
-	// Webhook namespace represents the namespace of the webhook server associated with the certificate.
+	// WebhookServerName represents the name of the webhook server associated with the certificate.
+	WebhookServerName string
+
+	// WebhookNamespace represents the namespace of the webhook server associated with the certificate.
 	WebhookNamespace string
 
 	// CertDir represents the directory to save the certificates in
@@ -51,6 +54,15 @@ type Options struct {
 
 	// CertValidity represents the number of days the certificate should be valid for
 	CertValidity int64
+
+	// SecretName represents the name of the secret used to store the webhook certificates
+	SecretName string
+
+	// SecretNamespace represents the namespace of the secret used to store the webhook certificates
+	SecretNamespace string
+
+	// KubernetesDomain represents the custom kubernetes domain needed in the certificate
+	KubernetesDomain string
 }
 
 func NewOptions() *Options {
@@ -80,8 +92,12 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	flags.DurationVar(&o.LeaderElection.RetryPeriod.Duration, "leader-elect-retry-period", defaultElectionRetryPeriod.Duration, ""+
 		"The duration the clients should wait between attempting acquisition and renewal "+
 		"of a leadership. This is only applicable if leader election is enabled.")
-	flags.StringVar(&o.WebhookName, "webhook-name", "nebulaWebhook", "Specifies the name of the webhook to associate with the certificate")
+	o.WebhookNames = flags.StringSlice("webhook-names", []string{}, "A comma-seperated list of the names of the webhooks supported by the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)")
+	flags.StringVar(&o.WebhookServerName, "webhook-server-name", "nebulaWebhook", "Specifies the name of the webhook to associate with the certificate")
 	flags.StringVar(&o.WebhookNamespace, "webhook-namespace", "default", "Specifies the namespace of the webhook to associate with the certificate")
 	flags.StringVar(&o.CertDir, "certificate-dir", "/etc/cert", "Specifies the directory in which to save the generated webhook certificates")
 	flags.Int64Var(&o.CertValidity, "certificate-validity", 365, "Specifies the number of days the certificate should be valid for")
+	flags.StringVar(&o.SecretName, "secret-name", "nebula-operator-webhook-secret", "Specifies the name of the webhook to associate with the certificate")
+	flags.StringVar(&o.SecretNamespace, "secret-namespace", "default", "Specifies the namespace of the webhook to associate with the certificate")
+	flags.StringVar(&o.KubernetesDomain, "kube-domain", "cluster.local", "Specifies the namespace of the webhook to associate with the certificate")
 }

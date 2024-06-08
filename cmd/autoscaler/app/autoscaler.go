@@ -20,6 +20,9 @@ import (
 	"context"
 	"flag"
 	"net/http"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -160,10 +163,25 @@ func Run(ctx context.Context, opts *options.Options) error {
 		return err
 	}
 
+	if !opts.EnableAdmissionWebhook {
+		for !fileExists(filepath.Join(opts.WebhookOpts.CertDir, "tls.crt")) {
+			klog.Info("waiting for webhook certificate...")
+			time.Sleep(2 * time.Second)
+		}
+	}
+
 	if err := mgr.Start(ctx); err != nil {
 		klog.Errorf("nebula-autoscaler exits unexpectedly: %v", err)
 		return err
 	}
 
 	return nil
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return err == nil
 }

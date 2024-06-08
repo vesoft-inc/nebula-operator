@@ -29,10 +29,12 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 	"time"
 
 	cron "github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
@@ -82,22 +84,22 @@ func Run(ctx context.Context, opts *options.Options) error {
 	// rotate cert once before starting cronjob
 	err = rotateCertificate(ctx, clientset, opts)
 	if err != nil {
-		klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
+		klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 		os.Exit(1)
 	}
 
-	klog.Infof("Starting cert rotation cron job for webhook [%v/%v]", opts.WebhookNamespace, opts.WebhookName)
+	klog.Infof("Starting cert rotation cron job for webhook [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
 	c := cron.New()
 	// rotate cert 1 hour before expiration date
 	c.AddFunc(fmt.Sprintf("@every %vm", opts.CertValidity-60), func() {
 		err := rotateCertificate(ctx, clientset, opts)
 		if err != nil {
-			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
+			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 			os.Exit(1)
 		}
 	})
 	c.Start()
-	klog.Infof("Cert rotation crontab started for webhook [%v/%v]. Will rotate every %v minutes", opts.WebhookNamespace, opts.WebhookName, opts.CertValidity)
+	klog.Infof("Cert rotation crontab started for webhook [%v/%v]. Will rotate every %v minutes", opts.WebhookNamespace, opts.WebhookServerName, opts.CertValidity)
 
 	// keep the program running
 	select {}
@@ -111,9 +113,9 @@ func rotateCertificate(ctx context.Context, clientset *kubernetes.Clientset, opt
 			klog.Errorf("Failed to get hostname: %v", err)
 		}
 
-		rl, err := resourcelock.New(resourcelock.LeasesResourceLock,
-			opts.WebhookNamespace,
-			opts.WebhookName,
+		rl, err := resourcelock.New(opts.LeaderElection.ResourceLock,
+			opts.LeaderElection.ResourceNamespace,
+			opts.LeaderElection.ResourceName,
 			clientset.CoreV1(),
 			clientset.CoordinationV1(),
 			resourcelock.ResourceLockConfig{
@@ -153,56 +155,39 @@ func rotateCertificate(ctx context.Context, clientset *kubernetes.Clientset, opt
 }
 
 func doCertRotation(clientset *kubernetes.Clientset, opts *options.Options) error {
-	klog.Infof("Start generating certificates for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookName)
-	caCert, caKey, err := generateCACert(opts.WebhookName, opts.CertValidity)
+	klog.Infof("Start generating certificates for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
+	caCert, caKey, err := generateCACert(opts)
 	if err != nil {
-		klog.Errorf("Error generating CA certificate for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
+		klog.Errorf("Error generating CA certificate for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 		return err
 	}
 
-	serverCert, serverKey, err := generateServerCert(caCert, caKey, opts.WebhookName, opts.WebhookNamespace, opts.CertValidity)
+	serverCert, serverKey, err := generateServerCert(caCert, caKey, opts)
 	if err != nil {
-		klog.Errorf("Error generating server certificate for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
+		klog.Errorf("Error generating server certificate for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 		return err
 	}
 
-	err = saveToFile(fmt.Sprintf("%v/ca.crt", opts.CertDir), "CERTIFICATE", caCert)
+	err = updateSecret(clientset, serverCert, serverKey, caCert, opts)
 	if err != nil {
-		klog.Errorf("Error saving CA certificate for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
+		klog.Errorf("Error updating secret for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 		return err
 	}
 
-	err = saveToFile(fmt.Sprintf("%v/ca.key", opts.CertDir), "EC PRIVATE KEY", caKey)
+	klog.Infof("Certificates generated successfully for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
+
+	klog.Infof("Updating ca bundle for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
+	err = updateWebhookConfiguration(clientset, opts)
 	if err != nil {
-		klog.Errorf("Error saving CA key for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
+		klog.Errorf("Error updating ca bundle for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 		return err
 	}
-
-	err = saveToFile(fmt.Sprintf("%v/tls.crt", opts.CertDir), "CERTIFICATE", serverCert)
-	if err != nil {
-		klog.Errorf("Error saving server certificate for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
-		return err
-	}
-
-	err = saveToFile(fmt.Sprintf("%v/tls.key", opts.CertDir), "EC PRIVATE KEY", serverKey)
-	if err != nil {
-		klog.Errorf("Error saving server key for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
-		return err
-	}
-
-	klog.Infof("Certificates generated successfully for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookName)
-
-	klog.Infof("Updating ca bundle for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookName)
-	err = updateWebhookConfiguration(clientset, opts.WebhookName, fmt.Sprintf("%v/ca.crt", opts.CertDir))
-	if err != nil {
-		klog.Errorf("Error updating ca bundle for webhook server [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookName, err)
-		return err
-	}
+	klog.Infof("Ca bundle updated successfully for webhook server [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
 
 	return nil
 }
 
-func generateCACert(webhookName string, validity int64) ([]byte, *ecdsa.PrivateKey, error) {
+func generateCACert(opts *options.Options) ([]byte, *ecdsa.PrivateKey, error) {
 	caKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -212,13 +197,14 @@ func generateCACert(webhookName string, validity int64) ([]byte, *ecdsa.PrivateK
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
 			Country:    []string{"US"},
-			CommonName: webhookName,
+			CommonName: opts.WebhookServerName,
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Duration(validity) * time.Minute),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		BasicConstraintsValid: true,
+		NotAfter:              time.Now().Add(time.Duration(opts.CertValidity) * time.Minute),
 		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		BasicConstraintsValid: true,
 	}
 
 	caCert, err := x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &caKey.PublicKey, caKey)
@@ -226,29 +212,38 @@ func generateCACert(webhookName string, validity int64) ([]byte, *ecdsa.PrivateK
 		return nil, nil, err
 	}
 
-	return caCert, caKey, nil
+	caPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert})
+
+	return caPem, caKey, nil
 }
 
-func generateServerCert(caCert []byte, caKey *ecdsa.PrivateKey, webhookName, webhookNamespace string, validity int64) ([]byte, *ecdsa.PrivateKey, error) {
+func generateServerCert(caCert []byte, caKey *ecdsa.PrivateKey, opts *options.Options) ([]byte, []byte, error) {
 	serverKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	dnsNames := make([]string, 2*len(*opts.WebhookNames))
+	for idx := -1; idx < len(*opts.WebhookNames)-1; idx++ {
+		dnsNames[idx+1] = fmt.Sprintf("%v.%v.svc", (*opts.WebhookNames)[idx+1], opts.WebhookNamespace)
+		dnsNames[idx+2] = fmt.Sprintf("%v.%v.svc.%v", (*opts.WebhookNames)[idx+1], opts.WebhookNamespace, opts.KubernetesDomain)
 	}
 
 	serverTemplate := x509.Certificate{
 		SerialNumber: big.NewInt(2),
 		Subject: pkix.Name{
 			Country:    []string{"US"},
-			CommonName: webhookName,
+			CommonName: opts.WebhookServerName,
 		},
 		NotBefore:   time.Now(),
-		NotAfter:    time.Now().Add(time.Duration(validity) * time.Minute),
+		NotAfter:    time.Now().Add(time.Duration(opts.CertValidity) * time.Minute),
 		KeyUsage:    x509.KeyUsageDigitalSignature,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		DNSNames:    []string{fmt.Sprintf("%v.%v.svc", webhookName, webhookNamespace), fmt.Sprintf("%v.%v.svc.cluster.local", webhookName, webhookNamespace)},
+		DNSNames:    dnsNames,
 	}
 
-	ca, err := x509.ParseCertificate(caCert)
+	caBlock, _ := pem.Decode(caCert)
+	ca, err := x509.ParseCertificate(caBlock.Bytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -258,44 +253,49 @@ func generateServerCert(caCert []byte, caKey *ecdsa.PrivateKey, webhookName, web
 		return nil, nil, err
 	}
 
-	return serverCert, serverKey, nil
+	certPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert})
+	marshalledKey, err := x509.MarshalECPrivateKey(serverKey)
+	if err != nil {
+		klog.Errorf("Error marshalling webhook server certificate key: %v", err)
+	}
+
+	keyPem := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshalledKey})
+
+	return certPem, keyPem, nil
 }
 
-func saveToFile(filename, blockType string, data interface{}) error {
-	file, err := os.Create(filename)
+func updateSecret(clientset *kubernetes.Clientset, certPEM, keyPEM, caPEM []byte, opts *options.Options) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.SecretName,
+			Namespace: opts.SecretNamespace,
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			"tls.crt": certPEM,
+			"tls.key": keyPEM,
+			"ca.crt":  caPEM,
+		},
+	}
+
+	_, err := clientset.CoreV1().Secrets(opts.SecretNamespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	var pemData []byte
-	switch data := data.(type) {
-	case []byte:
-		pemData = pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: data})
-	case *ecdsa.PrivateKey:
-		der, err := x509.MarshalECPrivateKey(data)
-		if err != nil {
-			return err
-		}
-		pemData = pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: der})
-	default:
-		return fmt.Errorf("unsupported data type")
+		return fmt.Errorf("failed to update secret: %v", err)
 	}
 
-	_, err = file.Write(pemData)
-	return err
+	return nil
 }
 
 // Update the webhook configuration with the new CA bundle
-func updateWebhookConfiguration(client *kubernetes.Clientset, webhookName, caCertPath string) error {
-	caCert, err := os.ReadFile(caCertPath)
+func updateWebhookConfiguration(client *kubernetes.Clientset, opts *options.Options) error {
+	caCert, err := os.ReadFile(filepath.Join(opts.CertDir, "ca.crt"))
 	if err != nil {
 		return fmt.Errorf("failed to read CA certificate: %v", err)
 	}
 
 	caBundle := base64.StdEncoding.EncodeToString(caCert)
 
-	webhook, err := client.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.Background(), webhookName, metav1.GetOptions{})
+	webhook, err := client.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.Background(), opts.WebhookServerName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get webhook configuration: %v", err)
 	}

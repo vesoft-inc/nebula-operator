@@ -45,7 +45,7 @@ spec:
             - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
             - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
             - --certificate-dir=/tmp/k8s-webhook-server/serving-certs
-            - --certificate-validity=5
+            - --certificate-validity=1
             - --secret-namespace={{ template "nebula-operator.namespace" . }}
             - --secret-name={{ template "admission-webhook.name" . }}-secret
             - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}

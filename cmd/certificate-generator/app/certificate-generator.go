@@ -135,12 +135,12 @@ func Run(ctx context.Context, opts *options.Options) error {
 }
 
 func rotateCertificate(clientset *kubernetes.Clientset, opts *options.Options) error {
-	//opts.CertValidity = opts.CertValidity * 24 * 60
+	opts.CertValidity = opts.CertValidity * 24 * 60
 
 	klog.Infof("Starting cert rotation cron job for webhook [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
 	c := cron.New()
 	// rotate cert 1 hour before expiration date
-	c.AddFunc(fmt.Sprintf("@every %vm", opts.CertValidity-1), func() {
+	c.AddFunc(fmt.Sprintf("@every %vm", opts.CertValidity-60), func() {
 		err := doCertRotation(clientset, opts)
 		if err != nil {
 			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)

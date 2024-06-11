@@ -63,6 +63,9 @@ type Options struct {
 
 	// KubernetesDomain represents the custom kubernetes domain needed in the certificate
 	KubernetesDomain string
+
+	// InitOnly repersent whether this script is running in an init container. It will not start the cronjob
+	InitOnly bool
 }
 
 func NewOptions() *Options {
@@ -100,4 +103,5 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&o.SecretName, "secret-name", "nebula-operator-webhook-secret", "Specifies the name of the webhook to associate with the certificate")
 	flags.StringVar(&o.SecretNamespace, "secret-namespace", "default", "Specifies the namespace of the webhook to associate with the certificate")
 	flags.StringVar(&o.KubernetesDomain, "kube-domain", "cluster.local", "Specifies the namespace of the webhook to associate with the certificate")
+	flags.BoolVar(&o.InitOnly, "init-only", false, "Specifies whether this script is running in a init container")
 }

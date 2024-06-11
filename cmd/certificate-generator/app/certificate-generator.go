@@ -77,77 +77,78 @@ func Run(ctx context.Context, opts *options.Options) error {
 		klog.Errorf("Error building Kubernetes clientset: %v", err.Error())
 	}
 
-	opts.CertValidity = opts.CertValidity * 24 * 60
+	if opts.InitOnly {
+		klog.Infof("Init only detected. Doing cert initialization for webhook [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
+		err := doCertRotation(clientset, opts)
+		if err != nil {
+			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
+			os.Exit(1)
+		}
+	} else {
+		if opts.LeaderElection.LeaderElect {
+			klog.Info("Doing leader election")
+			id, err := os.Hostname()
+			if err != nil {
+				klog.Errorf("Failed to get hostname: %v", err)
+			}
 
-	// rotate cert once before starting cronjob
-	err = rotateCertificate(ctx, clientset, opts)
-	if err != nil {
-		klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
-		os.Exit(1)
+			rl, err := resourcelock.New(opts.LeaderElection.ResourceLock,
+				opts.LeaderElection.ResourceNamespace,
+				opts.LeaderElection.ResourceName,
+				clientset.CoreV1(),
+				clientset.CoordinationV1(),
+				resourcelock.ResourceLockConfig{
+					Identity: id,
+				})
+			if err != nil {
+				klog.Errorf("Error creating resource lock: %v", err)
+			}
+
+			leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+				Lock:          rl,
+				LeaseDuration: opts.LeaderElection.LeaseDuration.Duration,
+				RenewDeadline: opts.LeaderElection.RenewDeadline.Duration,
+				RetryPeriod:   opts.LeaderElection.RetryPeriod.Duration,
+				Callbacks: leaderelection.LeaderCallbacks{
+					OnStartedLeading: func(ctx context.Context) {
+						klog.Info("Leader election successful. Starting certificate rotation")
+						err = rotateCertificate(clientset, opts)
+						if err != nil {
+							klog.Errorf("Failed to rotate certificates: %v", err)
+						}
+					},
+					OnStoppedLeading: func() {
+						klog.Info("Lost leadership, stopping")
+					},
+				},
+			})
+		} else {
+			klog.Infof("Leader election skipped. Starting certificate rotation")
+			err := rotateCertificate(clientset, opts)
+			if err != nil {
+				klog.Errorf("Failed to rotate certificates: %v", err)
+			}
+		}
 	}
+
+	return nil
+}
+
+func rotateCertificate(clientset *kubernetes.Clientset, opts *options.Options) error {
+	//opts.CertValidity = opts.CertValidity * 24 * 60
 
 	klog.Infof("Starting cert rotation cron job for webhook [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
 	c := cron.New()
 	// rotate cert 1 hour before expiration date
-	c.AddFunc(fmt.Sprintf("@every %vm", opts.CertValidity-60), func() {
-		err := rotateCertificate(ctx, clientset, opts)
+	c.AddFunc(fmt.Sprintf("@every %vm", opts.CertValidity-1), func() {
+		err := doCertRotation(clientset, opts)
 		if err != nil {
 			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 			os.Exit(1)
 		}
 	})
-	c.Start()
 	klog.Infof("Cert rotation crontab started for webhook [%v/%v]. Will rotate every %v minutes", opts.WebhookNamespace, opts.WebhookServerName, opts.CertValidity)
-
-	// keep the program running
-	select {}
-}
-
-func rotateCertificate(ctx context.Context, clientset *kubernetes.Clientset, opts *options.Options) error {
-	if opts.LeaderElection.LeaderElect {
-		klog.Info("Doing leader election")
-		id, err := os.Hostname()
-		if err != nil {
-			klog.Errorf("Failed to get hostname: %v", err)
-		}
-
-		rl, err := resourcelock.New(opts.LeaderElection.ResourceLock,
-			opts.LeaderElection.ResourceNamespace,
-			opts.LeaderElection.ResourceName,
-			clientset.CoreV1(),
-			clientset.CoordinationV1(),
-			resourcelock.ResourceLockConfig{
-				Identity: id,
-			})
-		if err != nil {
-			klog.Errorf("Error creating resource lock: %v", err)
-		}
-
-		leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
-			Lock:          rl,
-			LeaseDuration: opts.LeaderElection.LeaseDuration.Duration,
-			RenewDeadline: opts.LeaderElection.RenewDeadline.Duration,
-			RetryPeriod:   opts.LeaderElection.RetryPeriod.Duration,
-			Callbacks: leaderelection.LeaderCallbacks{
-				OnStartedLeading: func(ctx context.Context) {
-					klog.Info("Leader election successful. Starting certificate rotation")
-					err = doCertRotation(clientset, opts)
-					if err != nil {
-						klog.Errorf("Failed to rotate certificates: %v", err)
-					}
-				},
-				OnStoppedLeading: func() {
-					klog.Info("Lost leadership, stopping")
-				},
-			},
-		})
-	} else {
-		klog.Infof("Leader election skipped. Starting certificate rotation")
-		err := doCertRotation(clientset, opts)
-		if err != nil {
-			klog.Errorf("Failed to rotate certificates: %v", err)
-		}
-	}
+	c.Run()
 
 	return nil
 }

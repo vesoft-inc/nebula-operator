@@ -18,13 +18,8 @@ package app
 
 import (
 	"context"
-	"encoding/pem"
 	"flag"
-	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"time"
 
 	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	"github.com/spf13/cobra"
@@ -223,38 +218,10 @@ func Run(ctx context.Context, opts *options.Options) error {
 		return err
 	}
 
-	if opts.EnableAdmissionWebhook {
-		pemFile, err := isPemFile(filepath.Join(opts.WebhookOpts.CertDir, "tls.crt"))
-		for !pemFile {
-			if err != nil {
-				klog.Errorf("Error waiting for webhook certificate: %v", err)
-			}
-			klog.Info("waiting for webhook certificate...")
-			time.Sleep(2 * time.Second)
-			pemFile, err = isPemFile(filepath.Join(opts.WebhookOpts.CertDir, "tls.crt"))
-		}
-	}
-
 	if err := mgr.Start(ctx); err != nil {
 		klog.Errorf("nebula-controller-manager exits unexpectedly: %v", err)
 		return err
 	}
 
 	return nil
-}
-
-func isPemFile(filePath string) (bool, error) {
-	// Read file contents
-	fileContents, err := os.ReadFile(filePath)
-	if err != nil {
-		return false, fmt.Errorf("failed to read certificate file %v: %v", filePath, err)
-	}
-
-	// Decode PEM data
-	block, _ := pem.Decode(fileContents)
-	if block == nil {
-		return false, nil
-	}
-
-	return true, nil
 }

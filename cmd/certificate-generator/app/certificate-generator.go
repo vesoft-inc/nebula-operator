@@ -75,6 +75,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		klog.Errorf("Error building Kubernetes clientset: %v", err.Error())
+		return err
 	}
 
 	if opts.InitOnly {
@@ -82,7 +83,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 		err := doCertRotation(clientset, opts)
 		if err != nil {
 			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
-			os.Exit(1)
+			return err
 		}
 	} else {
 		if opts.LeaderElection.LeaderElect {
@@ -90,6 +91,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 			id, err := os.Hostname()
 			if err != nil {
 				klog.Errorf("Failed to get hostname: %v", err)
+				return err
 			}
 
 			rl, err := resourcelock.New(opts.LeaderElection.ResourceLock,
@@ -102,6 +104,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 				})
 			if err != nil {
 				klog.Errorf("Error creating resource lock: %v", err)
+				return err
 			}
 
 			leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
@@ -115,6 +118,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 						err = rotateCertificate(clientset, opts)
 						if err != nil {
 							klog.Errorf("Failed to rotate certificates: %v", err)
+							os.Exit(1)
 						}
 					},
 					OnStoppedLeading: func() {
@@ -127,6 +131,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 			err := rotateCertificate(clientset, opts)
 			if err != nil {
 				klog.Errorf("Failed to rotate certificates: %v", err)
+				return err
 			}
 		}
 	}
@@ -255,7 +260,7 @@ func generateServerCert(caCert []byte, caKey *ecdsa.PrivateKey, opts *options.Op
 	certPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert})
 	marshalledKey, err := x509.MarshalECPrivateKey(serverKey)
 	if err != nil {
-		klog.Errorf("Error marshalling webhook server certificate key: %v", err)
+		return nil, nil, fmt.Errorf("error marshalling webhook server certificate key: %v", err)
 	}
 
 	keyPem := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshalledKey})

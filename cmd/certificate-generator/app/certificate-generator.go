@@ -117,7 +117,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 						klog.Info("Leader election successful. Starting certificate rotation")
 						err = rotateCertificate(clientset, opts)
 						if err != nil {
-							klog.Errorf("Failed to rotate certificates: %v", err)
+							klog.Errorf("Failed to start cronjob to rotate certificates: %v", err)
 							os.Exit(1)
 						}
 					},
@@ -128,9 +128,9 @@ func Run(ctx context.Context, opts *options.Options) error {
 			})
 		} else {
 			klog.Infof("Leader election skipped. Starting certificate rotation")
-			err := rotateCertificate(clientset, opts)
+			err = rotateCertificate(clientset, opts)
 			if err != nil {
-				klog.Errorf("Failed to rotate certificates: %v", err)
+				klog.Errorf("Failed to start cronjob to rotate certificates: %v", err)
 				return err
 			}
 		}
@@ -145,13 +145,16 @@ func rotateCertificate(clientset *kubernetes.Clientset, opts *options.Options) e
 	klog.Infof("Starting cert rotation cron job for webhook [%v/%v]", opts.WebhookNamespace, opts.WebhookServerName)
 	c := cron.New()
 	// rotate cert 1 hour before expiration date
-	c.AddFunc(fmt.Sprintf("@every %vm", opts.CertValidity-60), func() {
+	_, err := c.AddFunc(fmt.Sprintf("@every %vm", opts.CertValidity-60), func() {
 		err := doCertRotation(clientset, opts)
 		if err != nil {
 			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", opts.WebhookNamespace, opts.WebhookServerName, err)
 			os.Exit(1)
 		}
 	})
+	if err != nil {
+		return err
+	}
 	klog.Infof("Cert rotation crontab started for webhook [%v/%v]. Will rotate every %v minutes", opts.WebhookNamespace, opts.WebhookServerName, opts.CertValidity)
 	c.Run()
 

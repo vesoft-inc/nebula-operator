@@ -73,6 +73,8 @@ admissionWebhook:
     # The TCP port the Webhook server binds to. (default 9448)
     webhookBindPort: 9448
   useCertManager: false
+  # Number of days. Only needed if useCertManager is false. (default 1)
+  certValidity: 1
 
 scheduler:
   create: true

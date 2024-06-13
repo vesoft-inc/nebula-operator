@@ -35,6 +35,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/scheme"
 	"github.com/vesoft-inc/nebula-operator/apis/autoscaling/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/cmd/autoscaler/app/options"
+	certrot "github.com/vesoft-inc/nebula-operator/pkg/cert-rotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/autoscaler"
 	klogflag "github.com/vesoft-inc/nebula-operator/pkg/flag/klog"
 	profileflag "github.com/vesoft-inc/nebula-operator/pkg/flag/profile"
@@ -148,6 +149,20 @@ func Run(ctx context.Context, opts *options.Options) error {
 		hookServer.Register("/validate-nebulaautoscaler",
 			&webhook.Admission{Handler: &nawebhook.ValidatingAdmission{Decoder: decoder}})
 		hookServer.WebhookMux().Handle("/readyz/", http.StripPrefix("/readyz/", &healthz.Handler{}))
+
+		// Start certificate rotation
+		certGenerator := certrot.CertGenerator{
+			WebhookNames:      opts.WebhookOpts.WebhookNames,
+			WebhookServerName: opts.WebhookOpts.WebhookServerName,
+			WebhookNamespace:  opts.WebhookOpts.WebhookNamespace,
+			CertDir:           opts.WebhookOpts.CertDir,
+			CertValidity:      opts.WebhookOpts.CertValidity,
+			SecretName:        opts.WebhookOpts.SecretName,
+			SecretNamespace:   opts.WebhookOpts.SecretNamespace,
+			KubernetesDomain:  opts.WebhookOpts.KubernetesDomain,
+		}
+
+		certGenerator.Run()
 	}
 
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {

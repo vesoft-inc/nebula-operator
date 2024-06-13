@@ -48,14 +48,35 @@ type Options struct {
 	// CertName is the server certificate name. Defaults to tls.crt.
 	CertName string
 
+	// CertValidity represents the number of days the certificate should be valid for
+	CertValidity int64
+
 	// KeyName is the server key name. Defaults to tls.key.
 	KeyName string
+
+	// KubernetesDomain represents the custom kubernetes domain needed in the certificate
+	KubernetesDomain string
+
+	// SecretName represents the name of the secret used to store the webhook certificates
+	SecretName string
+
+	// SecretNamespace represents the namespace of the secret used to store the webhook certificates
+	SecretNamespace string
 
 	// TLSMinVersion is the minimum version of TLS supported. Possible values: 1.0, 1.1, 1.2, 1.3.
 	// Some environments have automated security scans that trigger on TLS versions or insecure cipher suites, and
 	// setting TLS to 1.3 would solve both problems.
 	// Defaults to 1.3.
 	TLSMinVersion string
+
+	// WebhookNames represents the names of the webhooks in the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)
+	WebhookNames *[]string
+
+	// WebhookServerName represents the name of the webhook server associated with the certificate.
+	WebhookServerName string
+
+	// WebhookNamespace represents the namespace of the webhook server associated with the certificate.
+	WebhookNamespace string
 }
 
 func (o *Options) AddFlags(flags *pflag.FlagSet) {
@@ -66,9 +87,16 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&o.CertDir, "webhook-cert-dir", defaultCertDir,
 		"The directory that contains the server key and certificate.")
 	flags.StringVar(&o.CertName, "webhook-tls-cert-file-name", "tls.crt", "The name of server certificate.")
+	flags.Int64Var(&o.CertValidity, "certificate-validity", 365, "Specifies the number of days the certificate should be valid for")
 	flags.StringVar(&o.KeyName, "webhook-tls-private-key-file-name", "tls.key", "The name of server key.")
+	flags.StringVar(&o.KubernetesDomain, "kube-domain", "cluster.local", "Specifies the namespace of the webhook to associate with the certificate")
+	flags.StringVar(&o.SecretName, "secret-name", "nebula-operator-webhook-secret", "Specifies the name of the webhook to associate with the certificate")
+	flags.StringVar(&o.SecretNamespace, "secret-namespace", "default", "Specifies the namespace of the webhook to associate with the certificate")
 	flags.StringVar(&o.TLSMinVersion, "webhook-tls-min-version", defaultTLSMinVersion,
 		"Minimum TLS version supported. Possible values: 1.0, 1.1, 1.2, 1.3.")
+	o.WebhookNames = flags.StringSlice("webhook-names", []string{}, "A comma-seperated list of the names of the webhooks supported by the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)")
+	flags.StringVar(&o.WebhookServerName, "webhook-server-name", "nebulaWebhook", "Specifies the name of the webhook to associate with the certificate")
+	flags.StringVar(&o.WebhookNamespace, "webhook-namespace", "default", "Specifies the namespace of the webhook to associate with the certificate")
 }
 
 func (o *Options) Validate() field.ErrorList {

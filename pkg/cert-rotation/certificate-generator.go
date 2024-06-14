@@ -17,6 +17,7 @@ limitations under the License.
 package app
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -34,11 +35,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	cbc "k8s.io/component-base/config"
 	"k8s.io/klog/v2"
 	ctrlruntime "sigs.k8s.io/controller-runtime"
 )
 
+const (
+	ResourceName = "nebula-certificate-generator"
+)
+
 type CertGenerator struct {
+	// LeaderElection defines the configuration of leader election client.
+	LeaderElection cbc.LeaderElectionConfiguration
+
 	// WebhookNames represents the names of the webhooks in the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)
 	WebhookNames *[]string
 
@@ -64,7 +75,7 @@ type CertGenerator struct {
 	KubernetesDomain string
 }
 
-func (c *CertGenerator) Run() error {
+func (c *CertGenerator) Run(ctx context.Context) error {
 	klog.Info("Getting kubernetes configs")
 	cfg, err := ctrlruntime.GetConfig()
 	if err != nil {
@@ -77,36 +88,20 @@ func (c *CertGenerator) Run() error {
 		return err
 	}
 
+	// Initialize certificate
 	certValidityDuration := (time.Duration(c.CertValidity) * 24 * 60 * time.Minute)
-
-	// Check certificate validity
-	klog.Infof("Checking certificate validity for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
-	currCertValidity, hasCert := c.getCertValidity("tls.cert")
-
-	// Initialize certificate if needed
-	if !hasCert {
-		klog.Infof("No certificate detected. Creating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
-		err := c.doCertRotation(clientset, certValidityDuration)
-		if err != nil {
-			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
-			os.Exit(1)
-		}
-		klog.Infof("Certificate created successfully for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
-	} else if currCertValidity <= 2*time.Minute {
-		klog.Infof("Certificate is within 2 min of expiration. Rotating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
-		err := c.doCertRotation(clientset, currCertValidity+(certValidityDuration))
-		if err != nil {
-			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
-			os.Exit(1)
-		}
-		klog.Infof("Certificate rotated successfully for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+	err = c.rotateCert(ctx, clientset, certValidityDuration)
+	if err != nil {
+		klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
+		return err
 	}
 
 	// Start background job for rotation
+	klog.Infof("Starting cert rotation cronjob for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
 	rotateJob := cron.New()
 	rotateJob.AddFunc(fmt.Sprintf("@every %v", certValidityDuration-1*time.Minute), func() {
 		klog.Infof("Rotating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
-		err := c.doCertRotation(clientset, certValidityDuration+1*time.Minute)
+		err := c.rotateCert(ctx, clientset, certValidityDuration+1*time.Minute)
 		if err != nil {
 			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
 			os.Exit(1)
@@ -114,6 +109,80 @@ func (c *CertGenerator) Run() error {
 		klog.Infof("Certifcate rotation complete for webhook [%v/%v]. Will rotate in %v", c.WebhookNamespace, c.WebhookServerName, certValidityDuration)
 	})
 	rotateJob.Start()
+	klog.Infof("Cert rotation cronjob for webhook [%v/%v] started successfully", c.WebhookNamespace, c.WebhookServerName)
+
+	return nil
+}
+
+func (c *CertGenerator) rotateCert(ctx context.Context, clientset *kubernetes.Clientset, certValidity time.Duration) error {
+	klog.Info("Doing leader election")
+	id, err := os.Hostname()
+	if err != nil {
+		klog.Errorf("Failed to get hostname: %v", err)
+		return err
+	}
+
+	rl, err := resourcelock.New(
+		c.LeaderElection.ResourceLock,
+		c.LeaderElection.ResourceNamespace,
+		ResourceName,
+		clientset.CoreV1(),
+		clientset.CoordinationV1(),
+		resourcelock.ResourceLockConfig{
+			Identity: fmt.Sprintf("%v-%v", id, c.LeaderElection.ResourceName),
+		},
+	)
+	if err != nil {
+		klog.Errorf("Error creating resource lock: %v", err)
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: c.LeaderElection.LeaseDuration.Duration,
+		RenewDeadline: c.LeaderElection.RenewDeadline.Duration,
+		RetryPeriod:   c.LeaderElection.RetryPeriod.Duration,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) {
+				klog.Info("Leader election successful. Starting certificate rotation")
+
+				// Check certificate validity
+				klog.Infof("Checking certificate validity for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+				currCertValidity, hasCert := c.getCertValidity("tls.crt")
+
+				// Rotate if needed
+				if !hasCert {
+					klog.Infof("No certificate detected. Creating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+					err := c.doCertRotation(clientset, certValidity)
+					if err != nil {
+						klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
+						os.Exit(1)
+					}
+					klog.Infof("Certificate created successfully for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+				} else if currCertValidity <= 2*time.Minute {
+					klog.Infof("Certificate is within 2 min of expiration. Rotating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+					err := c.doCertRotation(clientset, currCertValidity+(certValidity))
+					if err != nil {
+						klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
+						os.Exit(1)
+					}
+					klog.Infof("Certificate rotated successfully for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+				} else {
+					klog.Infof("Certificate for webhook [%v/%v] is still valid for %v. Skipping cert rotation for now", c.WebhookNamespace, c.WebhookServerName, currCertValidity)
+				}
+
+				klog.Info("Finish certificate rotation. Relinquishing leadership")
+				cancel()
+			},
+			OnStoppedLeading: func() {
+				klog.Info("Lost leadership, stopping")
+			},
+		},
+		ReleaseOnCancel: true,
+	})
 
 	return nil
 }
@@ -137,7 +206,6 @@ func (c *CertGenerator) doCertRotation(clientset *kubernetes.Clientset, certVali
 		klog.Errorf("Error updating secret for webhook server [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
 		return err
 	}
-
 	klog.Infof("Certificates generated successfully for webhook server [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
 
 	klog.Infof("Updating ca bundle for webhook server [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
@@ -152,6 +220,7 @@ func (c *CertGenerator) doCertRotation(clientset *kubernetes.Clientset, certVali
 }
 
 func (c *CertGenerator) generateCACert(certValidity time.Duration) ([]byte, *ecdsa.PrivateKey, error) {
+	klog.V(4).Infof("Generating CA certificate and key for webhook server [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
 	caKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -178,10 +247,13 @@ func (c *CertGenerator) generateCACert(certValidity time.Duration) ([]byte, *ecd
 
 	caPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert})
 
+	klog.V(4).Infof("CA certificate and key generated successfully for webhook server [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+
 	return caPem, caKey, nil
 }
 
 func (c *CertGenerator) generateServerCert(caCert []byte, caKey *ecdsa.PrivateKey, certValidity time.Duration) ([]byte, []byte, error) {
+	klog.V(4).Infof("Generating tls certificate and key for webhook server [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
 	serverKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -224,11 +296,14 @@ func (c *CertGenerator) generateServerCert(caCert []byte, caKey *ecdsa.PrivateKe
 	}
 
 	keyPem := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: marshalledKey})
+	klog.V(4).Infof("TLS certificate and key generated successfully for webhook server [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
 
 	return certPem, keyPem, nil
 }
 
 func (c *CertGenerator) updateSecret(clientset *kubernetes.Clientset, certPEM, keyPEM, caPEM []byte) error {
+	klog.V(4).Infof("Updating secret [%v/%v] for webhook server [%v/%v]", c.SecretNamespace, c.SecretName, c.WebhookNamespace, c.WebhookServerName)
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      c.SecretName,
@@ -248,10 +323,35 @@ func (c *CertGenerator) updateSecret(clientset *kubernetes.Clientset, certPEM, k
 		return fmt.Errorf("failed to update secret: %v", err)
 	}
 
-	// Wait for secret to update
-	time.Sleep(15 * time.Second)
+	// Wait for certificate in local volume to update
+	err = c.waitForCertificateUpdate(filepath.Join(c.CertDir, "tls.crt"), certPEM)
+	if err != nil {
+		return fmt.Errorf("failed to wait for secret [%v/%v] to update: %v", c.SecretNamespace, c.SecretName, err)
+	}
+
+	klog.V(4).Infof("secret [%v/%v] updated successfully for webhook server [%v/%v]", c.SecretNamespace, c.SecretName, c.WebhookNamespace, c.WebhookServerName)
 
 	return nil
+}
+
+func (c *CertGenerator) waitForCertificateUpdate(certPath string, expectedContent []byte) error {
+	checkInterval := 2 * time.Second
+
+	for {
+		certBytes, err := os.ReadFile(certPath)
+		if err != nil {
+			return fmt.Errorf("unable to read certificate at path %v for webhook [%v/%v]: %v", certPath, c.WebhookNamespace, c.WebhookServerName, err)
+		}
+
+		block, _ := pem.Decode(certBytes)
+		if block != nil && block.Type == "CERTIFICATE" && bytes.Contains(certBytes, expectedContent) {
+			klog.V(4).Infof("Certificate updated successfully in the local volume for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+			return nil
+		}
+
+		klog.V(4).Infof("Waiting for certificate to be updated in the local volume for webhook [%v/%v], retrying in %v...", c.WebhookNamespace, c.WebhookServerName, checkInterval)
+		time.Sleep(checkInterval)
+	}
 }
 
 func (c *CertGenerator) updateWebhookConfiguration(client *kubernetes.Clientset, caCert []byte) error {

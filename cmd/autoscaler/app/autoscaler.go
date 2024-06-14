@@ -152,6 +152,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 
 		// Start certificate rotation
 		certGenerator := certrot.CertGenerator{
+			LeaderElection:    opts.LeaderElection,
 			WebhookNames:      opts.WebhookOpts.WebhookNames,
 			WebhookServerName: opts.WebhookOpts.WebhookServerName,
 			WebhookNamespace:  opts.WebhookOpts.WebhookNamespace,
@@ -162,7 +163,7 @@ func Run(ctx context.Context, opts *options.Options) error {
 			KubernetesDomain:  opts.WebhookOpts.KubernetesDomain,
 		}
 
-		certGenerator.Run()
+		certGenerator.Run(ctx)
 	}
 
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {

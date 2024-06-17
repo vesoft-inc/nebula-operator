@@ -1,4 +1,17 @@
 {{- if .Values.controllerManager.create }}
+{{- if and (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) (not .Values.admissionWebhook.useCertManager) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ template "admission-webhook.name" . }}-secret
+  namespace: {{ template "nebula-operator.namespace" . }}
+type: kubernetes.io/tls
+data:
+  tls.crt: ""
+  tls.key: ""
+  ca.crt: ""
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -43,8 +56,15 @@ spec:
             - --concurrent-nebulabackup-syncs={{ .Values.concurrentNebulaBackupSyncs }}
             - --leader-elect
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
-            - --enable-admission-webhook={{ .Values.admissionWebhook.create }}
-            - --webhook-secure-port={{ .Values.admissionWebhook.webhookBindPort }}
+            - --enable-admission-webhook={{ .Values.admissionWebhook.contollerManagerAdmissionWebhook.create }}
+            - --webhook-secure-port={{ .Values.admissionWebhook.contollerManagerAdmissionWebhook.webhookBindPort }}
+            - --webhook-namespace={{ template "nebula-operator.namespace" . }}
+            - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
+            - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
+            - --certificate-validity={{ .Values.admissionWebhook.certValidity }}
+            - --secret-namespace={{ template "nebula-operator.namespace" . }}
+            - --secret-name={{ template "admission-webhook.name" . }}-secret
+            - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}
             - --enable-kruise-scheme={{ .Values.enableKruiseScheme }}
             - --v={{ .Values.controllerManager.verbosity }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
@@ -55,9 +75,9 @@ spec:
           {{- end }}
           {{- if .Values.controllerManager.env }}{{ toYaml .Values.controllerManager.env | nindent 12 }}{{- end }}
           {{- end }}
-          {{- if .Values.admissionWebhook.create }}
+          {{- if .Values.admissionWebhook.contollerManagerAdmissionWebhook.create }}
           ports:
-            - containerPort: {{ .Values.admissionWebhook.webhookBindPort | default 9443 }}
+            - containerPort: {{ .Values.admissionWebhook.contollerManagerAdmissionWebhook.webhookBindPort | default 9443 }}
               name: webhook-server
               protocol: TCP
           {{- end }}
@@ -77,9 +97,9 @@ spec:
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false
-          {{- if or .Values.controllerManager.extraVolumeMounts .Values.admissionWebhook.create }}
+          {{- if or .Values.controllerManager.extraVolumeMounts .Values.admissionWebhook.contollerManagerAdmissionWebhook.create }}
           volumeMounts:
-          {{- if .Values.admissionWebhook.create }}
+          {{- if .Values.admissionWebhook.contollerManagerAdmissionWebhook.create }}
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
               readOnly: true
@@ -100,6 +120,15 @@ spec:
             - --leader-elect
             - --leader-elect-resource-namespace={{ template "nebula-operator.namespace" . }}
             - --v={{ .Values.controllerManager.verbosity }}
+            - --enable-admission-webhook={{ .Values.admissionWebhook.autoscalerAdmissionWebhook.create }}
+            - --webhook-secure-port={{ .Values.admissionWebhook.autoscalerAdmissionWebhook.webhookBindPort }}
+            - --webhook-namespace={{ template "nebula-operator.namespace" . }}
+            - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
+            - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
+            - --certificate-validity={{ .Values.admissionWebhook.certValidity }}
+            - --secret-namespace={{ template "nebula-operator.namespace" . }}
+            - --secret-name={{ template "admission-webhook.name" . }}-secret
+            - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}
           {{- if or .Values.kubernetesClusterDomain .Values.controllerManager.env }}
           env:
           {{- if .Values.kubernetesClusterDomain }}
@@ -107,6 +136,12 @@ spec:
               value: {{ .Values.kubernetesClusterDomain }}
           {{- end }}
           {{- if .Values.controllerManager.env }}{{ toYaml .Values.controllerManager.env | nindent 12 }}{{- end }}
+          {{- end }}
+          {{- if .Values.admissionWebhook.autoscalerAdmissionWebhook.create }}
+          ports:
+            - containerPort: {{ .Values.admissionWebhook.autoscalerAdmissionWebhook.webhookBindPort | default 9448 }}
+              name: webhook-server
+              protocol: TCP
           {{- end }}
           resources:
           {{- toYaml .Values.controllerManager.resources | nindent 12 }}
@@ -124,6 +159,12 @@ spec:
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false
+          {{- if .Values.admissionWebhook.autoscalerAdmissionWebhook.create }}
+          volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+          {{- end }}
     {{- with .Values.controllerManager.sidecarContainers }}
       {{- range $name, $spec :=  $.Values.controllerManager.sidecarContainers }}
         - name: {{ $name }}
@@ -153,9 +194,9 @@ spec:
       tolerations:
       {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if or .Values.controllerManager.extraVolumes .Values.admissionWebhook.create }}
+      {{- if or .Values.controllerManager.extraVolumes (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) }}
       volumes:
-      {{- if .Values.admissionWebhook.create }}
+      {{- if or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create}}
       - name: cert
         secret:
           defaultMode: 420

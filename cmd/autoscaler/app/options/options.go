@@ -27,6 +27,7 @@ import (
 	ctrlmgrconfigv1alpha1 "k8s.io/kube-controller-manager/config/v1alpha1"
 
 	"github.com/vesoft-inc/nebula-operator/pkg/flag/profile"
+	"github.com/vesoft-inc/nebula-operator/pkg/flag/webhook"
 )
 
 const (
@@ -57,6 +58,9 @@ type Options struct {
 	// HPAOpts defines the configuration of autoscaler controller.
 	HPAOpts ctrlmgrconfigv1alpha1.HPAControllerConfiguration
 
+	// EnableAdmissionWebhook enable admission webhook for autoscaler.
+	EnableAdmissionWebhook bool
+
 	// MetricsBindAddress is the TCP address that the controller should bind to
 	// for serving prometheus metrics.
 	// It can be set to "0" to disable the metrics serving.
@@ -70,6 +74,7 @@ type Options struct {
 	HealthProbeBindAddress string
 
 	ProfileOpts profile.Options
+	WebhookOpts webhook.Options
 }
 
 func NewOptions() *Options {
@@ -110,7 +115,10 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	flags.DurationVar(&o.HPAOpts.HorizontalPodAutoscalerInitialReadinessDelay.Duration, "autoscaler-initial-readiness-delay", defaultAutoscalerInitialReadinessDelay.Duration, "The period after pod start during which readiness changes will be treated as initial readiness.")
 
 	flags.StringVar(&o.MetricsBindAddress, "metrics-bind-address", ":8080", "The TCP address that the controller should bind to for serving prometheus metrics(e.g. 127.0.0.1:8080, :8080). It can be set to \"0\" to disable the metrics serving.")
+	flags.BoolVar(&o.EnableAdmissionWebhook, "enable-admission-webhook", false, "If set to ture enable admission webhook for autoscaler.")
 	flags.StringVar(&o.HealthProbeBindAddress, "health-probe-bind-address", ":8081", "The TCP address that the controller should bind to for serving health probes.(e.g. 127.0.0.1:8081, :8081). It can be set to \"0\" to disable the health probe serving.")
+
+	o.WebhookOpts.AddFlags(flags)
 
 	//flags.StringSliceVar(&o.Namespaces, "watch-namespaces", nil, "Namespaces restricts the controller watches for updates to Kubernetes objects. If empty, all namespaces are watched. Multiple namespaces seperated by comma.(e.g. ns1,ns2,ns3).")
 }

@@ -64,9 +64,17 @@ controllerManager:
 #    runAsNonRoot: true
 
 admissionWebhook:
-  create: false
-  # The TCP port the Webhook server binds to. (default 9443)
-  webhookBindPort: 9443
+  contollerManagerAdmissionWebhook:
+    create: false
+    # The TCP port the Webhook server binds to. (default 9443)
+    webhookBindPort: 9443
+  autoscalerAdmissionWebhook:
+    create: true
+    # The TCP port the Webhook server binds to. (default 9448)
+    webhookBindPort: 9448
+  useCertManager: false
+  # Number of days. Only needed if useCertManager is false. (default 1)
+  certValidity: 1
 
 scheduler:
   create: true

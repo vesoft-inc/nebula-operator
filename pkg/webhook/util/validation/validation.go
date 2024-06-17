@@ -47,3 +47,11 @@ func ValidateOddNumber(fldPath *field.Path, value int) *field.Error {
 	}
 	return nil
 }
+
+// ValidateMinLessThanMax validates that the minimum replicas is less then or equal to the maximum replicas
+func ValidateMinLessThanMax(fldPath *field.Path, minReplicas, maxReplicas int) *field.Error {
+	if minReplicas > maxReplicas {
+		return field.Invalid(fldPath, minReplicas, fmt.Sprintf("min replica %v should be less than or equal to max replicas %v", minReplicas, maxReplicas))
+	}
+	return nil
+}

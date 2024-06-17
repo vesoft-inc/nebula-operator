@@ -37,6 +37,19 @@ rules:
     verbs:
       - create
       - patch
+  {{- if and (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) (not .Values.admissionWebhook.useCertManager) }}
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+  {{- end}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -387,6 +400,18 @@ rules:
     verbs:
       - get
       - list
+  {{- if and (or .Values.admissionWebhook.contollerManagerAdmissionWebhook.create .Values.admissionWebhook.autoscalerAdmissionWebhook.create) (not .Values.admissionWebhook.useCertManager) }}
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+  {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

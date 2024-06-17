@@ -40,6 +40,7 @@ import (
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/cmd/controller-manager/app/options"
+	certrot "github.com/vesoft-inc/nebula-operator/pkg/cert-rotation"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/cronbackup"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulabackup"
 	"github.com/vesoft-inc/nebula-operator/pkg/controller/nebulacluster"
@@ -206,6 +207,21 @@ func Run(ctx context.Context, opts *options.Options) error {
 		hookServer.Register("/validate-nebulacluster",
 			&webhook.Admission{Handler: &ncwebhook.ValidatingAdmission{Decoder: decoder}})
 		hookServer.WebhookMux().Handle("/readyz/", http.StripPrefix("/readyz/", &healthz.Handler{}))
+
+		// Start certificate rotation
+		certGenerator := certrot.CertGenerator{
+			LeaderElection:    opts.LeaderElection,
+			WebhookNames:      opts.WebhookOpts.WebhookNames,
+			WebhookServerName: opts.WebhookOpts.WebhookServerName,
+			WebhookNamespace:  opts.WebhookOpts.WebhookNamespace,
+			CertDir:           opts.WebhookOpts.CertDir,
+			CertValidity:      opts.WebhookOpts.CertValidity,
+			SecretName:        opts.WebhookOpts.SecretName,
+			SecretNamespace:   opts.WebhookOpts.SecretNamespace,
+			KubernetesDomain:  opts.WebhookOpts.KubernetesDomain,
+		}
+
+		certGenerator.Run(ctx)
 	}
 
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {

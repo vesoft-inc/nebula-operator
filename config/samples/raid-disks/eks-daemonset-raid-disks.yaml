@@ -128,7 +128,7 @@ spec:
             device=${seen_arrays[0]}
             echo "Setting RAID array with Local SSDs on device ${device}"
             if [ ! -e "$device" ]; then
-              device="/dev/md0"
+              device="/dev/md/0"
               echo "y" | mdadm --create "${device}" --level=0 --force --raid-devices=$num_drives "${nvme_drives[@]}"
             fi
 

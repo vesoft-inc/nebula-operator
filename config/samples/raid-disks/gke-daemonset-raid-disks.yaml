@@ -28,6 +28,85 @@ spec:
             set -o errexit
             set -o nounset
             set -o pipefail
+            declare -A supported_oss
+            supported_oss["amzn"]="2,2023"
+            supported_oss["centos"]="7+"
+            supported_oss["debian"]="10+"
+            supported_oss["rhel"]="7+"
+            supported_oss["ubuntu"]="20+"
+
+            function install_nvme() {
+                id=$(cat /etc/*release* | grep -e ^ID= | grep -v \" || true)
+                if [[ -z $id ]]; then
+                    #for all oss except debian
+                    id=$(cat /etc/*release* | grep -e ^ID=)
+                fi
+
+                os=$(echo "$id" | cut -d = -f 2 | tr -d \")
+                version=$(cat /etc/*release* | grep "VERSION_ID" | cut -d = -f 2 | tr -d \")
+                supported_versions=${supported_oss[$os]}
+                
+                #check if os is supported
+                if [[ -z $supported_versions ]]; then
+                  echo "Unable to install nvem-cli. Unsupported OS $os. Supported OSs: ${!supported_oss[*]}"
+                  return 1
+                fi
+
+                #check if version is supported
+                readarray -t supported_versions_arr < <(echo "$supported_versions" | tr ',' '\n')
+                supported=0
+                for supported_ver in "${supported_versions_arr[@]}"; do
+                    if [[ $supported_ver == *"+" ]]; then
+                        ver_num=$(echo "$supported_ver" | tr -d +)
+                        if awk "BEGIN {exit !($version >= $ver_num)}"; then
+                            supported=1
+                            break
+                        fi
+                    elif [[ $supported_ver =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                        if awk "BEGIN {exit !($version == $supported_ver)}"; then
+                            supported=1
+                            break
+                        fi
+                    else
+                        echo "Invalid supported version/syntax $supported_ver found. Ignoring"
+                    fi
+                done
+
+                if [[ $supported = 0 ]]; then
+                    echo "Unsupported version $version for OS $os. Supported versions ${supported_versions_arr[*]}"
+                    return 2
+                fi
+
+                case $os in
+                    "amzn")
+                        echo "$os $version detected. Installing with yum"
+                        sudo yum install -y nvme-cli
+                        ;;
+                    "centos"|"rhel")
+                        if awk "BEGIN {exit !($version < 8)}"; then
+                            echo "$os $version detected. Installing with yum"
+                            sudo yum install -y nvme-cli
+                        else
+                            echo "$os $version detected. Installing with dnf"
+                            sudo dnf install -y nvme-cli
+                        fi
+                        ;;
+                    "debian"|"ubuntu")
+                        echo "$os $version detected. Installing with apt-get"
+                        sudo apt-get update
+                        sudo apt-get install -y nvme-cli
+                        ;;
+                esac
+            }
+
+            #main script
+            if ! sudo which nvme; then
+                echo "no nvme-cli detected. Installing nvme-cli"
+                install_nvme
+                echo "nvme-cli installed successfully"
+            else
+                echo "nvme-cli is already installed. Skipping installation"
+            fi
 
             devices=()
             for ssd in /dev/disk/by-id/google-local-nvme-ssd*; do
@@ -35,6 +114,7 @@ spec:
                 devices+=("${ssd}")
               fi
             done
+
             if [ "${#devices[@]}" -eq 0 ]; then
               echo "No Local NVMe SSD disks found."
               exit 0

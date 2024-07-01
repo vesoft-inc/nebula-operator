@@ -14,10 +14,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -38,10 +38,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -62,10 +62,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -86,10 +86,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -110,10 +110,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -134,10 +134,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -158,10 +158,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -182,10 +182,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -206,10 +206,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -230,10 +230,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -254,10 +254,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -278,10 +278,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -302,10 +302,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -326,10 +326,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -350,10 +350,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -374,10 +374,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -398,10 +398,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -422,10 +422,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -446,10 +446,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -470,10 +470,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-cluster
     sources:
       - https://github.com/vesoft-inc/nebula
@@ -494,10 +494,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-cluster
     sources:
     - https://github.com/vesoft-inc/nebula
@@ -519,10 +519,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -542,10 +542,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -565,10 +565,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -588,10 +588,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -611,10 +611,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -634,10 +634,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -657,10 +657,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -680,10 +680,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator
@@ -703,10 +703,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -726,10 +726,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -749,10 +749,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -772,10 +772,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -795,10 +795,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -818,10 +818,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -841,10 +841,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -864,10 +864,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -887,10 +887,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -910,10 +910,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -933,10 +933,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -956,10 +956,10 @@ entries:
       - database
       - graph database
     maintainers:
-      - email: vee.zhang@vesoft.com
-        name: Vee Zhang
+      - email: kevin.liu@vesoft.com
+        name: Kevin Liu
       - email: kevin.qiao@vesoft.com
-        name: Kevin Qiao
+        name: Lei Qiao
     name: nebula-operator
     sources:
       - https://github.com/vesoft-inc/nebula-operator
@@ -979,10 +979,10 @@ entries:
     - database
     - graph database
     maintainers:
-    - email: vee.zhang@vesoft.com
-      name: Vee Zhang
+    - email: kevin.liu@vesoft.com
+      name: Kevin Liu
     - email: kevin.qiao@vesoft.com
-      name: Kevin Qiao
+      name: Lei Qiao
     name: nebula-operator
     sources:
     - https://github.com/vesoft-inc/nebula-operator

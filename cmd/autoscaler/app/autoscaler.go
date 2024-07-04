@@ -163,7 +163,15 @@ func Run(ctx context.Context, opts *options.Options) error {
 			KubernetesDomain:  opts.WebhookOpts.KubernetesDomain,
 		}
 
-		certGenerator.Run(ctx)
+		if opts.WebhookOpts.UseCertGenerator {
+			err = certGenerator.Run(ctx)
+			if err != nil {
+				klog.Errorf("failed to generate certificate for webhook. err: %v", err)
+				return err
+			}
+		} else {
+			klog.Info("certificate generation disabled. will not generate self signed certificate")
+		}
 	}
 
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {

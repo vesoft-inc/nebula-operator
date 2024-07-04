@@ -62,8 +62,8 @@ type CertGenerator struct {
 	// CertDir represents the directory to save the certificates in
 	CertDir string
 
-	// CertValidity represents the number of days the certificate should be valid for
-	CertValidity int64
+	// CertValidity represents the duration the certificate should be valid for
+	CertValidity string
 
 	// SecretName represents the name of the secret used to store the webhook certificates
 	SecretName string
@@ -84,12 +84,22 @@ func (c *CertGenerator) Run(ctx context.Context) error {
 
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		klog.Errorf("Error building Kubernetes clientset: %v", err.Error())
+		klog.Errorf("Error building Kubernetes clientset: %v", err)
 		return err
 	}
 
+	certValidityDuration, err := time.ParseDuration(c.CertValidity)
+	if err != nil {
+		klog.Errorf("Invalid cert validity %v, cert validity needs to be in the format 0h0m0s. Msg: %v", c.CertValidity, err)
+		return err
+	}
+
+	// Check for minimum cert validity to avoid race condition (i.e. next certificate rotations starts before previous one if complete.)
+	if certValidityDuration < 5*time.Minute {
+		return fmt.Errorf("invalid cert validity %v, cert validity needs to be at least 2 minutes", c.CertValidity)
+	}
+
 	// Initialize certificate
-	certValidityDuration := (time.Duration(c.CertValidity) * 24 * 60 * time.Minute)
 	err = c.rotateCert(ctx, clientset, certValidityDuration)
 	if err != nil {
 		klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
@@ -97,11 +107,11 @@ func (c *CertGenerator) Run(ctx context.Context) error {
 	}
 
 	// Start background job for rotation
-	klog.Infof("Starting cert rotation cronjob for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+	klog.Infof("Starting cert rotation cronjob for webhook [%v/%v] every %v", c.WebhookNamespace, c.WebhookServerName, (certValidityDuration - 30*time.Second).String())
 	rotateJob := cron.New()
-	rotateJob.AddFunc(fmt.Sprintf("@every %v", certValidityDuration-1*time.Minute), func() {
+	rotateJob.AddFunc(fmt.Sprintf("@every %v", certValidityDuration-30*time.Second), func() {
 		klog.Infof("Rotating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
-		err := c.rotateCert(ctx, clientset, certValidityDuration+1*time.Minute)
+		err := c.rotateCert(ctx, clientset, certValidityDuration+30*time.Second)
 		if err != nil {
 			klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
 			os.Exit(1)
@@ -162,8 +172,8 @@ func (c *CertGenerator) rotateCert(ctx context.Context, clientset *kubernetes.Cl
 						os.Exit(1)
 					}
 					klog.Infof("Certificate created successfully for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
-				} else if currCertValidity <= 2*time.Minute {
-					klog.Infof("Certificate is within 2 min of expiration. Rotating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
+				} else if currCertValidity <= 1*time.Minute {
+					klog.Infof("Certificate is within 1 min of expiration. Rotating certificate for webhook [%v/%v]", c.WebhookNamespace, c.WebhookServerName)
 					err := c.doCertRotation(clientset, currCertValidity+(certValidity))
 					if err != nil {
 						klog.Errorf("Error rotating certificate for webhook [%v/%v]: %v", c.WebhookNamespace, c.WebhookServerName, err)
@@ -302,8 +312,6 @@ func (c *CertGenerator) generateServerCert(caCert []byte, caKey *ecdsa.PrivateKe
 }
 
 func (c *CertGenerator) updateSecret(clientset *kubernetes.Clientset, certPEM, keyPEM, caPEM []byte) error {
-	klog.V(4).Infof("Updating secret [%v/%v] for webhook server [%v/%v]", c.SecretNamespace, c.SecretName, c.WebhookNamespace, c.WebhookServerName)
-
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      c.SecretName,
@@ -318,13 +326,22 @@ func (c *CertGenerator) updateSecret(clientset *kubernetes.Clientset, certPEM, k
 	}
 
 	// The mounted local directory in the pod will automatically refresh regardless of the sync-interval since we're updating the data field in the secret here
-	_, err := clientset.CoreV1().Secrets(c.SecretNamespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to update secret: %v", err)
+	if _, err := clientset.CoreV1().Secrets(c.SecretNamespace).Get(context.TODO(), c.SecretName, metav1.GetOptions{}); err == nil {
+		klog.V(4).Infof("Updating secret [%v/%v] for webhook server [%v/%v]", c.SecretNamespace, c.SecretName, c.WebhookNamespace, c.WebhookServerName)
+		_, err := clientset.CoreV1().Secrets(c.SecretNamespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to update secret: %v", err)
+		}
+	} else {
+		klog.V(4).Infof("No secret found. creating secret [%v/%v] for webhook server [%v/%v]", c.SecretNamespace, c.SecretName, c.WebhookNamespace, c.WebhookServerName)
+		_, err := clientset.CoreV1().Secrets(c.SecretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create secret: %w", err)
+		}
 	}
 
 	// Wait for certificate in local volume to update
-	err = c.waitForCertificateUpdate(filepath.Join(c.CertDir, "tls.crt"), certPEM)
+	err := c.waitForCertificateUpdate(filepath.Join(c.CertDir, "tls.crt"), certPEM)
 	if err != nil {
 		return fmt.Errorf("failed to wait for secret [%v/%v] to update: %v", c.SecretNamespace, c.SecretName, err)
 	}

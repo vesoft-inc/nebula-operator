@@ -62,6 +62,7 @@ spec:
             - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
             - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
             - --certificate-validity={{ .Values.admissionWebhook.certValidity }}
+            - --use-cert-generator={{ not .Values.admissionWebhook.useCertManager }}
             - --secret-namespace={{ template "nebula-operator.namespace" . }}
             - --secret-name={{ template "admission-webhook.name" . }}-secret
             - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}
@@ -126,6 +127,7 @@ spec:
             - --webhook-server-name={{ template "admission-webhook.name" . }}-validating
             - --webhook-names={{ template "controller-manager-admission-webhook.name" . }}-service,{{ template "autoscaler-admission-webhook.name" . }}-service
             - --certificate-validity={{ .Values.admissionWebhook.certValidity }}
+            - --use-cert-generator={{ not .Values.admissionWebhook.useCertManager }}
             - --secret-namespace={{ template "nebula-operator.namespace" . }}
             - --secret-name={{ template "admission-webhook.name" . }}-secret
             - --kube-domain={{ default "cluster.local" .Values.kubernetesClusterDomain }}

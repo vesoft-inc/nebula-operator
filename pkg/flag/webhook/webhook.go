@@ -48,8 +48,8 @@ type Options struct {
 	// CertName is the server certificate name. Defaults to tls.crt.
 	CertName string
 
-	// CertValidity represents the number of days the certificate should be valid for
-	CertValidity int64
+	// CertValidity represents the duration the certificate should be valid for
+	CertValidity string
 
 	// KeyName is the server key name. Defaults to tls.key.
 	KeyName string
@@ -69,6 +69,9 @@ type Options struct {
 	// Defaults to 1.3.
 	TLSMinVersion string
 
+	// UseCertGenerator enables the self signed certificate
+	UseCertGenerator bool
+
 	// WebhookNames represents the names of the webhooks in the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)
 	WebhookNames *[]string
 
@@ -87,13 +90,14 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&o.CertDir, "webhook-cert-dir", defaultCertDir,
 		"The directory that contains the server key and certificate.")
 	flags.StringVar(&o.CertName, "webhook-tls-cert-file-name", "tls.crt", "The name of server certificate.")
-	flags.Int64Var(&o.CertValidity, "certificate-validity", 365, "Specifies the number of days the certificate should be valid for")
+	flags.StringVar(&o.CertValidity, "certificate-validity", "24h", "Specifies the duration the certificate should be valid for in 0h0m0s format")
 	flags.StringVar(&o.KeyName, "webhook-tls-private-key-file-name", "tls.key", "The name of server key.")
 	flags.StringVar(&o.KubernetesDomain, "kube-domain", "cluster.local", "Specifies the namespace of the webhook to associate with the certificate")
 	flags.StringVar(&o.SecretName, "secret-name", "nebula-operator-webhook-secret", "Specifies the name of the webhook to associate with the certificate")
 	flags.StringVar(&o.SecretNamespace, "secret-namespace", "default", "Specifies the namespace of the webhook to associate with the certificate")
 	flags.StringVar(&o.TLSMinVersion, "webhook-tls-min-version", defaultTLSMinVersion,
 		"Minimum TLS version supported. Possible values: 1.0, 1.1, 1.2, 1.3.")
+	flags.BoolVar(&o.UseCertGenerator, "use-cert-generator", false, "If set to true enable self signed certificate")
 	o.WebhookNames = flags.StringSlice("webhook-names", []string{}, "A comma-seperated list of the names of the webhooks supported by the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)")
 	flags.StringVar(&o.WebhookServerName, "webhook-server-name", "nebulaWebhook", "Specifies the name of the webhook to associate with the certificate")
 	flags.StringVar(&o.WebhookNamespace, "webhook-namespace", "default", "Specifies the namespace of the webhook to associate with the certificate")

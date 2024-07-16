@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	nebulago "github.com/vesoft-inc/nebula-go/v3/nebula"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -74,12 +73,16 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 		if err != nil {
 			return err
 		}
-		if len(spaces) == 0 {
-			return utilerrors.ReconcileErrorf("storaged pods [%v] are ready after restarted", readyPods)
+		if len(spaces) > 0 {
+			for _, podName := range readyPods {
+				fh, ok := nc.Status.Storaged.FailureHosts[podName]
+				if ok {
+					fh.DataBalanced = pointer.Bool(true)
+					nc.Status.Storaged.FailureHosts[podName] = fh
+				}
+			}
 		}
-	}
-	if err := s.deleteFailureHost(nc); err != nil {
-		return err
+		return utilerrors.ReconcileErrorf("storaged pods [%v] are ready after restarted", readyPods)
 	}
 	if err := s.deleteFailurePodAndPVC(nc); err != nil {
 		return err
@@ -154,84 +157,6 @@ func (s *storagedFailover) toleratePods(nc *v1alpha1.NebulaCluster) ([]string, e
 		}
 	}
 	return readyPods, nil
-}
-
-func (s *storagedFailover) deleteFailureHost(nc *v1alpha1.NebulaCluster) error {
-	ns := nc.GetNamespace()
-	componentName := nc.StoragedComponent().GetName()
-	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
-	if err != nil {
-		return err
-	}
-	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints, options...)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := metaClient.Disconnect()
-		if err != nil {
-			klog.Errorf("meta client disconnect failed: %v", err)
-		}
-	}()
-
-	hosts := make([]*nebulago.HostAddr, 0)
-	for _, fh := range nc.Status.Storaged.FailureHosts {
-		if pointer.BoolDeref(fh.HostDeleted, false) {
-			continue
-		}
-		count, err := metaClient.GetLeaderCount(fh.Host)
-		if err != nil {
-			klog.Errorf("storaged host %s get leader count failed: %v", fh.Host, err)
-			return err
-		}
-		if count > 0 {
-			return utilerrors.ReconcileErrorf("waiting for storaged host %s peers leader election done", fh.Host)
-		}
-		hosts = append(hosts, &nebulago.HostAddr{
-			Host: fh.Host,
-			Port: nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift),
-		})
-	}
-	if len(hosts) == 0 {
-		return nil
-	}
-
-	spaces, err := metaClient.ListSpaces()
-	if err != nil {
-		return err
-	}
-	if len(spaces) == 0 {
-		for podName, fh := range nc.Status.Storaged.FailureHosts {
-			fh.HostDeleted = pointer.Bool(true)
-			nc.Status.Storaged.FailureHosts[podName] = fh
-		}
-		return utilerrors.ReconcileErrorf("try to remove storaged cluster [%s/%s] failure host for recovery", ns, componentName)
-	}
-
-	if nc.Status.Storaged.RemovedSpaces == nil {
-		nc.Status.Storaged.RemovedSpaces = make([]int32, 0, len(spaces))
-	}
-	for _, space := range spaces {
-		if contains(nc.Status.Storaged.RemovedSpaces, *space.Id.SpaceID) {
-			continue
-		}
-		if err := removeHost(s.clientSet, metaClient, nc, *space.Id.SpaceID, hosts); err != nil {
-			klog.Errorf("storaged cluster [%s/%s] remove failure hosts %v failed: %v", ns, componentName, hosts, err)
-			return err
-		}
-		klog.Infof("storaged cluster [%s/%s] remove failure hosts %v in the space %s successfully", ns, componentName, hosts, space.Name)
-	}
-
-	for podName, fh := range nc.Status.Storaged.FailureHosts {
-		fh.HostDeleted = pointer.Bool(true)
-		fh.DataBalanced = pointer.Bool(false)
-		nc.Status.Storaged.FailureHosts[podName] = fh
-	}
-
-	nc.Status.Storaged.RemovedSpaces = nil
-	nc.Status.Storaged.LastBalanceJob = nil
-	return utilerrors.ReconcileErrorf("try to remove storaged cluster [%s/%s] failure host for recovery", ns, componentName)
 }
 
 func (s *storagedFailover) deleteFailurePodAndPVC(nc *v1alpha1.NebulaCluster) error {
@@ -314,7 +239,7 @@ func (s *storagedFailover) checkPendingPod(nc *v1alpha1.NebulaCluster) error {
 func (s *storagedFailover) balanceData(nc *v1alpha1.NebulaCluster) error {
 	podNames := make([]string, 0)
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
-		if pointer.BoolDeref(fh.DataBalanced, true) {
+		if pointer.BoolDeref(fh.DataBalanced, false) {
 			continue
 		}
 		pod, err := s.clientSet.Pod().GetPod(nc.Namespace, podName)

@@ -498,11 +498,6 @@ func (in *FailureHost) DeepCopyInto(out *FailureHost) {
 			(*out)[key] = val
 		}
 	}
-	if in.HostDeleted != nil {
-		in, out := &in.HostDeleted, &out.HostDeleted
-		*out = new(bool)
-		**out = **in
-	}
 	if in.DataBalanced != nil {
 		in, out := &in.DataBalanced, &out.DataBalanced
 		*out = new(bool)
@@ -1454,6 +1449,10 @@ func (in *StoragedStatus) DeepCopyInto(out *StoragedStatus) {
 		in, out := &in.BalancedSpaces, &out.BalancedSpaces
 		*out = make([]int32, len(*in))
 		copy(*out, *in)
+	}
+	if in.LastBalancedTime != nil {
+		in, out := &in.LastBalancedTime, &out.LastBalancedTime
+		*out = (*in).DeepCopy()
 	}
 	if in.LastBalanceJob != nil {
 		in, out := &in.LastBalanceJob, &out.LastBalanceJob

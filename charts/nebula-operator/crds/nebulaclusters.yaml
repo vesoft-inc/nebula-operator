@@ -11799,8 +11799,6 @@ spec:
                           type: string
                         host:
                           type: string
-                        hostDeleted:
-                          type: boolean
                         nodeDown:
                           type: boolean
                         podRebuilt:
@@ -11890,8 +11888,6 @@ spec:
                           type: string
                         host:
                           type: string
-                        hostDeleted:
-                          type: boolean
                         nodeDown:
                           type: boolean
                         podRebuilt:
@@ -11989,8 +11985,6 @@ spec:
                           type: string
                         host:
                           type: string
-                        hostDeleted:
-                          type: boolean
                         nodeDown:
                           type: boolean
                         podRebuilt:

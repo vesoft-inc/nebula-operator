@@ -589,7 +589,7 @@ func (c *storagedCluster) shouldRecover(nc *v1alpha1.NebulaCluster) (bool, []str
 	for _, host := range hostItems {
 		podName, ok := m[host.HostAddr.Host]
 		fh, exists := nc.Status.Storaged.FailureHosts[podName]
-		balanced := pointer.BoolDeref(fh.DataBalanced, true)
+		balanced := pointer.BoolDeref(fh.DataBalanced, false)
 		if ok && host.Status == meta.HostStatus_ONLINE && host.HostAddr.Port == thriftPort {
 			if exists && len(spaces) > 0 && !balanced {
 				continue

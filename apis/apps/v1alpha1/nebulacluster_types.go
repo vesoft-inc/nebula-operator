@@ -185,7 +185,6 @@ type EmptyStruct struct{}
 type FailureHost struct {
 	Host             string                    `json:"host,omitempty"`
 	PVCSet           map[types.UID]EmptyStruct `json:"pvcSet,omitempty"`
-	DataBalanced     *bool                     `json:"dataBalanced,omitempty"`
 	PodRestarted     bool                      `json:"podRestarted,omitempty"`
 	PodRebuilt       bool                      `json:"podRebuilt,omitempty"`
 	NodeDown         bool                      `json:"nodeDown,omitempty"`

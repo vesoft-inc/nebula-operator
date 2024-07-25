@@ -74,7 +74,15 @@ func NewMetaClient(hosts []string, options ...Option) (MetaInterface, error) {
 	if len(hosts) == 0 {
 		return nil, ErrNoAvailableMetadEndpoints
 	}
-	mc, err := newMetaConnection(hosts[0], options...)
+	var err error
+	var mc MetaInterface
+	for i := 0; i < len(hosts); i++ {
+		mc, err = newMetaConnection(hosts[i], options...)
+		if err != nil {
+			klog.Error(err)
+			continue
+		}
+	}
 	if err != nil {
 		return nil, err
 	}

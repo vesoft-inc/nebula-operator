@@ -498,11 +498,6 @@ func (in *FailureHost) DeepCopyInto(out *FailureHost) {
 			(*out)[key] = val
 		}
 	}
-	if in.DataBalanced != nil {
-		in, out := &in.DataBalanced, &out.DataBalanced
-		*out = new(bool)
-		**out = **in
-	}
 	in.CreationTime.DeepCopyInto(&out.CreationTime)
 	in.ConfirmationTime.DeepCopyInto(&out.ConfirmationTime)
 	in.DeletionTime.DeepCopyInto(&out.DeletionTime)

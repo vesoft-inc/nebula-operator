@@ -575,10 +575,6 @@ func (c *storagedCluster) shouldRecover(nc *v1alpha1.NebulaCluster) (bool, []str
 	defer func() {
 		_ = metaClient.Disconnect()
 	}()
-	spaces, err := metaClient.ListSpaces()
-	if err != nil {
-		return false, nil, err
-	}
 
 	onlineHosts := make([]string, 0)
 	hostItems, err := metaClient.ListHosts(meta.ListHostType_STORAGE)
@@ -588,12 +584,7 @@ func (c *storagedCluster) shouldRecover(nc *v1alpha1.NebulaCluster) (bool, []str
 	thriftPort := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
 	for _, host := range hostItems {
 		podName, ok := m[host.HostAddr.Host]
-		fh, exists := nc.Status.Storaged.FailureHosts[podName]
-		balanced := pointer.BoolDeref(fh.DataBalanced, false)
 		if ok && host.Status == meta.HostStatus_ONLINE && host.HostAddr.Port == thriftPort {
-			if exists && len(spaces) > 0 && !balanced {
-				continue
-			}
 			onlineHosts = append(onlineHosts, podName)
 		}
 	}

@@ -11792,8 +11792,6 @@ spec:
                         creationTime:
                           format: date-time
                           type: string
-                        dataBalanced:
-                          type: boolean
                         deletionTime:
                           format: date-time
                           type: string
@@ -11881,8 +11879,6 @@ spec:
                         creationTime:
                           format: date-time
                           type: string
-                        dataBalanced:
-                          type: boolean
                         deletionTime:
                           format: date-time
                           type: string
@@ -11978,8 +11974,6 @@ spec:
                         creationTime:
                           format: date-time
                           type: string
-                        dataBalanced:
-                          type: boolean
                         deletionTime:
                           format: date-time
                           type: string

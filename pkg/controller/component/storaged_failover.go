@@ -24,13 +24,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
-	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
@@ -51,46 +49,13 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 	if err != nil {
 		return err
 	}
-
 	if len(readyPods) > 0 {
-		options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
-		if err != nil {
-			return err
-		}
-		endpoints := []string{nc.GetMetadThriftConnAddress()}
-		metaClient, err := nebula.NewMetaClient(endpoints, options...)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err := metaClient.Disconnect()
-			if err != nil {
-				klog.Errorf("meta client disconnect failed: %v", err)
-			}
-		}()
-
-		spaces, err := metaClient.ListSpaces()
-		if err != nil {
-			return err
-		}
-		if len(spaces) > 0 {
-			for _, podName := range readyPods {
-				fh, ok := nc.Status.Storaged.FailureHosts[podName]
-				if ok {
-					fh.DataBalanced = pointer.Bool(true)
-					nc.Status.Storaged.FailureHosts[podName] = fh
-				}
-			}
-		}
 		return utilerrors.ReconcileErrorf("storaged pods [%v] are ready after restarted", readyPods)
 	}
 	if err := s.deleteFailurePodAndPVC(nc); err != nil {
 		return err
 	}
 	if err := s.checkPendingPod(nc); err != nil {
-		return err
-	}
-	if err := s.balanceData(nc); err != nil {
 		return err
 	}
 	return nil
@@ -234,70 +199,4 @@ func (s *storagedFailover) checkPendingPod(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 	return nil
-}
-
-func (s *storagedFailover) balanceData(nc *v1alpha1.NebulaCluster) error {
-	podNames := make([]string, 0)
-	for podName, fh := range nc.Status.Storaged.FailureHosts {
-		if pointer.BoolDeref(fh.DataBalanced, false) {
-			continue
-		}
-		pod, err := s.clientSet.Pod().GetPod(nc.Namespace, podName)
-		if err != nil {
-			return err
-		}
-		if !isPodHealthy(pod) {
-			return utilerrors.ReconcileErrorf("rebuilt storaged pod [%s/%s] is not healthy", nc.Namespace, podName)
-		}
-		podNames = append(podNames, podName)
-	}
-	if len(podNames) == 0 {
-		return nil
-	}
-
-	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
-	if err != nil {
-		return err
-	}
-	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints, options...)
-	if err != nil {
-		klog.Errorf("create meta client failed: %v", err)
-		return err
-	}
-	defer func() {
-		err := metaClient.Disconnect()
-		if err != nil {
-			klog.Errorf("disconnect meta client failed: %v", err)
-		}
-	}()
-
-	spaces, err := metaClient.ListSpaces()
-	if err != nil {
-		return err
-	}
-	if len(spaces) == 0 {
-		return utilerrors.ReconcileErrorf("storaged cluster [%s/%s] data balanced for recovery", nc.Namespace, nc.Name)
-	}
-
-	if nc.Status.Storaged.BalancedSpaces == nil {
-		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
-	}
-	for _, space := range spaces {
-		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
-			continue
-		}
-		if err := balanceSpace(s.clientSet, metaClient, nc, *space.Id.SpaceID); err != nil {
-			return err
-		}
-	}
-
-	for podName, fh := range nc.Status.Storaged.FailureHosts {
-		fh.DataBalanced = pointer.Bool(true)
-		nc.Status.Storaged.FailureHosts[podName] = fh
-	}
-
-	nc.Status.Storaged.BalancedSpaces = nil
-	nc.Status.Storaged.LastBalanceJob = nil
-	return utilerrors.ReconcileErrorf("storaged cluster [%s/%s] data balanced for recovery", nc.Namespace, nc.Name)
 }

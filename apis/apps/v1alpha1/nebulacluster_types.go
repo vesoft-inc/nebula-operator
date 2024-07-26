@@ -555,6 +555,12 @@ type ComponentSpec struct {
 
 	// +optional
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// +optional
+	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
+
+	// +optional
+	DNSPolicy corev1.DNSPolicy `json:"dnsPolicy,omitempty"`
 }
 
 // StorageClaim contains details of storage

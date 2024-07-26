@@ -831,6 +831,8 @@ func generateStatefulSet(c NebulaClusterComponent, cm *corev1.ConfigMap) (*appsv
 		Affinity:           c.ComponentSpec().Affinity(),
 		Tolerations:        c.ComponentSpec().Tolerations(),
 		ServiceAccountName: NebulaServiceAccountName,
+		DNSConfig:          c.ComponentSpec().DNSConfig(),
+		DNSPolicy:          c.ComponentSpec().DNSPolicy(),
 	}
 
 	podSpec.TopologySpreadConstraints = c.ComponentSpec().TopologySpreadConstraints(componentLabel)

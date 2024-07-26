@@ -953,6 +953,28 @@ spec:
                     type: object
                   collectRegex:
                     type: string
+                  dnsConfig:
+                    properties:
+                      nameservers:
+                        items:
+                          type: string
+                        type: array
+                      options:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          type: object
+                        type: array
+                      searches:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  dnsPolicy:
+                    type: string
                   env:
                     items:
                       properties:
@@ -3667,6 +3689,28 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  dnsConfig:
+                    properties:
+                      nameservers:
+                        items:
+                          type: string
+                        type: array
+                      options:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          type: object
+                        type: array
+                      searches:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  dnsPolicy:
+                    type: string
                   env:
                     items:
                       properties:
@@ -6483,6 +6527,28 @@ spec:
                       storageClassName:
                         type: string
                     type: object
+                  dnsConfig:
+                    properties:
+                      nameservers:
+                        items:
+                          type: string
+                        type: array
+                      options:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          type: object
+                        type: array
+                      searches:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  dnsPolicy:
+                    type: string
                   env:
                     items:
                       properties:
@@ -9338,6 +9404,28 @@ spec:
                           type: string
                       type: object
                     type: array
+                  dnsConfig:
+                    properties:
+                      nameservers:
+                        items:
+                          type: string
+                        type: array
+                      options:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          type: object
+                        type: array
+                      searches:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  dnsPolicy:
+                    type: string
                   enableAutoBalance:
                     type: boolean
                   enableForceUpdate:

@@ -30,7 +30,7 @@ import (
 // ValidatingAdmission handles StatefulSet
 type ValidatingAdmission struct {
 	// Decoder decodes objects
-	Decoder *admission.Decoder
+	Decoder admission.Decoder
 }
 
 var _ admission.Handler = &ValidatingAdmission{}

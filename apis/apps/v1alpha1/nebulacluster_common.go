@@ -319,15 +319,15 @@ func storageDataVolume(componentType string, index int) string {
 	return dataVolume(componentType)
 }
 
-func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, error) {
+func parseStorageRequest(res corev1.ResourceList) (corev1.VolumeResourceRequirements, error) {
 	if res == nil {
-		return corev1.ResourceRequirements{}, nil
+		return corev1.VolumeResourceRequirements{}, nil
 	}
 	storage, ok := res[corev1.ResourceStorage]
 	if !ok {
-		return corev1.ResourceRequirements{}, fmt.Errorf("storage request is not set")
+		return corev1.VolumeResourceRequirements{}, fmt.Errorf("storage request is not set")
 	}
-	return corev1.ResourceRequirements{
+	return corev1.VolumeResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceStorage: storage,
 		},

@@ -83,15 +83,15 @@ func (c *storagedComponent) GetDataStorageClass() *string {
 	return nil
 }
 
-func (c *storagedComponent) GetLogStorageResources() *corev1.ResourceRequirements {
+func (c *storagedComponent) GetLogStorageResources() *corev1.VolumeResourceRequirements {
 	if c.nc.Spec.Storaged.LogVolumeClaim == nil {
 		return nil
 	}
 	return c.nc.Spec.Storaged.LogVolumeClaim.Resources.DeepCopy()
 }
 
-func (c *storagedComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
-	resources := corev1.ResourceRequirements{}
+func (c *storagedComponent) GetDataStorageResources() (*corev1.VolumeResourceRequirements, error) {
+	resources := corev1.VolumeResourceRequirements{}
 	for i := range c.nc.Spec.Storaged.DataVolumeClaims {
 		claim := c.nc.Spec.Storaged.DataVolumeClaims[i]
 		storageRequest, err := parseStorageRequest(claim.Resources.Requests)

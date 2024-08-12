@@ -78,14 +78,14 @@ func (c *graphdComponent) GetLogStorageClass() *string {
 	return scName
 }
 
-func (c *graphdComponent) GetLogStorageResources() *corev1.ResourceRequirements {
+func (c *graphdComponent) GetLogStorageResources() *corev1.VolumeResourceRequirements {
 	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
 		return nil
 	}
 	return c.nc.Spec.Graphd.LogVolumeClaim.Resources.DeepCopy()
 }
 
-func (c *graphdComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
+func (c *graphdComponent) GetDataStorageResources() (*corev1.VolumeResourceRequirements, error) {
 	return nil, nil
 }
 

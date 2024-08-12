@@ -101,14 +101,13 @@ func getErrorAsStatus(err error) *framework.Status {
 }
 
 // PreFilter invoked at the prefilter extension point.
-// TODO: upgrade to v1.28.0+
 func (pl *NodeZone) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	// Skip if a pod has no topology spread constraints.
 	if len(pod.Spec.TopologySpreadConstraints) == 0 {
-		return nil, nil
+		return nil, framework.NewStatus(framework.Skip)
 	}
 	if !needSchedule(pod.Name) {
-		return nil, nil
+		return nil, framework.NewStatus(framework.Skip)
 	}
 	data, status := pl.getZoneMappingData(pod)
 	if !status.IsSuccess() {
@@ -180,13 +179,6 @@ func (pl *NodeZone) getTopologyZones() ([]string, error) {
 
 // Filter invoked at the filter extension point.
 func (pl *NodeZone) Filter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod, nodeInfo *framework.NodeInfo) *framework.Status {
-	if len(pod.Spec.TopologySpreadConstraints) == 0 {
-		return nil
-	}
-	if !needSchedule(pod.Name) {
-		return nil
-	}
-
 	state, err := getPreFilterState(cycleState)
 	if err != nil {
 		return framework.AsStatus(err)
@@ -382,15 +374,15 @@ func (pl *NodeZone) Unreserve(ctx context.Context, state *framework.CycleState, 
 
 // EventsToRegister returns the possible events that may make a Pod
 // failed by this plugin schedulable.
-func (pl *NodeZone) EventsToRegister() []framework.ClusterEvent {
-	return []framework.ClusterEvent{
-		{Resource: framework.Pod, ActionType: framework.All},
-		{Resource: framework.Node, ActionType: framework.All},
+func (pl *NodeZone) EventsToRegister() []framework.ClusterEventWithHint {
+	return []framework.ClusterEventWithHint{
+		{Event: framework.ClusterEvent{Resource: framework.Pod, ActionType: framework.All}},
+		{Event: framework.ClusterEvent{Resource: framework.Node, ActionType: framework.All}},
 	}
 }
 
 // New initializes a new plugin and returns it.
-func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
+func New(_ context.Context, _ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	informerFactory := handle.SharedInformerFactory()
 	cmLister := informerFactory.Core().V1().ConfigMaps().Lister()
 	podLister := informerFactory.Core().V1().Pods().Lister()

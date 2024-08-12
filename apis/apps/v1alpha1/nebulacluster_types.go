@@ -567,7 +567,7 @@ type ComponentSpec struct {
 type StorageClaim struct {
 	// Resources represents the minimum resources the volume should have.
 	// +optional
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	Resources corev1.VolumeResourceRequirements `json:"resources,omitempty"`
 
 	// Name of the StorageClass required by the claim.
 	// +optional

@@ -69,7 +69,7 @@ type Options struct {
 	// Defaults to 1.3.
 	TLSMinVersion string
 
-	// UseCertGenerator enables the self signed certificate
+	// UseCertGenerator enables the self-signed certificate
 	UseCertGenerator bool
 
 	// WebhookNames represents the names of the webhooks in the webhook server (i.e. controller-manager-nebula-operator-webhook, autoscaler-nebula-operator-webhook)

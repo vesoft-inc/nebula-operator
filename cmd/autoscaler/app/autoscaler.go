@@ -18,6 +18,7 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"net/http"
 
@@ -29,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -96,12 +98,13 @@ func Run(ctx context.Context, opts *options.Options) error {
 		RetryPeriod:                &opts.LeaderElection.RetryPeriod.Duration,
 		LeaderElectionResourceLock: opts.LeaderElection.ResourceLock,
 		HealthProbeBindAddress:     opts.HealthProbeBindAddress,
-		MetricsBindAddress:         opts.MetricsBindAddress,
+		Metrics: metricsserver.Options{
+			BindAddress: opts.MetricsBindAddress,
+		},
 
 		Cache: cache.Options{
 			SyncPeriod: &opts.HPAOpts.HorizontalPodAutoscalerSyncPeriod.Duration,
 			// FIXME: *cache.multiNamespaceInformer missing method GetController
-			//Namespaces: opts.Namespaces,
 		},
 		Controller: config.Controller{
 			GroupKindConcurrency: map[string]int{
@@ -113,12 +116,25 @@ func Run(ctx context.Context, opts *options.Options) error {
 
 	if opts.EnableAdmissionWebhook {
 		ctrlOptions.WebhookServer = webhook.NewServer(webhook.Options{
-			Host:          opts.WebhookOpts.BindAddress,
-			Port:          opts.WebhookOpts.SecurePort,
-			CertDir:       opts.WebhookOpts.CertDir,
-			CertName:      opts.WebhookOpts.CertName,
-			KeyName:       opts.WebhookOpts.KeyName,
-			TLSMinVersion: opts.WebhookOpts.TLSMinVersion,
+			Host:     opts.WebhookOpts.BindAddress,
+			Port:     opts.WebhookOpts.SecurePort,
+			CertDir:  opts.WebhookOpts.CertDir,
+			CertName: opts.WebhookOpts.CertName,
+			KeyName:  opts.WebhookOpts.KeyName,
+			TLSOpts: []func(*tls.Config){
+				func(config *tls.Config) {
+					switch opts.WebhookOpts.TLSMinVersion {
+					case "1.0":
+						config.MinVersion = tls.VersionTLS10
+					case "1.1":
+						config.MinVersion = tls.VersionTLS11
+					case "1.2":
+						config.MinVersion = tls.VersionTLS12
+					case "1.3":
+						config.MinVersion = tls.VersionTLS13
+					}
+				},
+			},
 		})
 	}
 

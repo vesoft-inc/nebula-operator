@@ -93,14 +93,14 @@ func (c *metadComponent) GetDataStorageClass() *string {
 	return scName
 }
 
-func (c *metadComponent) GetLogStorageResources() *corev1.ResourceRequirements {
+func (c *metadComponent) GetLogStorageResources() *corev1.VolumeResourceRequirements {
 	if c.nc.Spec.Metad.LogVolumeClaim == nil {
 		return nil
 	}
 	return c.nc.Spec.Metad.LogVolumeClaim.Resources.DeepCopy()
 }
 
-func (c *metadComponent) GetDataStorageResources() (*corev1.ResourceRequirements, error) {
+func (c *metadComponent) GetDataStorageResources() (*corev1.VolumeResourceRequirements, error) {
 	if c.nc.Spec.Metad.DataVolumeClaim == nil {
 		return nil, nil
 	}

@@ -208,8 +208,8 @@ func (a *componentAccessor) DNSPolicy() corev1.DNSPolicy {
 type NebulaClusterComponent interface {
 	BaseComponent
 
-	GetLogStorageResources() *corev1.ResourceRequirements
-	GetDataStorageResources() (*corev1.ResourceRequirements, error)
+	GetLogStorageResources() *corev1.VolumeResourceRequirements
+	GetDataStorageResources() (*corev1.VolumeResourceRequirements, error)
 	GetConfig() map[string]string
 	GetConfigMapKey() string
 

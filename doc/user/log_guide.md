@@ -95,5 +95,4 @@ spec:
         cpu: 500m
         memory: 500Mi
     version: v3.6.0
-  unsatisfiableAction: ScheduleAnyway
 ```

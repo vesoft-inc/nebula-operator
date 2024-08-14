@@ -155,6 +155,22 @@ nebula:
 
   sslCerts: {}
 
+# Note: for all 3 components, specifying positive integers for both minAvailable and maxUnavailable will result in minAvailable being used.
+# Please specify any negitive interger for minAvailable (i.e. -1) and a positive integer for maxUnavailable to use maxUnavailable instead.
+pdb:
+  graphd:
+    enable: false
+    minAvailable: 2
+    maxUnavailable:
+  metad:
+    enable: false
+    minAvailable: 3
+    maxUnavailable:
+  storaged:
+    enable: false
+    minAvailable: 3
+    maxUnavailable:
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

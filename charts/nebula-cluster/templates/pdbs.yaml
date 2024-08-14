@@ -1,0 +1,56 @@
+{{- if .Values.pdb.graphd.enable }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "nebula-cluster.name" . }}-graphd-pdb
+spec:
+  {{- if gt (int .Values.pdb.graphd.minAvailable) 0 }}
+  minAvailable: {{ .Values.pdb.graphd.minAvailable }}
+  {{- else if gt (int .Values.pdb.graphd.maxUnavailable) 0 }}
+  maxUnavailable: {{ .Values.pdb.graphd.maxUnavailable }}
+  {{- else }}
+  {{- fail "either minAvailable or maxUnavailable for graphd pdb must be specified and be greater than 0" }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" . }}
+      app.kubernetes.io/component: graphd
+{{- end }}
+{{- if .Values.pdb.metad.enable }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "nebula-cluster.name" . }}-metad-pdb
+spec:
+  {{- if gt (int .Values.pdb.metad.minAvailable) 0 }}
+  minAvailable: {{ .Values.pdb.metad.minAvailable }}
+  {{- else if gt (int .Values.pdb.metad.maxUnavailable) 0 }}
+  maxUnavailable: {{ .Values.pdb.metad.maxUnavailable }}
+  {{- else }}
+  {{- fail "either minAvailable or maxUnavailable for metad pdb must be specified and be greater than 0" }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" . }}
+      app.kubernetes.io/component: metad
+{{- end }}
+{{- if .Values.pdb.storaged.enable }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "nebula-cluster.name" . }}-storaged-pdb
+spec:
+  {{- if gt (int .Values.pdb.storaged.minAvailable) 0 }}
+  minAvailable: {{ .Values.pdb.storaged.minAvailable }}
+  {{- else if gt (int .Values.pdb.storaged.maxUnavailable) 0 }}
+  maxUnavailable: {{ .Values.pdb.storaged.maxUnavailable }}
+  {{- else }}
+  {{- fail "either minAvailable or maxUnavailable for storaged pdb must be specified and be greater than 0" }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" . }}
+      app.kubernetes.io/component: storaged
+{{- end }}

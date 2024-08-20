@@ -1,20 +1,22 @@
-{{- range $component, $pdb-settings := .Values.pdb }}
-  {{- $enabled := index $pdb-settings "enable" }}
-  {{- $minAvailable := index $pdb-settings "minAvailable" }}
-  {{- $maxUnavailable := index $pdb-settings "maxUnavailable" }}
+{{- range $component, $pdbSettings := .Values.pdb }}
+  {{- $enabled := default false $pdbSettings.enable }}
+  {{- $minAvailable := default "" $pdbSettings.minAvailable }}
+  {{- $maxUnavailable := default "" $pdbSettings.maxUnavailable }}
   {{- if $enabled }}
   apiVersion: policy/v1
   kind: PodDisruptionBudget
   metadata:
     name: {{ template "nebula-cluster.name" . }}-{{ $component }}-pdb
   spec:
-    {{- if gt (int $minAvailable) 0 }}
+    {{- if and (ne $minAvailable "") (not (hasSuffix $minAvailable "%")) }}
+    minAvailable: {{ $minAvailable | int }}
+    {{- else if hasSuffix $minAvailable "%" }}
     minAvailable: {{ $minAvailable }}
-    {{- else if ge (int $maxUnavailable) 0 }}
-    maxUnavailable: {{ $maxUnavailable }}
+    {{- else if and (ne $maxUnavailable "") (ge (int $maxUnavailable) 0) }}
+    maxUnavailable: {{ $maxUnavailable | int }}
     {{- else }}
     {{- fail "either minAvailable or maxUnavailable for the $component pdb must be specified. \
-    minAvailable must be a positive integer and maxUnavailable must be a non-negative integer." }}
+    minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
     {{- end }}
     selector:
       matchLabels:

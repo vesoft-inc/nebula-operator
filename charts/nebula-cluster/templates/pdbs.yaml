@@ -15,8 +15,7 @@
     {{- else if and (ne $maxUnavailable "") (ge (int $maxUnavailable) 0) }}
     maxUnavailable: {{ $maxUnavailable | int }}
     {{- else }}
-    {{- fail "either minAvailable or maxUnavailable for the $component pdb must be specified. \
-    minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
+    {{- fail "either minAvailable or maxUnavailable for the $component pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
     {{- end }}
     selector:
       matchLabels:

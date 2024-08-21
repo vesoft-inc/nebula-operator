@@ -1,25 +1,32 @@
+{{- $root := . -}}
+
 {{- range $component, $pdbSettings := .Values.pdb }}
-  {{- $enabled := default false $pdbSettings.enable }}
-  {{- $minAvailable := default "" $pdbSettings.minAvailable }}
-  {{- $maxUnavailable := default "" $pdbSettings.maxUnavailable }}
+  {{- $enabled := index $pdbSettings "enable" }}
+  {{- $minAvailable := index $pdbSettings "minAvailable" }}
+  {{- $maxUnavailable := index $pdbSettings "maxUnavailable" }}
   {{- if $enabled }}
-  apiVersion: policy/v1
-  kind: PodDisruptionBudget
-  metadata:
-    name: {{ template "nebula-cluster.name" . }}-{{ $component }}-pdb
-  spec:
-    {{- if and (ne $minAvailable "") (not (hasSuffix $minAvailable "%")) }}
-    minAvailable: {{ $minAvailable | int }}
-    {{- else if hasSuffix $minAvailable "%" }}
-    minAvailable: {{ $minAvailable }}
-    {{- else if and (ne $maxUnavailable "") (ge (int $maxUnavailable) 0) }}
-    maxUnavailable: {{ $maxUnavailable | int }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "nebula-cluster.name" $root }}-{{ $component }}-pdb
+spec:
+  {{- if and (and (ne $minAvailable "") (not (hasSuffix "%" $minAvailable ))) (gt (int $minAvailable) 0) }}
+  minAvailable: {{ $minAvailable | int }}
+  {{- else if hasSuffix "%" $minAvailable }}
+    {{- $minAvailableInt := (trimSuffix "%" $minAvailable | int) }}
+    {{- if gt (int $minAvailableInt) 0 }}
+  minAvailable: {{ $minAvailable }}
     {{- else }}
-    {{- fail "either minAvailable or maxUnavailable for the $component pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
-    {{- end }}
-    selector:
-      matchLabels:
-        app.kubernetes.io/cluster: {{ template "nebula-cluster.name" . }}
-        app.kubernetes.io/component: {{ $component }}
+      {{- fail (printf "minAvailable percentage for the %s pdb must must be positive." $component) }}
+    {{- end}}
+  {{- else if and (ne $maxUnavailable "") (ge (int $maxUnavailable) 0) }}
+  maxUnavailable: {{ $maxUnavailable | int }}
+  {{- else }}
+  {{- fail (printf "either minAvailable or maxUnavailable for the %s pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." $component) }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" $root }}
+      app.kubernetes.io/component: {{ $component }}
   {{- end }}
 {{- end }}

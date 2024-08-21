@@ -1,32 +1,56 @@
-{{- $root := . -}}
-
-{{- range $component, $pdbSettings := .Values.pdb }}
-  {{- $enabled := index $pdbSettings "enable" }}
-  {{- $minAvailable := index $pdbSettings "minAvailable" }}
-  {{- $maxUnavailable := index $pdbSettings "maxUnavailable" }}
-  {{- if $enabled }}
+{{- if .Values.pdb.graphd.enable }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ template "nebula-cluster.name" $root }}-{{ $component }}-pdb
+  name: {{ template "nebula-cluster.name" . }}-graphd-pdb
 spec:
-  {{- if and (and (ne $minAvailable "") (not (hasSuffix "%" $minAvailable ))) (gt (int $minAvailable) 0) }}
-  minAvailable: {{ $minAvailable | int }}
-  {{- else if hasSuffix "%" $minAvailable }}
-    {{- $minAvailableInt := (trimSuffix "%" $minAvailable | int) }}
-    {{- if gt (int $minAvailableInt) 0 }}
-  minAvailable: {{ $minAvailable }}
-    {{- else }}
-      {{- fail (printf "minAvailable percentage for the %s pdb must must be positive." $component) }}
-    {{- end}}
-  {{- else if and (ne $maxUnavailable "") (ge (int $maxUnavailable) 0) }}
-  maxUnavailable: {{ $maxUnavailable | int }}
+  {{- if gt (int .Values.pdb.graphd.minAvailable) 0 }}
+  minAvailable: {{ .Values.pdb.graphd.minAvailable }}
+  {{- else if gt (int .Values.pdb.graphd.maxUnavailable) 0 }}
+  maxUnavailable: {{ .Values.pdb.graphd.maxUnavailable }}
   {{- else }}
-  {{- fail (printf "either minAvailable or maxUnavailable for the %s pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." $component) }}
+  {{- fail "either minAvailable or maxUnavailable for the graphd pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
   {{- end }}
   selector:
     matchLabels:
-      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" $root }}
-      app.kubernetes.io/component: {{ $component }}
+      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" . }}
+      app.kubernetes.io/component: graphd
+{{- end }}
+{{- if .Values.pdb.metad.enable }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "nebula-cluster.name" . }}-metad-pdb
+spec:
+  {{- if gt (int .Values.pdb.metad.minAvailable) 0 }}
+  minAvailable: {{ .Values.pdb.metad.minAvailable }}
+  {{- else if gt (int .Values.pdb.metad.maxUnavailable) 0 }}
+  maxUnavailable: {{ .Values.pdb.metad.maxUnavailable }}
+  {{- else }}
+  {{- fail "either minAvailable or maxUnavailable for the metad pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
   {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" . }}
+      app.kubernetes.io/component: metad
+{{- end }}
+{{- if .Values.pdb.storaged.enable }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "nebula-cluster.name" . }}-storaged-pdb
+spec:
+  {{- if gt (int .Values.pdb.storaged.minAvailable) 0 }}
+  minAvailable: {{ .Values.pdb.storaged.minAvailable }}
+  {{- else if gt (int .Values.pdb.storaged.maxUnavailable) 0 }}
+  maxUnavailable: {{ .Values.pdb.storaged.maxUnavailable }}
+  {{- else }}
+  {{- fail "either minAvailable or maxUnavailable for the storaged pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/cluster: {{ template "nebula-cluster.name" . }}
+      app.kubernetes.io/component: storaged
 {{- end }}

@@ -4,10 +4,12 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ template "nebula-cluster.name" . }}-graphd-pdb
 spec:
-  {{- if gt (int .Values.pdb.graphd.minAvailable) 0 }}
+  {{- if and (not (hasSuffix "%" .Values.pdb.graphd.minAvailable )) (gt (int .Values.pdb.graphd.minAvailable) 0) }}
+  minAvailable: {{ int .Values.pdb.graphd.minAvailable }}
+  {{- else if hasSuffix "%" .Values.pdb.graphd.minAvailable }}
   minAvailable: {{ .Values.pdb.graphd.minAvailable }}
   {{- else if ge (int .Values.pdb.graphd.maxUnavailable) 0 }}
-  maxUnavailable: {{ .Values.pdb.graphd.maxUnavailable }}
+  maxUnavailable: {{ int .Values.pdb.graphd.maxUnavailable }}
   {{- else }}
   {{- fail "either minAvailable or maxUnavailable for the graphd pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
   {{- end }}
@@ -23,10 +25,12 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ template "nebula-cluster.name" . }}-metad-pdb
 spec:
-  {{- if gt (int .Values.pdb.metad.minAvailable) 0 }}
+  {{- if and (not (hasSuffix "%" .Values.pdb.metad.minAvailable )) (gt (int .Values.pdb.metad.minAvailable) 0) }}
+  minAvailable: {{ int .Values.pdb.metad.minAvailable }}
+  {{- else if hasSuffix "%" .Values.pdb.metad.minAvailable }}
   minAvailable: {{ .Values.pdb.metad.minAvailable }}
   {{- else if ge (int .Values.pdb.metad.maxUnavailable) 0 }}
-  maxUnavailable: {{ .Values.pdb.metad.maxUnavailable }}
+  maxUnavailable: {{ int .Values.pdb.metad.maxUnavailable }}
   {{- else }}
   {{- fail "either minAvailable or maxUnavailable for the metad pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
   {{- end }}
@@ -42,10 +46,12 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ template "nebula-cluster.name" . }}-storaged-pdb
 spec:
-  {{- if gt (int .Values.pdb.storaged.minAvailable) 0 }}
+  {{- if and (not (hasSuffix "%" .Values.pdb.storaged.minAvailable )) (gt (int .Values.pdb.storaged.minAvailable) 0) }}
+  minAvailable: {{ int .Values.pdb.storaged.minAvailable }}
+  {{- else if hasSuffix "%" .Values.pdb.storaged.minAvailable }}
   minAvailable: {{ .Values.pdb.storaged.minAvailable }}
   {{- else if ge (int .Values.pdb.storaged.maxUnavailable) 0 }}
-  maxUnavailable: {{ .Values.pdb.storaged.maxUnavailable }}
+  maxUnavailable: {{ int .Values.pdb.storaged.maxUnavailable }}
   {{- else }}
   {{- fail "either minAvailable or maxUnavailable for the storaged pdb must be specified. minAvailable must be a positive integer or percentage, and maxUnavailable must be a non-negative integer." }}
   {{- end }}

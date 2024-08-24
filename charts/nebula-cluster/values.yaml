@@ -161,15 +161,15 @@ pdb:
   graphd:
     enable: false
     minAvailable: 2
-    maxUnavailable:
+    maxUnavailable: 1
   metad:
     enable: false
     minAvailable: 3
-    maxUnavailable:
+    maxUnavailable: 1
   storaged:
     enable: false
     minAvailable: 3
-    maxUnavailable:
+    maxUnavailable: 1
 
 imagePullSecrets: []
 nameOverride: ""

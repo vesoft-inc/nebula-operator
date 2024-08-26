@@ -121,6 +121,9 @@ type NebulaClusterSpec struct {
 
 	// +optional
 	AlpineImage *string `json:"alpineImage,omitempty"`
+
+	// +optional
+	CoredumpPreservation *StorageClaim `json:"coredumpPreservation,omitempty"`
 }
 
 // NebulaClusterStatus defines the observed state of NebulaCluster

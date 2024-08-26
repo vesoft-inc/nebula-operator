@@ -326,3 +326,13 @@ spec:
   {{ toYaml . | nindent 4 }}
   {{- end }}
   {{- end }}
+  {{- if .Values.nebula.coredumpPreservation.enable }}
+  coredumpPreservation:
+    resources:
+      requests:
+        storage: {{ .Values.nebula.coredumpPreservation.volumeSize }}
+      {{- if .Values.nebula.storageClassName }}
+      storageClassName: {{ .Values.nebula.storageClassName }}
+      {{- end }}
+  {{- end }}
+

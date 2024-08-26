@@ -319,6 +319,10 @@ func storageDataVolume(componentType string, index int) string {
 	return dataVolume(componentType)
 }
 
+func coredumpVolume(componentType string) string {
+	return componentType + "-coredump"
+}
+
 func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, error) {
 	if res == nil {
 		return corev1.ResourceRequirements{}, nil
@@ -342,6 +346,62 @@ func logVolumeExists(componentType string, volumes []corev1.Volume) bool {
 		}
 	}
 	return false
+}
+
+func generateCoredumpVolume(componentType string) corev1.Volume {
+	return corev1.Volume{
+		Name: coredumpVolume(componentType),
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: coredumpVolume(componentType),
+			},
+		},
+	}
+}
+
+func generateCoredumpVolumeClaim(nc *NebulaCluster, componentType string) (*corev1.PersistentVolumeClaim, error) {
+	coredumpSC, coredumpRes := getCoredumpStorageClass(nc), getCoredumpStorageResources(nc)
+	coredumpReq, err := parseStorageRequest(coredumpRes.Requests)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse storage request for %s coredump volume, error: %v", componentType, err)
+	}
+
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: logVolume(componentType),
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources:        coredumpReq,
+			StorageClassName: coredumpSC,
+		},
+	}, nil
+}
+
+func getCoredumpStorageClass(nc *NebulaCluster) *string {
+	if nc.Spec.CoredumpPreservation == nil {
+		return nil
+	}
+	scName := nc.Spec.CoredumpPreservation.StorageClassName
+	if scName == nil || *scName == "" {
+		return nil
+	}
+	return scName
+}
+
+func getCoredumpStorageResources(nc *NebulaCluster) *corev1.ResourceRequirements {
+	if nc.Spec.CoredumpPreservation == nil {
+		return nil
+	}
+	return nc.Spec.CoredumpPreservation.Resources.DeepCopy()
+}
+
+func generateCoredumpVolumeMount(componentType string) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      coredumpVolume(componentType),
+		MountPath: "/usr/local/nebula/coredump",
+		SubPath:   "coredump",
+	}
 }
 
 func generateLogContainer(c NebulaClusterComponent) corev1.Container {

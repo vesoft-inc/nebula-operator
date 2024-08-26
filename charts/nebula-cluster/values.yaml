@@ -155,6 +155,10 @@ nebula:
 
   sslCerts: {}
 
+  coredumpPreservation:
+    enable: false
+    volumeSize: 5Gi
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

@@ -368,7 +368,7 @@ func generateCoredumpVolumeClaim(nc *NebulaCluster, componentType string) (*core
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: logVolume(componentType),
+			Name: coredumpVolume(componentType),
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},

@@ -283,7 +283,7 @@ func (c *graphdComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClaim,
 	componentType := c.ComponentType().String()
 	claims := make([]corev1.PersistentVolumeClaim, 0)
 
-	if c.nc.Spec.Graphd.LogVolumeClaim == nil {
+	if c.nc.Spec.Graphd.LogVolumeClaim != nil {
 		logSC, logRes := c.GetLogStorageClass(), c.GetLogStorageResources()
 		storageRequest, err := parseStorageRequest(logRes.Requests)
 		if err != nil {

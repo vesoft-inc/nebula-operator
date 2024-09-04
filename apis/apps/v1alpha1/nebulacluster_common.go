@@ -49,6 +49,7 @@ const (
 	AgentPortNameGRPC         = "grpc"
 	DefaultAgentImage         = "vesoft/nebula-agent"
 	DefaultAlpineImage        = "vesoft/nebula-alpine:latest"
+	CoredumpMountPath         = "/usr/local/nebula/coredump"
 
 	ZoneSuffix = "zone"
 )
@@ -399,7 +400,7 @@ func getCoredumpStorageResources(nc *NebulaCluster) *corev1.ResourceRequirements
 func generateCoredumpVolumeMount(componentType string) corev1.VolumeMount {
 	return corev1.VolumeMount{
 		Name:      coredumpVolume(componentType),
-		MountPath: "/usr/local/nebula/coredump",
+		MountPath: CoredumpMountPath,
 		SubPath:   "coredump",
 	}
 }
@@ -652,6 +653,52 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 	return container
 }
 
+func genCoredumpPresInitContainer(nc *NebulaCluster) corev1.Container {
+	script := `
+set -exo pipefail
+
+ulimit -c unlimited
+echo "${MOUNT_PATH}/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
+
+`
+	image := DefaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	container := corev1.Container{
+		Name:    "coredump-preservation-init",
+		Image:   image,
+		Command: []string{"/bin/sh", "-c"},
+		Args:    []string{`echo "$SCRIPT" > /tmp/coredump-setup-script && sh /tmp/coredump-setup-script`},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "MOUNT_PATH",
+				Value: CoredumpMountPath,
+			},
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "coredump",
+				MountPath: CoredumpMountPath,
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged: pointer.Bool(true),
+		},
+	}
+
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
+	return container
+}
+
 func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 	containers := c.ComponentSpec().InitContainers()
 	nc := c.GetNebulaCluster()
@@ -659,8 +706,53 @@ func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 		nodeLabelsContainer := genNodeLabelsContainer(nc)
 		containers = append(containers, nodeLabelsContainer)
 	}
+	if nc.Spec.CoredumpPreservation != nil {
+		coreDumpPresInitContainer := genCoredumpPresInitContainer(nc)
+		containers = append(containers, coreDumpPresInitContainer)
+	}
 	containers = append(containers, genDynamicFlagsContainer(c))
 	return containers
+}
+
+func generateCoredumpManagementContainer(nc *NebulaCluster) corev1.Container {
+	script := `
+set -exo pipefail
+
+sleep 3600
+`
+	image := DefaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	container := corev1.Container{
+		Name:    "coredump-management",
+		Image:   image,
+		Command: []string{"/bin/sh", "-c"},
+		Args:    []string{`echo "$SCRIPT" > /tmp/coredump-management-script && sh /tmp/coredump-management-script`},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "MOUNT_PATH",
+				Value: CoredumpMountPath,
+			},
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "coredump",
+				MountPath: CoredumpMountPath,
+			},
+		},
+	}
+
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
+	return container
 }
 
 func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dynamicFlags map[string]string) ([]corev1.Container, error) {
@@ -814,6 +906,10 @@ done
 	if nc.IsLogRotateEnabled() && logVolumeExists(componentType, c.GenerateVolumes()) {
 		logContainer := generateLogContainer(c)
 		containers = append(containers, logContainer)
+	}
+	if nc.Spec.CoredumpPreservation != nil {
+		coredumpManagementContainer := generateCoredumpManagementContainer(nc)
+		containers = append(containers, coredumpManagementContainer)
 	}
 
 	containers = mergeSidecarContainers(containers, c.ComponentSpec().SidecarContainers())

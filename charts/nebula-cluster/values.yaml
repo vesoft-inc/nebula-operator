@@ -156,7 +156,7 @@ nebula:
   sslCerts: {}
 
   coredumpPreservation:
-    maxTimeKept: 1m
+    maxTimeKept: 72h
     enable: false
     volumeSize: 5Gi
 

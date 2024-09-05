@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -720,7 +719,7 @@ func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 
 func generateCoredumpManagementContainer(nc *NebulaCluster, componentType, timeToKeep string) corev1.Container {
 	script := `
-set -exo pipefail
+set -eo pipefail
 
 if [ ! -d "${COREDUMP_DIR}" ]; then
     echo "Error: Directory ${COREDUMP_DIR} does not exist."
@@ -743,9 +742,9 @@ while true; do
 	find "${COREDUMP_DIR}" -type f -name 'core*' > ${CURR_COREDUMP_LIST}
     new_coredumps=$(comm -13 "${COREDUMP_LIST}" ${CURR_COREDUMP_LIST})
 
-    if [ -n "\$new_coredumps" ]; then
-        for coredump in \$new_coredumps; do
-            log_message "New coredump detected: \$coredump"
+    if [ -n "$new_coredumps" ]; then
+        for coredump in $new_coredumps; do
+            log_message "New coredump detected: $coredump"
         done
         # Update the list of known coredumps
         mv ${CURR_COREDUMP_LIST} "${COREDUMP_LIST}"
@@ -771,10 +770,6 @@ done
 		Args:    []string{`echo "$SCRIPT" > /tmp/coredump-management-script && sh /tmp/coredump-management-script`},
 		Env: []corev1.EnvVar{
 			{
-				Name:  "MOUNT_PATH",
-				Value: CoredumpMountPath,
-			},
-			{
 				Name:  "SCRIPT",
 				Value: script,
 			},
@@ -784,11 +779,11 @@ done
 			},
 			{
 				Name:  "COREDUMP_LIST",
-				Value: filepath.Join(CoredumpMountPath, "coredump_list.txt"),
+				Value: "/tmp/coredump_list.txt",
 			},
 			{
 				Name:  "CURR_COREDUMP_LIST",
-				Value: filepath.Join(CoredumpMountPath, "current_coredump_list.txt"),
+				Value: "/tmp/current_coredump_list.txt",
 			},
 			{
 				Name:  "MINS",

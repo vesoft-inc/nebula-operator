@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -50,6 +52,7 @@ const (
 	DefaultAgentImage         = "vesoft/nebula-agent"
 	DefaultAlpineImage        = "vesoft/nebula-alpine:latest"
 	CoredumpMountPath         = "/usr/local/nebula/coredump"
+	CoredumpSubPath           = "coredump"
 
 	ZoneSuffix = "zone"
 )
@@ -383,7 +386,7 @@ func getCoredumpStorageClass(nc *NebulaCluster) *string {
 	if nc.Spec.CoredumpPreservation == nil {
 		return nil
 	}
-	scName := nc.Spec.CoredumpPreservation.StorageClassName
+	scName := nc.Spec.CoredumpPreservation.VolumeSpecs.StorageClassName
 	if scName == nil || *scName == "" {
 		return nil
 	}
@@ -394,14 +397,14 @@ func getCoredumpStorageResources(nc *NebulaCluster) *corev1.ResourceRequirements
 	if nc.Spec.CoredumpPreservation == nil {
 		return nil
 	}
-	return nc.Spec.CoredumpPreservation.Resources.DeepCopy()
+	return nc.Spec.CoredumpPreservation.VolumeSpecs.Resources.DeepCopy()
 }
 
 func generateCoredumpVolumeMount(componentType string) corev1.VolumeMount {
 	return corev1.VolumeMount{
 		Name:      coredumpVolume(componentType),
 		MountPath: CoredumpMountPath,
-		SubPath:   "coredump",
+		SubPath:   CoredumpSubPath,
 	}
 }
 
@@ -653,7 +656,7 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 	return container
 }
 
-func genCoredumpPresInitContainer(nc *NebulaCluster) corev1.Container {
+func genCoredumpPresInitContainer(nc *NebulaCluster, componentType string) corev1.Container {
 	script := `
 set -exo pipefail
 
@@ -683,8 +686,9 @@ echo "${MOUNT_PATH}/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      "coredump",
+				Name:      coredumpVolume(componentType),
 				MountPath: CoredumpMountPath,
+				SubPath:   CoredumpSubPath,
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
@@ -707,18 +711,53 @@ func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 		containers = append(containers, nodeLabelsContainer)
 	}
 	if nc.Spec.CoredumpPreservation != nil {
-		coreDumpPresInitContainer := genCoredumpPresInitContainer(nc)
+		coreDumpPresInitContainer := genCoredumpPresInitContainer(nc, c.ComponentType().String())
 		containers = append(containers, coreDumpPresInitContainer)
 	}
 	containers = append(containers, genDynamicFlagsContainer(c))
 	return containers
 }
 
-func generateCoredumpManagementContainer(nc *NebulaCluster) corev1.Container {
+func generateCoredumpManagementContainer(nc *NebulaCluster, componentType, timeToKeep string) corev1.Container {
 	script := `
 set -exo pipefail
 
-sleep 3600
+if [ ! -d "${COREDUMP_DIR}" ]; then
+    echo "Error: Directory ${COREDUMP_DIR} does not exist."
+    exit 1
+fi
+
+# Function to log a message (Kubernetes pod logs capture stdout)
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1"
+}
+
+# Initialize the list of existing coredumps
+if [ ! -f "${COREDUMP_LIST}" ]; then
+    find "${COREDUMP_DIR}" -type f -name 'core*' > "${COREDUMP_LIST}"
+fi
+
+# Monitor for new coredumps indefinitely
+while true; do
+	# Detect new coredumps
+	find "${COREDUMP_DIR}" -type f -name 'core*' > ${CURR_COREDUMP_LIST}
+    new_coredumps=$(comm -13 "${COREDUMP_LIST}" ${CURR_COREDUMP_LIST})
+
+    if [ -n "\$new_coredumps" ]; then
+        for coredump in \$new_coredumps; do
+            log_message "New coredump detected: \$coredump"
+        done
+        # Update the list of known coredumps
+        mv ${CURR_COREDUMP_LIST} "${COREDUMP_LIST}"
+    fi
+
+	# Delete expired coredumps
+	find "${COREDUMP_DIR}" -type f -name 'core.*' -mmin +"${MINS}" -exec rm -f {} \;
+	echo "Deleted all core dumps in ${COREDUMP_DIR} older than ${MINS} minutes."
+
+    # Sleep for a few seconds before checking again
+    sleep 5
+done
 `
 	image := DefaultAlpineImage
 	if nc.Spec.AlpineImage != nil {
@@ -739,11 +778,28 @@ sleep 3600
 				Name:  "SCRIPT",
 				Value: script,
 			},
+			{
+				Name:  "COREDUMP_DIR",
+				Value: CoredumpMountPath,
+			},
+			{
+				Name:  "COREDUMP_LIST",
+				Value: filepath.Join(CoredumpMountPath, "coredump_list.txt"),
+			},
+			{
+				Name:  "CURR_COREDUMP_LIST",
+				Value: filepath.Join(CoredumpMountPath, "current_coredump_list.txt"),
+			},
+			{
+				Name:  "MINS",
+				Value: timeToKeep,
+			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      "coredump",
+				Name:      coredumpVolume(componentType),
 				MountPath: CoredumpMountPath,
+				SubPath:   CoredumpSubPath,
 			},
 		},
 	}
@@ -908,7 +964,17 @@ done
 		containers = append(containers, logContainer)
 	}
 	if nc.Spec.CoredumpPreservation != nil {
-		coredumpManagementContainer := generateCoredumpManagementContainer(nc)
+		maxTimeKept, err := time.ParseDuration(pointer.StringDeref(nc.Spec.CoredumpPreservation.MaxTimeKept, "0"))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing maximum time to keep for coredumps for %v: %v", componentType, err)
+		}
+
+		maxTimeKeptMin := maxTimeKept.Minutes()
+		if maxTimeKeptMin < 1 {
+			return nil, fmt.Errorf("invalid maximum time to keep %v for coredumps for %v. Maximum time to keep must be at least 1 minute", maxTimeKept, componentType)
+		}
+
+		coredumpManagementContainer := generateCoredumpManagementContainer(nc, componentType, fmt.Sprintf("%.0f", maxTimeKeptMin))
 		containers = append(containers, coredumpManagementContainer)
 	}
 

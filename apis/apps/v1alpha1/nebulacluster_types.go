@@ -123,7 +123,17 @@ type NebulaClusterSpec struct {
 	AlpineImage *string `json:"alpineImage,omitempty"`
 
 	// +optional
-	CoredumpPreservation *StorageClaim `json:"coredumpPreservation,omitempty"`
+	CoredumpPreservation *CoredumpPreservSpec `json:"coredumpPreservation,omitempty"`
+}
+
+// CoredumpPreservSpec defines the specs for coredump preservation
+type CoredumpPreservSpec struct {
+	// VolumeSpecs specifies the size and storage class of the coredump volume
+	VolumeSpecs *StorageClaim `json:"volumeSpecs,omitempty"`
+
+	// MaxTimeKept specifies how long we want to keep the coredumps for.
+	// It should be a string representing a time.Duration and has to be at least 1 minute.
+	MaxTimeKept *string `json:"maxTimeKept,omitempty"`
 }
 
 // NebulaClusterStatus defines the observed state of NebulaCluster

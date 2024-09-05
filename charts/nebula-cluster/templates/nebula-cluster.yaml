@@ -328,11 +328,13 @@ spec:
   {{- end }}
   {{- if .Values.nebula.coredumpPreservation.enable }}
   coredumpPreservation:
-    resources:
-      requests:
-        storage: {{ .Values.nebula.coredumpPreservation.volumeSize }}
-      {{- if .Values.nebula.storageClassName }}
-      storageClassName: {{ .Values.nebula.storageClassName }}
-      {{- end }}
+    maxTimeKept: {{ .Values.nebula.coredumpPreservation.maxTimeKept }}
+    volumeSpecs:
+      resources:
+        requests:
+          storage: {{ .Values.nebula.coredumpPreservation.volumeSize }}
+        {{- if .Values.nebula.storageClassName }}
+        storageClassName: {{ .Values.nebula.storageClassName }}
+        {{- end }}
   {{- end }}
 

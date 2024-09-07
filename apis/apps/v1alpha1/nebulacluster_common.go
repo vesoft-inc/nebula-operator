@@ -740,33 +740,33 @@ fi
 while true; do
 	# Detect new coredumps
 	find "${COREDUMP_DIR}" -type f -name 'core*' > ${CURR_COREDUMP_LIST}
-    new_coredumps=$(comm -13 "${COREDUMP_LIST}" ${CURR_COREDUMP_LIST})
+	new_coredumps=$(comm -13 "${COREDUMP_LIST}" ${CURR_COREDUMP_LIST})
 
-    if [ -n "$new_coredumps" ]; then
-        for coredump in $new_coredumps; do
-            log_message "New coredump detected: $coredump"
-        done
-        # Update the list of known coredumps
-        mv ${CURR_COREDUMP_LIST} "${COREDUMP_LIST}"
-    fi
+	if [ -n "$new_coredumps" ]; then
+		for coredump in $new_coredumps; do
+			log_message "New coredump detected: $coredump"
+		done
+		# Update the list of known coredumps
+		mv ${CURR_COREDUMP_LIST} "${COREDUMP_LIST}"
+	fi
 
 	# Delete expired coredumps
 	first_loop=1
-	find "${COREDUMP_DIR}" -type f -name "core*" -mmin +"${MINS}" -print | while read file; do
+	while read file; do
 		if [ $first_loop -eq 1 ]; then
 			log_message "Cleaning up coredumps older than ${MINS} minutes from directory ${COREDUMP_DIR}"
 			first_loop=0
 		fi
 		log_message "Cleaning up coredump $file"
 		rm "$file"
-	done
+	done < <(find "${COREDUMP_DIR}" -type f -name "core*" -mmin +"${MINS}")
 
 	if [ $first_loop -eq 0 ]; then
 		log_message "Coredump cleanup completed."
 	fi
 
-    # Sleep for a few seconds before checking again
-    sleep 5
+	# Sleep for a few seconds before checking again
+	sleep 5
 done
 `
 	image := DefaultAlpineImage

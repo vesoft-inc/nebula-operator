@@ -736,7 +736,7 @@ if [ ! -f "${COREDUMP_LIST}" ]; then
     find "${COREDUMP_DIR}" -type f -name 'core*' > "${COREDUMP_LIST}"
 fi
 
-# Monitor for new coredumps indefinitely
+# Monitor for new coredumps and delete expired coredumps indefinitely
 while true; do
 	# Detect new coredumps
 	find "${COREDUMP_DIR}" -type f -name 'core*' > ${CURR_COREDUMP_LIST}
@@ -751,8 +751,19 @@ while true; do
     fi
 
 	# Delete expired coredumps
-	find "${COREDUMP_DIR}" -type f -name 'core.*' -mmin +"${MINS}" -exec rm -f {} \;
-	echo "Deleted all core dumps in ${COREDUMP_DIR} older than ${MINS} minutes."
+	first_loop=1
+	find "${COREDUMP_DIR}" -type f -name "core*" -mmin +"${MINS}" -print | while read file; do
+		if [ $first_loop -eq 1 ]; then
+			log_message "Cleaning up coredumps older than ${MINS} minutes from directory ${COREDUMP_DIR}"
+			first_loop=0
+		fi
+		log_message "Cleaning up coredump $file"
+		rm "$file"
+	done
+
+	if [ $first_loop -eq 0 ]; then
+		log_message "Coredump cleanup completed."
+	fi
 
     # Sleep for a few seconds before checking again
     sleep 5

@@ -157,7 +157,7 @@ nebula:
 
   coredumpPreservation:
     maxTimeKept: 72h
-    enable: false
+    enable: true
     volumeSize: 5Gi
     
 # Note: for all 3 components, specifying positive integers for both minAvailable and maxUnavailable will result in minAvailable being used.

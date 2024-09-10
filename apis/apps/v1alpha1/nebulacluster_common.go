@@ -759,7 +759,7 @@ while true; do
 		fi
 		log_message "Cleaning up coredump $file"
 		rm "$file"
-	done < <(find "${COREDUMP_DIR}" -type f -name "core*" -mmin +"${MINS}")
+	done < <(find "${COREDUMP_DIR}" -type f -name "core*" -mmin +$((MINS-1)))
 
 	if [ $first_loop -eq 0 ]; then
 		log_message "Coredump cleanup completed."

@@ -1,8 +1,6 @@
 module github.com/vesoft-inc/nebula-operator
 
-go 1.22.0
-
-toolchain go1.22.5
+go 1.20
 
 require (
 	github.com/caarlos0/env/v8 v8.0.0
@@ -201,7 +199,6 @@ require (
 	k8s.io/kubelet v0.27.10 // indirect
 	k8s.io/mount-utils v0.0.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
-	sigs.k8s.io/controller-tools v0.16.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/api v0.13.2 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.14.1 // indirect

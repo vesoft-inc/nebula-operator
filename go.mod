@@ -14,7 +14,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/vesoft-inc/fbthrift v0.0.0-20230214024353-fa2f34755b28
 	github.com/vesoft-inc/nebula-agent/v3 v3.0.0-20240201021050-f01509d9ba5b
 	github.com/vesoft-inc/nebula-go/v3 v3.6.2-0.20240108060629-6eb07e9b9e0f

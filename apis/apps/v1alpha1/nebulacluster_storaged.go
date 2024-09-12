@@ -223,6 +223,10 @@ func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 		mounts = append(mounts, certMounts...)
 	}
 
+	if c.nc.Spec.CoredumpPreservation != nil {
+		mounts = append(mounts, generateCoredumpVolumeMount(componentType))
+	}
+
 	return mounts
 }
 
@@ -302,6 +306,10 @@ func (c *storagedComponent) GenerateVolumes() []corev1.Volume {
 		volumes = append(volumes, certVolumes...)
 	}
 
+	if c.baseComponent.nc.Spec.CoredumpPreservation != nil {
+		volumes = append(volumes, generateCoredumpVolume(componentType))
+	}
+
 	return volumes
 }
 
@@ -332,6 +340,14 @@ func (c *storagedComponent) GenerateVolumeClaim() ([]corev1.PersistentVolumeClai
 				StorageClassName: logSC,
 			},
 		})
+	}
+
+	if c.nc.Spec.CoredumpPreservation != nil {
+		coredumpVolumeClaim, err := generateCoredumpVolumeClaim(c.nc, componentType)
+		if err != nil {
+			return nil, fmt.Errorf("cannot generate graphd coredump volume claim, error: %v", err)
+		}
+		claims = append(claims, *coredumpVolumeClaim)
 	}
 
 	return claims, nil

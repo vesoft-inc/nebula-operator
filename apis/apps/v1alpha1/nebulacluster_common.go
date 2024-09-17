@@ -326,7 +326,7 @@ func coredumpVolume(componentType string) string {
 	return componentType + "-coredump"
 }
 
-func parseStorageRequest(res corev1.ResourceList) (corev1.ResourceRequirements, error) {
+func parseStorageRequest(res corev1.ResourceList) (corev1.VolumeResourceRequirements, error) {
 	if res == nil {
 		return corev1.VolumeResourceRequirements{}, nil
 	}
@@ -392,7 +392,7 @@ func getCoredumpStorageClass(nc *NebulaCluster) *string {
 	return scName
 }
 
-func getCoredumpStorageResources(nc *NebulaCluster) *corev1.ResourceRequirements {
+func getCoredumpStorageResources(nc *NebulaCluster) *corev1.VolumeResourceRequirements {
 	if nc.Spec.CoredumpPreservation == nil {
 		return nil
 	}

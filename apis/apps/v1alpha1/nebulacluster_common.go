@@ -22,6 +22,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -49,6 +50,8 @@ const (
 	AgentPortNameGRPC         = "grpc"
 	DefaultAgentImage         = "vesoft/nebula-agent"
 	DefaultAlpineImage        = "vesoft/nebula-alpine:latest"
+	CoredumpMountPath         = "/usr/local/nebula/coredump"
+	CoredumpSubPath           = "coredump"
 
 	ZoneSuffix = "zone"
 )
@@ -319,6 +322,10 @@ func storageDataVolume(componentType string, index int) string {
 	return dataVolume(componentType)
 }
 
+func coredumpVolume(componentType string) string {
+	return componentType + "-coredump"
+}
+
 func parseStorageRequest(res corev1.ResourceList) (corev1.VolumeResourceRequirements, error) {
 	if res == nil {
 		return corev1.VolumeResourceRequirements{}, nil
@@ -342,6 +349,62 @@ func logVolumeExists(componentType string, volumes []corev1.Volume) bool {
 		}
 	}
 	return false
+}
+
+func generateCoredumpVolume(componentType string) corev1.Volume {
+	return corev1.Volume{
+		Name: coredumpVolume(componentType),
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: coredumpVolume(componentType),
+			},
+		},
+	}
+}
+
+func generateCoredumpVolumeClaim(nc *NebulaCluster, componentType string) (*corev1.PersistentVolumeClaim, error) {
+	coredumpSC, coredumpRes := getCoredumpStorageClass(nc), getCoredumpStorageResources(nc)
+	coredumpReq, err := parseStorageRequest(coredumpRes.Requests)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse storage request for %s coredump volume, error: %v", componentType, err)
+	}
+
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: coredumpVolume(componentType),
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources:        coredumpReq,
+			StorageClassName: coredumpSC,
+		},
+	}, nil
+}
+
+func getCoredumpStorageClass(nc *NebulaCluster) *string {
+	if nc.Spec.CoredumpPreservation == nil {
+		return nil
+	}
+	scName := nc.Spec.CoredumpPreservation.VolumeSpecs.StorageClassName
+	if scName == nil || *scName == "" {
+		return nil
+	}
+	return scName
+}
+
+func getCoredumpStorageResources(nc *NebulaCluster) *corev1.VolumeResourceRequirements {
+	if nc.Spec.CoredumpPreservation == nil {
+		return nil
+	}
+	return nc.Spec.CoredumpPreservation.VolumeSpecs.Resources.DeepCopy()
+}
+
+func generateCoredumpVolumeMount(componentType string) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      coredumpVolume(componentType),
+		MountPath: CoredumpMountPath,
+		SubPath:   CoredumpSubPath,
+	}
 }
 
 func generateLogContainer(c NebulaClusterComponent) corev1.Container {
@@ -592,6 +655,53 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 	return container
 }
 
+func genCoredumpPresInitContainer(nc *NebulaCluster, componentType string) corev1.Container {
+	script := `
+set -exo pipefail
+
+ulimit -c unlimited
+echo "${MOUNT_PATH}/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
+
+`
+	image := DefaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	container := corev1.Container{
+		Name:    "coredump-preservation-init",
+		Image:   image,
+		Command: []string{"/bin/sh", "-c"},
+		Args:    []string{`echo "$SCRIPT" > /tmp/coredump-setup-script && sh /tmp/coredump-setup-script`},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "MOUNT_PATH",
+				Value: CoredumpMountPath,
+			},
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      coredumpVolume(componentType),
+				MountPath: CoredumpMountPath,
+				SubPath:   CoredumpSubPath,
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged: pointer.Bool(true),
+		},
+	}
+
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
+	return container
+}
+
 func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 	containers := c.ComponentSpec().InitContainers()
 	nc := c.GetNebulaCluster()
@@ -599,8 +709,112 @@ func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
 		nodeLabelsContainer := genNodeLabelsContainer(nc)
 		containers = append(containers, nodeLabelsContainer)
 	}
+	if nc.Spec.CoredumpPreservation != nil {
+		coreDumpPresInitContainer := genCoredumpPresInitContainer(nc, c.ComponentType().String())
+		containers = append(containers, coreDumpPresInitContainer)
+	}
 	containers = append(containers, genDynamicFlagsContainer(c))
 	return containers
+}
+
+func generateCoredumpManagementContainer(nc *NebulaCluster, componentType, timeToKeep string) corev1.Container {
+	script := `
+set -eo pipefail
+
+if [ ! -d "${COREDUMP_DIR}" ]; then
+    echo "Error: Directory ${COREDUMP_DIR} does not exist."
+    exit 1
+fi
+
+# Function to log a message (Kubernetes pod logs capture stdout)
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1"
+}
+
+# Initialize the list of existing coredumps
+if [ ! -f "${COREDUMP_LIST}" ]; then
+    find "${COREDUMP_DIR}" -type f -name 'core*' > "${COREDUMP_LIST}"
+fi
+
+# Monitor for new coredumps and delete expired coredumps indefinitely
+while true; do
+	# Detect new coredumps
+	find "${COREDUMP_DIR}" -type f -name 'core*' > ${CURR_COREDUMP_LIST}
+	new_coredumps=$(comm -13 "${COREDUMP_LIST}" ${CURR_COREDUMP_LIST})
+
+	if [ -n "$new_coredumps" ]; then
+		for coredump in $new_coredumps; do
+			log_message "New coredump detected: $coredump"
+		done
+		# Update the list of known coredumps
+		mv ${CURR_COREDUMP_LIST} "${COREDUMP_LIST}"
+	fi
+
+	# Delete expired coredumps
+	first_loop=1
+	while read file; do
+		if [ $first_loop -eq 1 ]; then
+			log_message "Cleaning up coredumps older than ${MINS} minutes from directory ${COREDUMP_DIR}"
+			first_loop=0
+		fi
+		log_message "Cleaning up coredump $file"
+		rm "$file"
+	done < <(find "${COREDUMP_DIR}" -type f -name "core*" -mmin +$((MINS-1)))
+
+	if [ $first_loop -eq 0 ]; then
+		log_message "Coredump cleanup completed."
+	fi
+
+	# Sleep for a few seconds before checking again
+	sleep 5
+done
+`
+	image := DefaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	container := corev1.Container{
+		Name:    "coredump-management",
+		Image:   image,
+		Command: []string{"/bin/sh", "-c"},
+		Args:    []string{`echo "$SCRIPT" > /tmp/coredump-management-script && sh /tmp/coredump-management-script`},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+			{
+				Name:  "COREDUMP_DIR",
+				Value: CoredumpMountPath,
+			},
+			{
+				Name:  "COREDUMP_LIST",
+				Value: "/tmp/coredump_list.txt",
+			},
+			{
+				Name:  "CURR_COREDUMP_LIST",
+				Value: "/tmp/current_coredump_list.txt",
+			},
+			{
+				Name:  "MINS",
+				Value: timeToKeep,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      coredumpVolume(componentType),
+				MountPath: CoredumpMountPath,
+				SubPath:   CoredumpSubPath,
+			},
+		},
+	}
+
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
+	return container
 }
 
 func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dynamicFlags map[string]string) ([]corev1.Container, error) {
@@ -754,6 +968,20 @@ done
 	if nc.IsLogRotateEnabled() && logVolumeExists(componentType, c.GenerateVolumes()) {
 		logContainer := generateLogContainer(c)
 		containers = append(containers, logContainer)
+	}
+	if nc.Spec.CoredumpPreservation != nil {
+		maxTimeKept, err := time.ParseDuration(pointer.StringDeref(nc.Spec.CoredumpPreservation.MaxTimeKept, "0"))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing maximum time to keep for coredumps for %v: %v", componentType, err)
+		}
+
+		maxTimeKeptMin := maxTimeKept.Minutes()
+		if maxTimeKeptMin < 1 {
+			return nil, fmt.Errorf("invalid maximum time to keep %v for coredumps for %v. Maximum time to keep must be at least 1 minute", maxTimeKept, componentType)
+		}
+
+		coredumpManagementContainer := generateCoredumpManagementContainer(nc, componentType, fmt.Sprintf("%.0f", maxTimeKeptMin))
+		containers = append(containers, coredumpManagementContainer)
 	}
 
 	containers = mergeSidecarContainers(containers, c.ComponentSpec().SidecarContainers())

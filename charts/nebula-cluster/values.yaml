@@ -155,6 +155,27 @@ nebula:
 
   sslCerts: {}
 
+  coredumpPreservation:
+    maxTimeKept: 72h
+    enable: true
+    volumeSize: 5Gi
+    
+# Note: for all 3 components, specifying positive integers for both minAvailable and maxUnavailable will result in minAvailable being used.
+# Please specify any negitive interger for minAvailable (i.e. -1) and a positive integer for maxUnavailable to use maxUnavailable instead.
+pdb:
+  graphd:
+    enable: false
+    minAvailable: 2
+    maxUnavailable: 1
+  metad:
+    enable: false
+    minAvailable: 3
+    maxUnavailable: 1
+  storaged:
+    enable: false
+    minAvailable: 3
+    maxUnavailable: 1
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

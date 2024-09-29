@@ -27,6 +27,7 @@ import (
 	kruisev1beta1 "github.com/openkruise/kruise-api/apps/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -421,6 +422,13 @@ func generateLogContainer(c NebulaClusterComponent) corev1.Container {
 		Name:    LogSidecarContainerName,
 		Image:   image,
 		Command: cmd,
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("50m"),
+				corev1.ResourceMemory: apiresource.MustParse("50Mi"),
+			},
+			Limits: corev1.ResourceList{},
+		},
 	}
 
 	logRotate := nc.Spec.LogRotate
@@ -580,6 +588,12 @@ cat /metadata/flags.json
 				Value: script,
 			},
 		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("30m"),
+				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
+			},
+		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      "flags",
@@ -640,6 +654,12 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 				Value: script,
 			},
 		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("30m"),
+				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
+			},
+		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      "node-info",
@@ -681,6 +701,12 @@ echo "${MOUNT_PATH}/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
 			{
 				Name:  "SCRIPT",
 				Value: script,
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("30m"),
+				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -801,6 +827,12 @@ done
 				Value: timeToKeep,
 			},
 		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("50m"),
+				corev1.ResourceMemory: apiresource.MustParse("50Mi"),
+			},
+		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      coredumpVolume(componentType),
@@ -894,7 +926,7 @@ func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dy
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/status",
-					Port:   intstr.FromInt(int(ports[1].ContainerPort)),
+					Port:   intstr.FromInt32(ports[1].ContainerPort),
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},

@@ -130,3 +130,6 @@ nodeSelector: { }
 tolerations: [ ]
 
 affinity: { }
+
+fullnameOverride: ""
+nameOverride: ""

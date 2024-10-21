@@ -292,12 +292,16 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		return err
 	}
 	thriftPort := nc.GraphdComponent().GetPort(v1alpha1.GraphdPortNameThrift)
-	for i := range hostItems {
-		host := hostItems[i]
+	klog.Infof("Current graphd state: %v. Current number of replicas: %v", nc.Status.Graphd.Phase, pointer.Int32Deref(newReplicas, 0))
+	for _, host := range hostItems {
+		klog.Infof("Currently looking at host: %v with status %v", strings.Split(host.HostAddr.Host, ".")[0], host.Status)
 		if host.Status == meta.HostStatus_OFFLINE && host.HostAddr.Port == thriftPort {
 			podName := strings.Split(host.HostAddr.Host, ".")[0]
 			ordinal := getPodOrdinal(podName)
 			if int32(ordinal) >= pointer.Int32Deref(nc.Spec.Graphd.Replicas, 0) {
+				klog.Infof("graphd pod [%s/%s] has already been terminated by the sts. Skipping failover and/or removing from auto failover list", nc.Namespace, podName)
+				// delete is a no-op if FailureHosts or podName is nil
+				delete(nc.Status.Graphd.FailureHosts, podName)
 				continue
 			}
 			if nc.Status.Graphd.FailureHosts == nil {

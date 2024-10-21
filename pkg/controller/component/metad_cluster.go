@@ -257,10 +257,16 @@ func (c *metadCluster) syncNebulaClusterStatus(nc *v1alpha1.NebulaCluster, oldWo
 		return err
 	}
 	thriftPort := nc.MetadComponent().GetPort(v1alpha1.MetadPortNameThrift)
-	for i := range hostItems {
-		host := hostItems[i]
+	for _, host := range hostItems {
 		if host.Status == meta.HostStatus_OFFLINE && host.HostAddr.Port == thriftPort {
 			podName := strings.Split(host.HostAddr.Host, ".")[0]
+			ordinal := getPodOrdinal(podName)
+			if int32(ordinal) >= pointer.Int32Deref(nc.Spec.Metad.Replicas, 0) {
+				klog.Infof("metad pod [%s/%s] has already been terminated by the sts. Skipping failover and/or removing from auto failover list", nc.Namespace, podName)
+				// delete is a no-op if FailureHosts or podName is nil
+				delete(nc.Status.Metad.FailureHosts, podName)
+				continue
+			}
 			if nc.Status.Metad.FailureHosts == nil {
 				nc.Status.Metad.FailureHosts = make(map[string]v1alpha1.FailureHost)
 			}

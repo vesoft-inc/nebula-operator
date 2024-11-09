@@ -53,6 +53,7 @@ type (
 		GetSpaceLeaderHosts(space []byte) ([]string, error)
 		GetLeaderCount(leaderHost string) (int, error)
 		BalanceStatus(jobID int32, spaceID nebula.GraphSpaceID) error
+		IsLeaderBalanced(spaceName []byte) (bool, error)
 		BalanceLeader(spaceID nebula.GraphSpaceID) error
 		BalanceData(spaceID nebula.GraphSpaceID) (int32, error)
 		BalanceDataInZone(spaceID nebula.GraphSpaceID) (int32, error)
@@ -354,6 +355,24 @@ func (m *metaClient) BalanceLeader(spaceID nebula.GraphSpaceID) error {
 	}
 	klog.Infof("space %d balance leader successfully", spaceID)
 	return nil
+}
+
+func (m *metaClient) IsLeaderBalanced(spaceName []byte) (bool, error) {
+	hosts, err := m.ListHosts(meta.ListHostType_ALLOC)
+	if err != nil {
+		return false, err
+	}
+
+	for _, host := range hosts {
+		if host.Status != meta.HostStatus_ONLINE {
+			continue
+		}
+		if host.LeaderParts[(string)(spaceName)] == nil {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (m *metaClient) runAdminJob(req *meta.AdminJobReq) (int32, error) {

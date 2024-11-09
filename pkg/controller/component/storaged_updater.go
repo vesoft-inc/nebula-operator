@@ -467,10 +467,20 @@ func (s *storagedUpdater) balanceLeader(mc nebula.MetaInterface, nc *v1alpha1.Ne
 		if time.Now().Before(lastBalancedTime.Add(BalanceLeaderInterval * time.Second)) {
 			return utilerrors.ReconcileErrorf("partition leader is balancing")
 		}
+
+		balanced, err := mc.IsLeaderBalanced(space.Name)
+		if err != nil {
+			return utilerrors.ReconcileErrorf("failed to check if the leader is balanced for space %s: %v", space.Name, err)
+		}
+
+		if balanced {
+			nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
+			continue
+		}
+
 		if err := mc.BalanceLeader(*space.Id.SpaceID); err != nil {
 			return err
 		}
-		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
 		nc.Status.Storaged.LastBalancedTime = &metav1.Time{Time: time.Now()}
 		return utilerrors.ReconcileErrorf("space %d need to be synced", *space.Id.SpaceID)
 	}

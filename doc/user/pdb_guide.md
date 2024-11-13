@@ -1,17 +1,17 @@
-## Pod Desruption Budget
-The Nebula Cluster Helm chart has a feature to automatically start pod desruption budgets (PDBs) for all services it controls (metad, graphd, storaged) if requested by you. PDBs help minimize latency issues by ensuring a minimum number of required pods for the requsted service are available at all times during voluntary node outages. You may specify the minimum pods available or the maximum pods unavailable for a given service and whether to apply the PDB to all nebula graph services or just a particular service.
+## Pod Disruption Budget
+The Nebula Cluster Helm chart has a feature to automatically start pod disruption budgets (PDBs) for all services it controls (metad, graphd, storaged) if requested by you. PDBs help minimize latency issues by ensuring a minimum number of required pods for the requsted service are available at all times during voluntary node outages. You may specify the minimum pods available or the maximum pods unavailable for a given service and whether to apply the PDB to all nebula graph services or just a particular service.
 
 ### Prereqisites
 * Nebula operator is installed
 * Nebula operator version >= 1.8.2
 
 ### Warning
-The Nebula Cluster pod desruption budget feature is based on the [kubernetes PDB](https://kubernetes.io/docs/tasks/run-application/configure-pdb/), so it will only be enforced for voluntary disruptions (i.e. draining a node for maintance, rolling update). Any involutary distuptions (i.e. node down, forced update) will cause the PDB to be overridden. There's nothing Nebula can do to prevent this due to the limitations of kubernetes.
+The Nebula Cluster pod disruption budget feature is based on the [kubernetes PDB](https://kubernetes.io/docs/tasks/run-application/configure-pdb/), so it will only be enforced for voluntary disruptions (i.e. draining a node for maintance, rolling update). Any involutary distuptions (i.e. node down, forced update) will cause the PDB to be overridden. There's nothing Nebula can do to prevent this due to the limitations of kubernetes.
 
-### Using the Pod Desruption Budget Feature In the Given Helm Chart
+### Using the Pod Disruption Budget Feature In the Given Helm Chart
 
 #### Enableing the pdb feature:
-The PDBs feature is disabled for all Nebula Cluster services by default. To enable and use this feature for all services, look for the `pdb:` section in [values.yaml](https://raw.githubusercontent.com/vesoft-inc/nebula-operator/refs/heads/add-documentation/charts/nebula-cluster/values.yaml) file for the given helm chart and set the `enable` field for all three services to `true` like the example below. 
+The PDBs feature is disabled for all Nebula Cluster services by default. To enable and use this feature for all services, look for the `pdb:` section in the [values.yaml](https://raw.githubusercontent.com/vesoft-inc/nebula-operator/refs/heads/add-documentation/charts/nebula-cluster/values.yaml) file for the given helm chart and set the `enable` field for all three services to `true` like the example below. 
 ```yaml
 pdb:
   graphd:

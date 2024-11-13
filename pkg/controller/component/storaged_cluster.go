@@ -335,12 +335,14 @@ func (c *storagedCluster) syncNebulaClusterStatus(
 		return err
 	}
 	thriftPort := nc.StoragedComponent().GetPort(v1alpha1.StoragedPortNameThrift)
-	for i := range hostItems {
-		host := hostItems[i]
+	for _, host := range hostItems {
 		if host.Status == meta.HostStatus_OFFLINE && host.HostAddr.Port == thriftPort {
 			podName := strings.Split(host.HostAddr.Host, ".")[0]
 			ordinal := getPodOrdinal(podName)
 			if int32(ordinal) >= pointer.Int32Deref(nc.Spec.Storaged.Replicas, 0) {
+				klog.Infof("storaged pod [%s/%s] has already been terminated by the sts. Skipping failover and/or removing from auto failover list", nc.Namespace, podName)
+				// delete is a no-op if FailureHosts or podName is nil
+				delete(nc.Status.Storaged.FailureHosts, podName)
 				continue
 			}
 			if nc.Status.Storaged.FailureHosts == nil {

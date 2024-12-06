@@ -29,6 +29,7 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
+	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	utilerrors "github.com/vesoft-inc/nebula-operator/pkg/util/errors"
 )
 
@@ -58,6 +59,49 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 	if err := s.checkPendingPod(nc); err != nil {
 		return err
 	}
+
+	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
+	if err != nil {
+		return err
+	}
+	endpoints := []string{nc.GetMetadThriftConnAddress()}
+	metaClient, err := nebula.NewMetaClient(endpoints, options...)
+	if err != nil {
+		klog.Errorf("create meta client failed: %v", err)
+		return err
+	}
+	defer func() {
+		err := metaClient.Disconnect()
+		if err != nil {
+			klog.Errorf("disconnect meta client failed: %v", err)
+		}
+	}()
+
+	spaces, err := metaClient.ListSpaces()
+	if err != nil {
+		return err
+	}
+
+	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
+		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
+	}
+
+	for _, space := range spaces {
+		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
+			continue
+		}
+		if err := balanceSpace(s.clientSet, metaClient, nc, *space.Id.SpaceID); err != nil {
+			return err
+		}
+		if err := metaClient.BalanceLeader(*space.Id.SpaceID); err != nil {
+			return err
+		}
+		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
+	}
+
+	nc.Status.Storaged.BalancedSpaces = nil
+	nc.Status.Storaged.LastBalanceJob = nil
+
 	return nil
 }
 

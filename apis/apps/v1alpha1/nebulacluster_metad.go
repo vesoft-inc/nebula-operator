@@ -188,16 +188,16 @@ func (c *metadComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	mounts := []corev1.VolumeMount{
 		{
 			Name:      dataVolume(componentType),
-			MountPath: DefaultDataMountPath,
-			SubPath:   DefaultDataSubPath,
+			MountPath: "/usr/local/nebula/data",
+			SubPath:   "data",
 		},
 	}
 
 	if c.nc.Spec.Metad.LogVolumeClaim != nil {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      logVolume(componentType),
-			MountPath: DefaultLogMountPath,
-			SubPath:   DefaultLogSubPath,
+			MountPath: "/usr/local/nebula/logs",
+			SubPath:   "logs",
 		})
 	}
 

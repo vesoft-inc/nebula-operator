@@ -173,8 +173,8 @@ func (c *graphdComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	if c.nc.Spec.Graphd.LogVolumeClaim != nil {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      logVolume(componentType),
-			MountPath: DefaultLogMountPath,
-			SubPath:   DefaultLogSubPath,
+			MountPath: "/usr/local/nebula/logs",
+			SubPath:   "logs",
 		})
 	}
 

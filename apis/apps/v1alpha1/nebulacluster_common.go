@@ -51,10 +51,6 @@ const (
 	AgentPortNameGRPC         = "grpc"
 	DefaultAgentImage         = "vesoft/nebula-agent"
 	DefaultAlpineImage        = "vesoft/nebula-alpine:latest"
-	DefaultDataMountPath      = "/usr/local/nebula/data"
-	DefaultDataSubPath        = "data"
-	DefaultLogMountPath       = "/usr/local/nebula/logs"
-	DefaultLogSubPath         = "logs"
 	CoredumpMountPath         = "/usr/local/nebula/coredump"
 	CoredumpSubPath           = "coredump"
 	DefaultUserId             = 999
@@ -176,8 +172,8 @@ func getStoragedDataVolumeMounts(c NebulaClusterComponent) []corev1.VolumeMount 
 	mounts := make([]corev1.VolumeMount, 0)
 	for i := range nc.Spec.Storaged.DataVolumeClaims {
 		volumeName := storageDataVolume(componentType, i)
-		mountPath := DefaultDataMountPath
-		subPath := DefaultDataSubPath
+		mountPath := "/usr/local/nebula/data"
+		subPath := "data"
 		if i > 0 {
 			mountPath = fmt.Sprintf("/usr/local/nebula/data%d", i)
 			subPath = fmt.Sprintf("data%d", i)

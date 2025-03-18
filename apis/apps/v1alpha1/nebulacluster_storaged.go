@@ -194,8 +194,8 @@ func (c *storagedComponent) GenerateVolumeMounts() []corev1.VolumeMount {
 	if c.nc.Spec.Storaged.LogVolumeClaim != nil {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      logVolume(componentType),
-			MountPath: DefaultLogMountPath,
-			SubPath:   DefaultLogSubPath,
+			MountPath: "/usr/local/nebula/logs",
+			SubPath:   "logs",
 		})
 	}
 

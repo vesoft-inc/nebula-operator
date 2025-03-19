@@ -53,6 +53,8 @@ const (
 	DefaultAlpineImage        = "vesoft/nebula-alpine:latest"
 	CoredumpMountPath         = "/usr/local/nebula/coredump"
 	CoredumpSubPath           = "coredump"
+	DefaultUserId             = 999
+	DefaultGroupId            = 998
 
 	ZoneSuffix = "zone"
 )
@@ -728,8 +730,81 @@ echo "${MOUNT_PATH}/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
 	return container
 }
 
+func genSetPermissionsInitContainers(c NebulaClusterComponent) corev1.Container {
+	nc := c.GetNebulaCluster()
+
+	script := `
+#!/bin/bash
+
+# Convert comma-separated list into an array
+IFS=',' read -ra MOUNT_PATHS <<< "${MOUNT_PATHS_STR}"
+
+# Loop through each data mount point
+for MOUNT_PATH in "${MOUNT_PATHS[@]}"; do
+    if [ -d "${MOUNT_PATH}" ]; then
+        echo "Fixing permissions for: ${MOUNT_PATH}"
+        chown -R ${USER_ID}:${GROUP_ID} "${MOUNT_PATH}"
+    else
+        echo "Warning: ${MOUNT_PATH} does not exist, skipping..."
+    fi
+done
+`
+
+	var mountPaths string
+	volumeMounts := c.GenerateVolumeMounts()
+	for ind, volumeMount := range volumeMounts {
+		mountPaths = fmt.Sprintf("%v%v", mountPaths, volumeMount.MountPath)
+		if ind != len(volumeMounts)-1 {
+			mountPaths = fmt.Sprintf("%v,", mountPaths)
+		}
+	}
+
+	image := DefaultAlpineImage
+	if nc.Spec.AlpineImage != nil {
+		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
+	}
+
+	container := corev1.Container{
+		Name:    "mount-path-permissions-init",
+		Image:   image,
+		Command: []string{"/bin/sh", "-c"},
+		Args:    []string{`echo "$SCRIPT" > /tmp/modify-permissions-script && bash /tmp/modify-permissions-script`},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "SCRIPT",
+				Value: script,
+			},
+			{
+				Name:  "USER_ID",
+				Value: strconv.Itoa(int(DefaultUserId)),
+			},
+			{
+				Name:  "GROUP_ID",
+				Value: strconv.Itoa(int(DefaultGroupId)),
+			},
+			{
+				Name:  "MOUNT_PATHS_STR",
+				Value: mountPaths,
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("30m"),
+				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
+			},
+		},
+		VolumeMounts: volumeMounts,
+	}
+
+	imagePullPolicy := nc.Spec.ImagePullPolicy
+	if imagePullPolicy != nil {
+		container.ImagePullPolicy = *imagePullPolicy
+	}
+	return container
+}
+
 func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
-	containers := c.ComponentSpec().InitContainers()
+	containers := append(c.ComponentSpec().InitContainers(), genSetPermissionsInitContainers(c))
 	nc := c.GetNebulaCluster()
 	if c.ComponentType() == GraphdComponentType && nc.IsZoneEnabled() {
 		nodeLabelsContainer := genNodeLabelsContainer(nc)
@@ -915,6 +990,12 @@ func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dy
 		SecurityContext: c.ComponentSpec().SecurityContext(),
 		Ports:           ports,
 		VolumeMounts:    mounts,
+	}
+
+	if c.ComponentSpec().SecurityContext() != nil && pointer.BoolDeref(c.ComponentSpec().SecurityContext().RunAsNonRoot, false) {
+		// set run as user to the uid of nebula in non-root mode to avoid CreateContainerConfigError during startup
+		// since the user (nebula) set in the image is non-numeric and can't be verified as non-root.
+		baseContainer.SecurityContext.RunAsUser = pointer.Int64(DefaultUserId)
 	}
 
 	baseContainer.LivenessProbe = c.ComponentSpec().LivenessProbe()

@@ -63,6 +63,10 @@ spec:
     initContainers:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.graphd.securityContext }}
+    securityContext:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.graphd.sidecarContainers }}
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
@@ -139,6 +143,10 @@ spec:
     {{- end }}
     {{- with .Values.nebula.metad.initContainers }}
     initContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.metad.securityContext }}
+    securityContext:
     {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- with .Values.nebula.metad.sidecarContainers }}
@@ -218,6 +226,10 @@ spec:
     initContainers:
     {{- toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.nebula.storaged.securityContext }}
+    securityContext:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.nebula.storaged.sidecarContainers }}
     sidecarContainers:
     {{- toYaml . | nindent 6 }}
@@ -269,6 +281,10 @@ spec:
     {{- end }}
     {{- with .Values.nebula.exporter.initContainers }}
     initContainers:
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.nebula.exporter.securityContext }}
+    securityContext:
     {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- with .Values.nebula.exporter.sidecarContainers }}

@@ -268,8 +268,7 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		nc.Status.Graphd.Phase = v1alpha1.RunningPhase
 	}
 
-	//workloadReplicas := getWorkloadReplicas(nc.Status.Graphd.Workload)
-	if !nc.IsAutoFailoverEnabled() /*&& pointer.Int32Deref(nc.Spec.Graphd.Replicas, 0) != workloadReplicas*/ {
+	if !nc.IsAutoFailoverEnabled() {
 		return syncComponentStatus(nc.GraphdComponent(), &nc.Status.Graphd, oldWorkload)
 	}
 

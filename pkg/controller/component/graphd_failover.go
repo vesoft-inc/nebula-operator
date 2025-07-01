@@ -105,11 +105,16 @@ func (g *graphdFailover) toleratePods(nc *v1alpha1.NebulaCluster) ([]string, err
 		if fh.PodRebuilt {
 			continue
 		}
+
 		pod, err := g.clientSet.Pod().GetPod(nc.Namespace, podName)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return nil, err
 		}
-		if pod != nil && isPodTerminating(pod) {
+		if pod == nil {
+			continue
+		}
+
+		if isPodTerminating(pod) {
 			return nil, utilerrors.ReconcileErrorf("failure graphd pod [%s/%s] is deleting", nc.Namespace, podName)
 		}
 		if isPodHealthy(pod) {

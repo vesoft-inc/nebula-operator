@@ -4,12 +4,12 @@ CRD_OPTIONS ?= "crd:generateEmbeddedObjectMeta=false,maxDescLen=0"
 LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 
 DOCKER_REGISTRY ?= docker.io
-DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
+DOCKER_REPO ?= 782052981853.dkr.ecr.us-east-2.amazonaws.com/cloud-dev#${DOCKER_REGISTRY}/vesoft
 USERNAME ?= ng-user
-IMAGE_TAG ?= v1.8.1
+IMAGE_TAG ?= v1.8.3
 PROVISIONER_IMAGE_TAG ?= v0.1
 
-CHARTS_VERSION ?= 1.8.1
+CHARTS_VERSION ?= 1.8.3
 
 export GO111MODULE := on
 GOOS := $(if $(GOOS),$(GOOS),linux)

@@ -19,22 +19,16 @@ package component
 import (
 	"fmt"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/annotation"
-	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/nebula"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/discovery"
@@ -44,26 +38,23 @@ import (
 )
 
 type graphdCluster struct {
-	clientSet       kube.ClientSet
-	dm              discovery.Interface
-	updateManager   UpdateManager
-	failoverManager FailoverManager
-	eventRecorder   record.EventRecorder
+	clientSet     kube.ClientSet
+	dm            discovery.Interface
+	updateManager UpdateManager
+	eventRecorder record.EventRecorder
 }
 
 func NewGraphdCluster(
 	clientSet kube.ClientSet,
 	dm discovery.Interface,
 	um UpdateManager,
-	fm FailoverManager,
 	recorder record.EventRecorder,
 ) ReconcileManager {
 	return &graphdCluster{
-		clientSet:       clientSet,
-		dm:              dm,
-		updateManager:   um,
-		failoverManager: fm,
-		eventRecorder:   recorder,
+		clientSet:     clientSet,
+		dm:            dm,
+		updateManager: um,
+		eventRecorder: recorder,
 	}
 }
 
@@ -187,22 +178,6 @@ func (c *graphdCluster) syncGraphdWorkload(nc *v1alpha1.NebulaCluster) error {
 		}
 	}
 
-	if nc.IsAutoFailoverEnabled() {
-		r, hosts, err := c.shouldRecover(nc)
-		if err != nil {
-			return err
-		}
-		if r {
-			if err := c.failoverManager.Recovery(nc, hosts); err != nil {
-				return err
-			}
-		} else if nc.GraphdComponent().IsAutoFailovering() {
-			if err := c.failoverManager.Failover(nc); err != nil {
-				return err
-			}
-		}
-	}
-
 	equal := extender.PodTemplateEqual(newWorkload, oldWorkload)
 	if !equal || nc.Status.Graphd.Phase == v1alpha1.UpdatePhase {
 		if err := c.updateManager.Update(nc, oldWorkload, newWorkload, gvk); err != nil {
@@ -266,74 +241,6 @@ func (c *graphdCluster) syncNebulaClusterStatus(
 		nc.Status.Graphd.Phase = v1alpha1.ScaleOutPhase
 	} else {
 		nc.Status.Graphd.Phase = v1alpha1.RunningPhase
-	}
-
-	if !nc.IsAutoFailoverEnabled() {
-		return syncComponentStatus(nc.GraphdComponent(), &nc.Status.Graphd, oldWorkload)
-	}
-
-	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
-	if err != nil {
-		return err
-	}
-	hosts := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(hosts, options...)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = metaClient.Disconnect()
-	}()
-
-	hostItems, err := metaClient.ListHosts(meta.ListHostType_GRAPH)
-	if err != nil {
-		return err
-	}
-	thriftPort := nc.GraphdComponent().GetPort(v1alpha1.GraphdPortNameThrift)
-	klog.Infof("Current graphd state: %v. Current number of replicas: %v", nc.Status.Graphd.Phase, pointer.Int32Deref(newReplicas, 0))
-	for _, host := range hostItems {
-		klog.Infof("Currently looking at host: %v with status %v", strings.Split(host.HostAddr.Host, ".")[0], host.Status)
-		if host.Status == meta.HostStatus_OFFLINE && host.HostAddr.Port == thriftPort {
-			podName := strings.Split(host.HostAddr.Host, ".")[0]
-			ordinal := getPodOrdinal(podName)
-			if int32(ordinal) >= pointer.Int32Deref(nc.Spec.Graphd.Replicas, 0) {
-				klog.Infof("graphd pod [%s/%s] has already been terminated by the sts. Skipping failover and/or removing from auto failover list", nc.Namespace, podName)
-				// delete is a no-op if FailureHosts or podName is nil
-				delete(nc.Status.Graphd.FailureHosts, podName)
-				continue
-			}
-			if nc.Status.Graphd.FailureHosts == nil {
-				nc.Status.Graphd.FailureHosts = make(map[string]v1alpha1.FailureHost)
-			}
-			fh, exists := nc.Status.Graphd.FailureHosts[podName]
-			if exists {
-				deadline := fh.CreationTime.Add(nc.Spec.FailoverPeriod.Duration)
-				if time.Now().After(deadline) {
-					if fh.ConfirmationTime.IsZero() {
-						fh.ConfirmationTime = metav1.Time{Time: time.Now()}
-						cl := label.New().Cluster(nc.GetClusterName()).Graphd()
-						_, pvcs, err := getPodAndPvcs(c.clientSet, nc, cl, podName)
-						if err != nil {
-							return err
-						}
-						pvcSet := make(map[types.UID]v1alpha1.EmptyStruct)
-						for _, pvc := range pvcs {
-							pvcSet[pvc.UID] = v1alpha1.EmptyStruct{}
-						}
-						fh.PVCSet = pvcSet
-						nc.Status.Graphd.FailureHosts[podName] = fh
-						klog.Infof("graphd pod [%s/%s] failover period exceeds %s", nc.Namespace, podName, nc.Spec.FailoverPeriod.Duration.String())
-					}
-				}
-				continue
-			}
-			failureHost := v1alpha1.FailureHost{
-				Host:         host.HostAddr.Host,
-				CreationTime: metav1.Time{Time: time.Now()},
-			}
-			nc.Status.Graphd.FailureHosts[podName] = failureHost
-			klog.Infof("offline graph host %s found", host.HostAddr.Host)
-		}
 	}
 
 	return syncComponentStatus(nc.GraphdComponent(), &nc.Status.Graphd, oldWorkload)

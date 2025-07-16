@@ -96,7 +96,7 @@ type NebulaClusterSpec struct {
 	// +optional
 	EnableBR *bool `json:"enableBR,omitempty"`
 
-	// Flag to enable/disable auto fail over in use local PV scenario, default false.
+	// Flag to enable/disable auto failover for storaged. Used only for local PV, default false.
 	// +optional
 	EnableAutoFailover *bool `json:"enableAutoFailover,omitempty"`
 

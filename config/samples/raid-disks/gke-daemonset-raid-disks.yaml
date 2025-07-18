@@ -55,7 +55,21 @@ spec:
 
             mountpoint=/mnt/disks/raid0
             mkdir -p "${mountpoint}"
-            echo "Mounting '${device}' at '${mountpoint}'"
-            mount -o discard,defaults "${device}" "${mountpoint}"
-            chmod a+w "${mountpoint}"
+
+            echo "Checking if device '${device}' is already mounted at '${mountpoint}'"
+            device_real=$(readlink -f "$device")
+            if mountpoint -q "$mountpoint"; then
+              mounted_device=$(findmnt -nro SOURCE --target "$mountpoint" | xargs readlink -f)
+
+              if [ "$mounted_device" != "$device_real" ]; then
+                  echo "error: '${mountpoint}' is already mounted to '${mounted_device}', unable to mount '${device}'."
+                  exit 1
+              else
+                  echo "'${device}' is already mounted to '${mountpoint}'. Skipping mount"
+              fi
+            else
+              echo "Mounting '${device}' at '${mountpoint}'"
+              mount -o discard,defaults "${device}" "${mountpoint}"
+              chmod a+w "${mountpoint}"
+            end
             rm -rf /mnt/disks/raid0/*

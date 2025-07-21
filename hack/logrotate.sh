@@ -18,14 +18,12 @@ nebula="
 /usr/local/nebula/logs/*.WARNING
 /usr/local/nebula/logs/*.ERROR
 {
-        su root root
         daily
         rotate ${ROTATE}
         copytruncate
         nocompress
         missingok
         notifempty
-        create 644 root root
         size ${SIZE}
 }
 "

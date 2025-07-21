@@ -447,8 +447,8 @@ func generateLogContainer(c NebulaClusterComponent) corev1.Container {
 
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 		Name:      logVolume(componentType),
-		MountPath: "/usr/local/nebula/logs",
-		SubPath:   "logs",
+		MountPath: "/etc/logrotate.d/",
+		SubPath:   "logrotate.d",
 	})
 
 	return container
@@ -730,81 +730,8 @@ echo "${MOUNT_PATH}/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
 	return container
 }
 
-func genSetPermissionsInitContainers(c NebulaClusterComponent) corev1.Container {
-	nc := c.GetNebulaCluster()
-
-	script := `
-#!/bin/bash
-
-# Convert comma-separated list into an array
-IFS=',' read -ra MOUNT_PATHS <<< "${MOUNT_PATHS_STR}"
-
-# Loop through each data mount point
-for MOUNT_PATH in "${MOUNT_PATHS[@]}"; do
-    if [ -d "${MOUNT_PATH}" ]; then
-        echo "Fixing permissions for: ${MOUNT_PATH}"
-        chown -R ${USER_ID}:${GROUP_ID} "${MOUNT_PATH}"
-    else
-        echo "Warning: ${MOUNT_PATH} does not exist, skipping..."
-    fi
-done
-`
-
-	var mountPaths string
-	volumeMounts := c.GenerateVolumeMounts()
-	for ind, volumeMount := range volumeMounts {
-		mountPaths = fmt.Sprintf("%v%v", mountPaths, volumeMount.MountPath)
-		if ind != len(volumeMounts)-1 {
-			mountPaths = fmt.Sprintf("%v,", mountPaths)
-		}
-	}
-
-	image := DefaultAlpineImage
-	if nc.Spec.AlpineImage != nil {
-		image = pointer.StringDeref(nc.Spec.AlpineImage, "")
-	}
-
-	container := corev1.Container{
-		Name:    "mount-path-permissions-init",
-		Image:   image,
-		Command: []string{"/bin/sh", "-c"},
-		Args:    []string{`echo "$SCRIPT" > /tmp/modify-permissions-script && bash /tmp/modify-permissions-script`},
-		Env: []corev1.EnvVar{
-			{
-				Name:  "SCRIPT",
-				Value: script,
-			},
-			{
-				Name:  "USER_ID",
-				Value: strconv.Itoa(int(DefaultUserId)),
-			},
-			{
-				Name:  "GROUP_ID",
-				Value: strconv.Itoa(int(DefaultGroupId)),
-			},
-			{
-				Name:  "MOUNT_PATHS_STR",
-				Value: mountPaths,
-			},
-		},
-		Resources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    apiresource.MustParse("30m"),
-				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
-			},
-		},
-		VolumeMounts: volumeMounts,
-	}
-
-	imagePullPolicy := nc.Spec.ImagePullPolicy
-	if imagePullPolicy != nil {
-		container.ImagePullPolicy = *imagePullPolicy
-	}
-	return container
-}
-
 func generateInitContainers(c NebulaClusterComponent) []corev1.Container {
-	containers := append(c.ComponentSpec().InitContainers(), genSetPermissionsInitContainers(c))
+	containers := append(c.ComponentSpec().InitContainers())
 	nc := c.GetNebulaCluster()
 	if c.ComponentType() == GraphdComponentType && nc.IsZoneEnabled() {
 		nodeLabelsContainer := genNodeLabelsContainer(nc)
@@ -1030,19 +957,35 @@ func generateNebulaContainers(c NebulaClusterComponent, cm *corev1.ConfigMap, dy
 	script := `
 set -x
 
+echo "[INFO] Starting post-start script"
+
+echo "[INFO] Checking if flags.json exists and is not empty..."
 if [ ! -s "metadata/flags.json" ]; then
  echo "flags.json is empty"
  exit 0
 fi
+
+echo "[INFO] flags.json is present and not empty"
+echo "[INFO] MY_IP=${MY_IP}"
+echo "[INFO] HTTP_PORT=${HTTP_PORT}"
+
+attempt=0
 while :
 do
+  attempt=$((attempt+1))
+  echo "[INFO] Attempt $attempt: Sending flags.json to http://${MY_IP}:${HTTP_PORT}/flags"
   curl -i -X PUT -H "Content-Type: application/json" -d @/metadata/flags.json -s "http://${MY_IP}:${HTTP_PORT}/flags"
-  if [ $? -eq 0 ]
-  then
+  result=$?
+  if [ $result -eq 0 ]; then
+    echo "[INFO] Successfully sent flags.json"
     break
+  else
+    echo "[WARN] curl failed with exit code $result, retrying in 1 second..."
   fi
   sleep 1
 done
+
+echo "[INFO] Post-start script completed successfully"
 `
 
 	envVars := []corev1.EnvVar{

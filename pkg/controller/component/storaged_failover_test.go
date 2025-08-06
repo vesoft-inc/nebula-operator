@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-func TestCheckPeerExist(t *testing.T) {
+func TestIsMultipleFailureHostsInSamePart(t *testing.T) {
 	tests := []struct {
 		name         string
 		failureHosts []string

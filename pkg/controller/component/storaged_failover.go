@@ -170,7 +170,7 @@ func (s *storagedFailover) deleteFailedPodAndPVC(nc *v1alpha1.NebulaCluster) err
 		}
 	}
 
-	exist, err := s.checkPeerExist(nc, failureHosts)
+	exist, err := s.isMultipleFailureHostsInSamePart(nc, failureHosts)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func (s *storagedFailover) balanceStorageLeader(nc *v1alpha1.NebulaCluster) erro
 }
 
 // check if there are more than 2 failure hosts in the same part
-func (s *storagedFailover) checkPeerExist(nc *v1alpha1.NebulaCluster, failureHosts []string) (bool, error) {
+func (s *storagedFailover) isMultipleFailureHostsInSamePart(nc *v1alpha1.NebulaCluster, failureHosts []string) (bool, error) {
 	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return false, err

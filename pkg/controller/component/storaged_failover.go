@@ -25,6 +25,7 @@ import (
 
 	nebula0 "github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/vesoft-inc/nebula-go/v3/nebula/meta"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -41,6 +42,11 @@ import (
 const (
 	// PodScheduleTimeout is the duration to wait for a pod to be scheduled
 	PodScheduleTimeout = 1 * time.Minute
+	// RestartTolerancePeriod is the duration to wait for a pod to be ready after restart
+	RestartTolerancePeriod = time.Minute * 1
+
+	// PVCProtectionFinalizer is the finalizer for PVC protection
+	PVCProtectionFinalizer = "kubernetes.io/pvc-protection"
 )
 
 // StoragedFailover handles failover operations for storaged pods
@@ -61,7 +67,7 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	// Step 2: Check if restarted pods are ready within a tolerance period
-	readyPods, err := s.checkRestartedPods(nc)
+	readyPods, err := s.checkPodsAfterRestart(nc)
 	if err != nil {
 		return err
 	}
@@ -75,7 +81,7 @@ func (s *storagedFailover) Failover(nc *v1alpha1.NebulaCluster) error {
 	}
 
 	// Step 4: Check and handle pending pods
-	if err := s.checkPendingPod(nc); err != nil {
+	if err := s.handlePendingPods(nc); err != nil {
 		return err
 	}
 
@@ -106,12 +112,36 @@ func (s *storagedFailover) tryRestartPod(nc *v1alpha1.NebulaCluster) error {
 			return err
 		}
 
-		// Skip if pod not found or in a pending state
-		if pod == nil || isPodPending(pod) {
+		// Skip if pod not found
+		if pod == nil {
 			continue
 		}
 
+		// Deal with pod in pending state
+		if isPodPending(pod) {
+			if err := s.checkPodAssociatedNodeStatus(nc, pod, &fh); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// Check if the pod is associated with a down node
+		if pod.Spec.NodeName != "" {
+			node, err := s.clientSet.Node().GetNode(pod.Spec.NodeName)
+			if err != nil {
+				klog.Errorf("get node %s failed: %v", pod.Spec.NodeName, err)
+				return err
+			}
+
+			if node != nil && isNodeDown(node) {
+				fh.NodeDown = true
+				nc.Status.Storaged.FailureHosts[pod.Name] = fh
+				klog.Infof("pod %s associated with node %s is not ready", pod.Name, pod.Spec.NodeName)
+			}
+		}
+
 		// Delete pod to trigger restart
+		klog.Infof("deleting pod %s/%s to trigger restart", nc.Namespace, podName)
 		if err := s.clientSet.Pod().DeletePod(nc.Namespace, podName, true); err != nil {
 			return err
 		}
@@ -119,13 +149,96 @@ func (s *storagedFailover) tryRestartPod(nc *v1alpha1.NebulaCluster) error {
 		// Update status
 		fh.PodRestarted = true
 		nc.Status.Storaged.FailureHosts[podName] = fh
-		return utilerrors.ReconcileErrorf("try to restart failure storaged pod [%s/%s] for recovery", nc.Namespace, podName)
+		return utilerrors.ReconcileErrorf("try to restart failure storaged pod [%s/%s] for recovery",
+			nc.Namespace, podName)
 	}
 	return nil
 }
 
-// checkRestartedPods checks the status of restarted pods within a tolerance period
-func (s *storagedFailover) checkRestartedPods(nc *v1alpha1.NebulaCluster) ([]string, error) {
+// checkPodAssociatedNodeStatus checks the status of a pod's node and updates the failure host status accordingly
+func (s *storagedFailover) checkPodAssociatedNodeStatus(nc *v1alpha1.NebulaCluster, pod *corev1.Pod, fh *v1alpha1.FailureHost) error {
+	if pod.Spec.NodeName != "" {
+		node, err := s.clientSet.Node().GetNode(pod.Spec.NodeName)
+		if err != nil {
+			klog.Errorf("get node %s failed: %v", pod.Spec.NodeName, err)
+			return err
+		}
+
+		if node != nil && isNodeDown(node) {
+			fh.NodeDown = true
+			nc.Status.Storaged.FailureHosts[pod.Name] = *fh
+			klog.Infof("pending pod %s assigned to node %s is not ready", pod.Name, pod.Spec.NodeName)
+			return utilerrors.ReconcileErrorf("detected node down for pending pod %s/%s", nc.Namespace, pod.Name)
+		}
+		return nil
+	}
+
+	ordinal := getPodOrdinal(pod.Name)
+	pvcName := fmt.Sprintf("%s-data-%s-%d", nc.StoragedComponent().ComponentType(), nc.StoragedComponent().GetName(), ordinal)
+
+	pvc, err := s.clientSet.PVC().GetPVC(nc.Namespace, pvcName)
+	if err != nil && !apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
+			klog.V(4).Infof("PVC %s/%s not found for pod %s", nc.Namespace, pvcName, pod.Name)
+			return nil
+		}
+		return err
+	}
+
+	if pvc.Spec.VolumeName == "" {
+		klog.V(4).Infof("PVC %s/%s has no associated volume yet", nc.Namespace, pvcName)
+		return nil
+	}
+
+	pv, err := s.clientSet.PV().GetPersistentVolume(pvc.Spec.VolumeName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			klog.V(4).Infof("PV %s not found for PVC %s/%s", pvc.Spec.VolumeName, nc.Namespace, pvcName)
+			return nil
+		}
+		return err
+	}
+
+	nodeName := getNodeNameFromPV(pv)
+	if nodeName == "" {
+		return nil
+	}
+
+	node, err := s.clientSet.Node().GetNode(nodeName)
+	if err != nil {
+		klog.Errorf("get node %s failed: %v", nodeName, err)
+		return err
+	}
+
+	if node != nil && isNodeDown(node) {
+		fh.NodeDown = true
+		nc.Status.Storaged.FailureHosts[pod.Name] = *fh
+		klog.Infof("pending pod %s associated with node %s through PV is not ready", pod.Name, nodeName)
+		return utilerrors.ReconcileErrorf("detected node down for pending pod %s/%s", nc.Namespace, pod.Name)
+	}
+
+	return nil
+}
+
+// getNodeNameFromPV extracts the node name from the PersistentVolume's NodeAffinity
+func getNodeNameFromPV(pv *corev1.PersistentVolume) string {
+	if pv.Spec.NodeAffinity == nil || pv.Spec.NodeAffinity.Required == nil {
+		return ""
+	}
+
+	for _, selector := range pv.Spec.NodeAffinity.Required.NodeSelectorTerms {
+		for _, expr := range selector.MatchExpressions {
+			if expr.Key == "kubernetes.io/hostname" && len(expr.Values) > 0 {
+				return expr.Values[0]
+			}
+		}
+	}
+
+	return ""
+}
+
+// checkPodsAfterRestart checks the status of restarted pods within a tolerance period
+func (s *storagedFailover) checkPodsAfterRestart(nc *v1alpha1.NebulaCluster) ([]string, error) {
 	readyPods := make([]string, 0)
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
 		// Skip if pod already rebuilt
@@ -170,7 +283,7 @@ func (s *storagedFailover) deleteFailedPodAndPVC(nc *v1alpha1.NebulaCluster) err
 		}
 	}
 
-	exist, err := s.isMultipleFailureHostsInSamePart(nc, failureHosts)
+	exist, err := s.hasMultipleFailuresInSamePart(nc, failureHosts)
 	if err != nil {
 		return err
 	}
@@ -184,6 +297,12 @@ func (s *storagedFailover) deleteFailedPodAndPVC(nc *v1alpha1.NebulaCluster) err
 			continue
 		}
 
+		// Only proceed if the node is down
+		if !fh.NodeDown {
+			klog.Infof("failure storaged pod [%s/%s] is not associated with a down node, skip", nc.Namespace, podName)
+			continue
+		}
+
 		pod, pvcs, err := getPodAndPvcs(s.clientSet, nc, cl, podName)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return err
@@ -192,20 +311,6 @@ func (s *storagedFailover) deleteFailedPodAndPVC(nc *v1alpha1.NebulaCluster) err
 		// Skip if pod not found
 		if pod == nil {
 			klog.Infof("failure storaged pod [%s/%s] not found, skip", nc.Namespace, podName)
-			continue
-		}
-
-		node, err := s.clientSet.Node().GetNode(pod.Spec.NodeName)
-		if err != nil {
-			klog.Errorf("get node %s failed: %v", pod.Spec.NodeName, err)
-			return err
-		}
-
-		// Only proceed if the node is down
-		if isNodeDown(node) {
-			fh.NodeDown = true
-		} else {
-			klog.Infof("node status %s is ready, skip", node.Name)
 			continue
 		}
 
@@ -245,8 +350,8 @@ func (s *storagedFailover) deleteFailedPodAndPVC(nc *v1alpha1.NebulaCluster) err
 	return nil
 }
 
-// checkPendingPod handles pods stuck in pending state
-func (s *storagedFailover) checkPendingPod(nc *v1alpha1.NebulaCluster) error {
+// handlePendingPods handles pods stuck in pending state
+func (s *storagedFailover) handlePendingPods(nc *v1alpha1.NebulaCluster) error {
 	cl := label.New().Cluster(nc.GetClusterName()).Storaged()
 
 	for podName, fh := range nc.Status.Storaged.FailureHosts {
@@ -342,7 +447,7 @@ func (s *storagedFailover) balanceStorageLeader(nc *v1alpha1.NebulaCluster) erro
 }
 
 // check if there are more than 2 failure hosts in the same part
-func (s *storagedFailover) isMultipleFailureHostsInSamePart(nc *v1alpha1.NebulaCluster, failureHosts []string) (bool, error) {
+func (s *storagedFailover) hasMultipleFailuresInSamePart(nc *v1alpha1.NebulaCluster, failureHosts []string) (bool, error) {
 	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
 		return false, err

@@ -19,7 +19,6 @@ package component
 import (
 	"strconv"
 	"strings"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,11 +29,6 @@ import (
 	"github.com/vesoft-inc/nebula-operator/apis/pkg/label"
 	"github.com/vesoft-inc/nebula-operator/pkg/kube"
 	"github.com/vesoft-inc/nebula-operator/pkg/util/condition"
-)
-
-const (
-	PVCProtectionFinalizer = "kubernetes.io/pvc-protection"
-	RestartTolerancePeriod = time.Minute * 1
 )
 
 func getPodOrdinal(name string) int {

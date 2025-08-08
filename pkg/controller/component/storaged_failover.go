@@ -168,7 +168,6 @@ func (s *storagedFailover) checkPodAssociatedNodeStatus(nc *v1alpha1.NebulaClust
 			fh.NodeDown = true
 			nc.Status.Storaged.FailureHosts[pod.Name] = *fh
 			klog.Infof("pending pod %s assigned to node %s is not ready", pod.Name, pod.Spec.NodeName)
-			return utilerrors.ReconcileErrorf("detected node down for pending pod %s/%s", nc.Namespace, pod.Name)
 		}
 		return nil
 	}
@@ -206,7 +205,12 @@ func (s *storagedFailover) checkPodAssociatedNodeStatus(nc *v1alpha1.NebulaClust
 
 	node, err := s.clientSet.Node().GetNode(nodeName)
 	if err != nil {
-		klog.Errorf("get node %s failed: %v", nodeName, err)
+		if apierrors.IsNotFound(err) {
+			fh.NodeDown = true
+			nc.Status.Storaged.FailureHosts[pod.Name] = *fh
+			klog.Infof("pod %s associated with node %s not found", pod.Name, nodeName)
+			return nil
+		}
 		return err
 	}
 
@@ -214,7 +218,6 @@ func (s *storagedFailover) checkPodAssociatedNodeStatus(nc *v1alpha1.NebulaClust
 		fh.NodeDown = true
 		nc.Status.Storaged.FailureHosts[pod.Name] = *fh
 		klog.Infof("pending pod %s associated with node %s through PV is not ready", pod.Name, nodeName)
-		return utilerrors.ReconcileErrorf("detected node down for pending pod %s/%s", nc.Namespace, pod.Name)
 	}
 
 	return nil

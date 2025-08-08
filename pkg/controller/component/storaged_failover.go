@@ -206,7 +206,10 @@ func (s *storagedFailover) checkPodAssociatedNodeStatus(nc *v1alpha1.NebulaClust
 
 	node, err := s.clientSet.Node().GetNode(nodeName)
 	if err != nil {
-		klog.Errorf("get node %s failed: %v", nodeName, err)
+		if apierrors.IsNotFound(err) {
+			klog.V(4).Infof("Node %s not found for pod %s", nodeName, pod.Name)
+			return nil
+		}
 		return err
 	}
 

@@ -129,6 +129,13 @@ func (s *storagedFailover) tryRestartPod(nc *v1alpha1.NebulaCluster) error {
 		if pod.Spec.NodeName != "" {
 			node, err := s.clientSet.Node().GetNode(pod.Spec.NodeName)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					// No need to keep trying if the node is not found
+					fh.NodeDown = true
+					nc.Status.Storaged.FailureHosts[pod.Name] = fh
+					klog.Infof("node %s associated with pod %v is not found", pod.Spec.NodeName, pod.Name)
+					return nil
+				}
 				klog.Errorf("get node %s failed: %v", pod.Spec.NodeName, err)
 				return err
 			}
@@ -208,7 +215,7 @@ func (s *storagedFailover) checkPodAssociatedNodeStatus(nc *v1alpha1.NebulaClust
 		if apierrors.IsNotFound(err) {
 			fh.NodeDown = true
 			nc.Status.Storaged.FailureHosts[pod.Name] = *fh
-			klog.Infof("pod %s associated with node %s not found", pod.Name, nodeName)
+			klog.Infof("node %s associated with pod %v not found", nodeName, pod.Name)
 			return nil
 		}
 		return err

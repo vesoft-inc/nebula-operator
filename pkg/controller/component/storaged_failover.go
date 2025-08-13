@@ -258,8 +258,12 @@ func (s *storagedFailover) checkPodsAfterRestart(nc *v1alpha1.NebulaCluster) ([]
 
 		// Get pod information
 		pod, err := s.clientSet.Pod().GetPod(nc.Namespace, podName)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return nil, err
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			} else {
+				continue // Skip pod if already terminated but in the process of starting.
+			}
 		}
 
 		// Wait if the pod is terminating
@@ -456,7 +460,7 @@ func (s *storagedFailover) balanceStorageLeader(nc *v1alpha1.NebulaCluster) erro
 	return nil
 }
 
-// check if there are more than 2 failure hosts in the same part
+// check if there are more than replicas/2 failure hosts in the same part
 func (s *storagedFailover) hasMultipleFailuresInSamePart(nc *v1alpha1.NebulaCluster, failureHosts []string) (bool, error) {
 	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
 	if err != nil {
@@ -511,7 +515,7 @@ func (s *storagedFailover) hasMultipleFailuresInSamePart(nc *v1alpha1.NebulaClus
 				peerSet := sets.NewString(peers...)
 				interSection := peerSet.Intersection(failureHostsSet)
 
-				if interSection.Len() >= 2 {
+				if interSection.Len() > len(peers)/2 {
 					if atomic.CompareAndSwapInt32(&foundResult, 0, 1) {
 						klog.Infof("space %d part %d has more than 2 failure hosts: %v",
 							spaceID, part.PartID, interSection.List())

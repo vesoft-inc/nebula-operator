@@ -6,10 +6,10 @@ LDFLAGS = $(if $(DEBUGGER),,-s -w) $(shell ./hack/version.sh)
 DOCKER_REGISTRY ?= docker.io
 DOCKER_REPO ?= ${DOCKER_REGISTRY}/vesoft
 USERNAME ?= ng-user
-IMAGE_TAG ?= v1.8.4
+IMAGE_TAG ?= v1.8.5
 PROVISIONER_IMAGE_TAG ?= v0.1
 
-CHARTS_VERSION ?= 1.8.4
+CHARTS_VERSION ?= 1.8.5
 
 export GO111MODULE := on
 GOOS := $(if $(GOOS),$(GOOS),linux)

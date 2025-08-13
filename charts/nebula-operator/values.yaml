@@ -1,6 +1,6 @@
 image:
   nebulaOperator:
-    image: vesoft/nebula-operator:v1.8.4
+    image: vesoft/nebula-operator:v1.8.5
     imagePullPolicy: Always
 
 imagePullSecrets: [ ]

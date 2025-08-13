@@ -1,8 +1,8 @@
 apiVersion: v2
 name: nebula-cluster
 description: Nebula Cluster Helm chart for Kubernetes
-version: 1.8.2
-appVersion: 1.8.2
+version: 1.8.5
+appVersion: 1.8.5
 home: https://nebula-graph.io
 sources:
 - https://github.com/vesoft-inc/nebula

@@ -29,7 +29,7 @@ func GetNodeTrueConditions(status *corev1.NodeStatus) []corev1.NodeCondition {
 
 func IsNodeReadyFalseOrUnknown(status *corev1.NodeStatus) bool {
 	condition := getNodeReadyCondition(status)
-	return condition != nil && (condition.Status == corev1.ConditionFalse || condition.Status == corev1.ConditionUnknown)
+	return condition != nil && (condition.Status == corev1.ConditionFalse) //Only mark node in not ready state not unknown state.
 }
 
 func getNodeReadyCondition(status *corev1.NodeStatus) *corev1.NodeCondition {

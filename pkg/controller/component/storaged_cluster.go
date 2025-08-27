@@ -231,6 +231,52 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 				return err
 			}
 		}
+	} else {
+		for i := int32(0); i < nc.StoragedComponent().ComponentSpec().Replicas(); i++ {
+			podName := nc.StoragedComponent().GetPodName(i)
+			pod, err := c.clientSet.Pod().GetPod(nc.Namespace, podName)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
+				return err
+			}
+
+			if !isPodRunningAndReady(pod) {
+				klog.V(3).Infof("pod %v is not ready. Skipping check", podName)
+				continue
+			}
+
+			//check pod recreate
+			hostDetails, ok := nc.Status.Storaged.HostInfo[podName]
+			if !ok {
+				nc.Status.Storaged.HostInfo[podName] = v1alpha1.HostInfo{
+					UID:          string(pod.UID),
+					RestartTimes: 0,
+				}
+				continue
+			} else {
+				if hostDetails.UID != string(pod.UID) {
+					klog.Infof("storaged pod %v has been recreated. Balancing leader...", podName)
+					err := balanceStorageLeader(nc)
+					if err != nil {
+						return err
+					}
+					continue
+				}
+			}
+
+			//check pod restart by checking main container restart
+			for _, cStatus := range pod.Status.ContainerStatuses {
+				if cStatus.Name == v1alpha1.StoragedComponentType.String() && cStatus.RestartCount != int32(hostDetails.RestartTimes) {
+					klog.Infof("storaged pod %v has been restarted. Balancing leader...", podName)
+					err := balanceStorageLeader(nc)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
 	}
 
 	if err := c.scaleManager.Scale(nc, oldWorkload, newWorkload); err != nil {

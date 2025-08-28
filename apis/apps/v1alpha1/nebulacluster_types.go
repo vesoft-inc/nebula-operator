@@ -164,7 +164,14 @@ type StoragedStatus struct {
 	LastBalancedTime *metav1.Time           `json:"lastBalancedTime,omitempty"`
 	LastBalanceJob   *BalanceJob            `json:"lastBalanceJob,omitempty"`
 	FailureHosts     map[string]FailureHost `json:"failureHosts,omitempty"`
+	HostInfo         map[string]HostInfo    `json:"hostInfo,omitempty"`
 	Volume           *VolumeStatus          `json:"volume,omitempty"`
+}
+
+// HostInfo is used to keep track of the most recent pod UID and restart time in storaged status
+type HostInfo struct {
+	UID          string
+	RestartTimes int
 }
 
 // BalanceJob describes the admin job for balance data.

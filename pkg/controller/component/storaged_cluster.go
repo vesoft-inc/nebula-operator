@@ -247,6 +247,10 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 				continue
 			}
 
+			if nc.Status.Storaged.HostInfo == nil {
+				nc.Status.Storaged.HostInfo = make(map[string]v1alpha1.HostInfo)
+			}
+
 			//check pod recreate
 			hostDetails, ok := nc.Status.Storaged.HostInfo[podName]
 			if !ok {

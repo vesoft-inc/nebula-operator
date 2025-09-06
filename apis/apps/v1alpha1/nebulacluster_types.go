@@ -170,8 +170,8 @@ type StoragedStatus struct {
 
 // HostInfo is used to keep track of the most recent pod UID and restart time in storaged status
 type HostInfo struct {
-	UID          string
-	RestartTimes int
+	UID          string `json:"uid,omitempty"`
+	RestartTimes int    `json:"restartTimes,omitempty"`
 }
 
 // BalanceJob describes the admin job for balance data.

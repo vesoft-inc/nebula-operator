@@ -12153,6 +12153,11 @@ spec:
                     type: object
                   hostInfo:
                     additionalProperties:
+                      properties:
+                        restartTimes:
+                          type: integer
+                        uid:
+                          type: string
                       type: object
                     type: object
                   hostsAdded:

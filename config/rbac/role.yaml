@@ -2,13 +2,17 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
   - ""
   resources:
   - configmaps
+  - persistentvolumeclaims
+  - persistentvolumes
+  - pods
+  - serviceaccounts
+  - services
   verbs:
   - create
   - delete
@@ -29,6 +33,8 @@ rules:
   - ""
   resources:
   - namespaces
+  - pods/log
+  - secrets
   verbs:
   - get
   - list
@@ -41,94 +47,9 @@ rules:
   - list
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - persistentvolumeclaims
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - persistentvolumes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods/log
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - apps
   resources:
   - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
   - statefulsets
   verbs:
   - create
@@ -154,83 +75,8 @@ rules:
   - apps.nebula-graph.io
   resources:
   - nebulabackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
-  - nebulabackups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
-  - nebulabackups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
   - nebulaclusters
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
-  - nebulaclusters/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
-  - nebulaclusters/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
   - nebulacronbackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
-  - nebulacronbackups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
-  - nebulacronbackups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps.nebula-graph.io
-  resources:
   - nebularestores
   verbs:
   - create
@@ -243,12 +89,18 @@ rules:
 - apiGroups:
   - apps.nebula-graph.io
   resources:
+  - nebulabackups/finalizers
+  - nebulaclusters/finalizers
+  - nebulacronbackups/finalizers
   - nebularestores/finalizers
   verbs:
   - update
 - apiGroups:
   - apps.nebula-graph.io
   resources:
+  - nebulabackups/status
+  - nebulaclusters/status
+  - nebulacronbackups/status
   - nebularestores/status
   verbs:
   - get
@@ -304,17 +156,6 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - clusterrolebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
   - clusterroles
   verbs:
   - create

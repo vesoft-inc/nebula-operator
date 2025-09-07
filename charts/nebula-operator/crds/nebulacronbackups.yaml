@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.3
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.16.2
   name: nebulacronbackups.apps.nebula-graph.io
 spec:
   group: apps.nebula-graph.io
@@ -759,6 +758,7 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   type: string
                               required:
                               - port
@@ -863,6 +863,7 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   type: string
                               required:
                               - port
@@ -1046,6 +1047,7 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   type: string
                               required:
                               - port
@@ -1412,6 +1414,7 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   type: string
                               required:
                               - port
@@ -1516,6 +1519,7 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   type: string
                               required:
                               - port
@@ -1699,6 +1703,7 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   type: string
                               required:
                               - port

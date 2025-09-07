@@ -416,48 +416,7 @@ func (s *storagedFailover) balanceStorageLeader(nc *v1alpha1.NebulaCluster) erro
 		return nil
 	}
 
-	options, err := nebula.ClientOptions(nc, nebula.SetIsMeta(true))
-	if err != nil {
-		return err
-	}
-
-	endpoints := []string{nc.GetMetadThriftConnAddress()}
-	metaClient, err := nebula.NewMetaClient(endpoints, options...)
-	if err != nil {
-		klog.Errorf("create meta client failed: %v", err)
-		return err
-	}
-
-	defer func() {
-		if err := metaClient.Disconnect(); err != nil {
-			klog.Errorf("disconnect meta client failed: %v", err)
-		}
-	}()
-
-	spaces, err := metaClient.ListSpaces()
-	if err != nil {
-		return err
-	}
-
-	if len(spaces) > 0 && nc.Status.Storaged.BalancedSpaces == nil {
-		nc.Status.Storaged.BalancedSpaces = make([]int32, 0, len(spaces))
-	}
-
-	for _, space := range spaces {
-		if contains(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID) {
-			continue
-		}
-		if err := metaClient.BalanceLeader(*space.Id.SpaceID); err != nil {
-			return err
-		}
-		nc.Status.Storaged.BalancedSpaces = append(nc.Status.Storaged.BalancedSpaces, *space.Id.SpaceID)
-	}
-
-	// Reset balance status
-	nc.Status.Storaged.BalancedSpaces = nil
-	nc.Status.Storaged.LastBalanceJob = nil
-
-	return nil
+	return balanceStorageLeader(nc)
 }
 
 // check if there are more than replicas/2 failure hosts in the same part

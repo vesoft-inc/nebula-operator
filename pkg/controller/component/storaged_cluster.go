@@ -266,6 +266,9 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 					if err != nil {
 						return err
 					}
+
+					hostDetails.UID = string(pod.UID)
+					nc.Status.Storaged.HostInfo[podName] = hostDetails
 					continue
 				}
 			}
@@ -278,6 +281,9 @@ func (c *storagedCluster) syncStoragedWorkload(nc *v1alpha1.NebulaCluster) error
 					if err != nil {
 						return err
 					}
+
+					hostDetails.RestartTimes++
+					nc.Status.Storaged.HostInfo[podName] = hostDetails
 				}
 			}
 		}

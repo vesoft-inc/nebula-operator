@@ -66,10 +66,11 @@ spec:
                   exit 1
               else
                   echo "'${device}' is already mounted to '${mountpoint}'. Skipping mount"
+                  exit 0
               fi
-            else
-              echo "Mounting '${device}' at '${mountpoint}'"
-              mount -o discard,defaults "${device}" "${mountpoint}"
-              chmod a+w "${mountpoint}"
-            end
+            fi
+            
+            echo "Mounting '${device}' at '${mountpoint}'"
+            mount -o discard,defaults "${device}" "${mountpoint}"
+            chmod a+w "${mountpoint}"
             rm -rf /mnt/disks/raid0/*

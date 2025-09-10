@@ -349,8 +349,8 @@ spec:
       resources:
         requests:
           storage: {{ .Values.nebula.coredumpPreservation.volumeSize }}
-        {{- if .Values.nebula.storageClassName }}
-        storageClassName: {{ .Values.nebula.storageClassName }}
-        {{- end }}
+      {{- if .Values.nebula.storageClassName }}
+      storageClassName: {{ .Values.nebula.storageClassName }}
+      {{- end }}
   {{- end }}
 

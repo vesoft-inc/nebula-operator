@@ -429,7 +429,10 @@ func generateLogContainer(c NebulaClusterComponent) corev1.Container {
 				corev1.ResourceCPU:    apiresource.MustParse("50m"),
 				corev1.ResourceMemory: apiresource.MustParse("50Mi"),
 			},
-			Limits: corev1.ResourceList{},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("200m"),
+				corev1.ResourceMemory: apiresource.MustParse("200Mi"),
+			},
 		},
 	}
 
@@ -595,6 +598,10 @@ cat /metadata/flags.json
 				corev1.ResourceCPU:    apiresource.MustParse("30m"),
 				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
 			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("200m"),
+				corev1.ResourceMemory: apiresource.MustParse("200Mi"),
+			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
@@ -661,6 +668,10 @@ echo "export NODE_ZONE=${NODE_ZONE}" > /node/zone
 				corev1.ResourceCPU:    apiresource.MustParse("30m"),
 				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
 			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("200m"),
+				corev1.ResourceMemory: apiresource.MustParse("200Mi"),
+			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
@@ -709,6 +720,10 @@ echo "${MOUNT_PATH}/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    apiresource.MustParse("30m"),
 				corev1.ResourceMemory: apiresource.MustParse("30Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("200m"),
+				corev1.ResourceMemory: apiresource.MustParse("200Mi"),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -833,6 +848,10 @@ done
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    apiresource.MustParse("50m"),
 				corev1.ResourceMemory: apiresource.MustParse("50Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    apiresource.MustParse("200m"),
+				corev1.ResourceMemory: apiresource.MustParse("200Mi"),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{

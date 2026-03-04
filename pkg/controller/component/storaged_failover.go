@@ -311,12 +311,6 @@ func (s *storagedFailover) deleteFailedPodAndPVC(nc *v1alpha1.NebulaCluster) err
 			continue
 		}
 
-		// Only proceed if the node is down
-		if !fh.NodeDown {
-			klog.Infof("failure storaged pod [%s/%s] is not associated with a down node, skip", nc.Namespace, podName)
-			continue
-		}
-
 		pod, pvcs, err := getPodAndPvcs(s.clientSet, nc, cl, podName)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return err
@@ -325,6 +319,15 @@ func (s *storagedFailover) deleteFailedPodAndPVC(nc *v1alpha1.NebulaCluster) err
 		// Skip if pod not found
 		if pod == nil {
 			klog.Infof("failure storaged pod [%s/%s] not found, skip", nc.Namespace, podName)
+			continue
+		}
+
+		// Only proceed if the node is down
+		if err = s.checkPodAssociatedNodeStatus(nc, pod, &fh); err != nil {
+			return err
+		}
+		if !fh.NodeDown {
+			klog.Infof("failure storaged pod [%s/%s] is not associated with a down node, skip", nc.Namespace, podName)
 			continue
 		}
 

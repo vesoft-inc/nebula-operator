@@ -140,6 +140,8 @@ const (
 ########## memory ##########
 # System memory high watermark ratio, cancel the memory checking when the ratio greater than 1.0
 --system_memory_high_watermark_ratio=0.8
+# use container memory limit
+--containerized=true
 
 ########## audit ##########
 # This variable is used to enable audit. The value can be 'true' or 'false'.
@@ -544,6 +546,8 @@ const (
 --memory_purge_enabled=true
 # memory background purge interval in seconds
 --memory_purge_interval_seconds=10
+# use container memory limit
+--containerized=true
 
 ########## SSL ##########
 # whether to enable ssl

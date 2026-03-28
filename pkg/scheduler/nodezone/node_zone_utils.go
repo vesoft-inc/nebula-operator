@@ -24,7 +24,9 @@ import (
 
 	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 var statefulPodRegex = regexp.MustCompile("(.*)-([0-9]+)$")
@@ -70,4 +72,44 @@ func getNamespacedName(obj metav1.Object) string {
 
 func isPodScheduled(pod *corev1.Pod) bool {
 	return pod != nil && pod.DeletionTimestamp == nil && pod.Spec.NodeName != ""
+}
+
+func zoneForNode(node *corev1.Node) string {
+	if node == nil {
+		return ""
+	}
+	if z, ok := node.Labels[corev1.LabelTopologyZone]; ok {
+		return z
+	}
+	// Pre-1.17 fallback.
+	return node.Labels["failure-domain.beta.kubernetes.io/zone"]
+}
+
+func isFinished(pod *v1.Pod) bool {
+	return pod.Status.Phase == v1.PodSucceeded ||
+		pod.Status.Phase == v1.PodFailed ||
+		pod.DeletionTimestamp != nil
+}
+
+func podFromTombstone(obj interface{}) *v1.Pod {
+	if pod, ok := obj.(*v1.Pod); ok {
+		return pod
+	}
+	tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+	if !ok {
+		return nil
+	}
+	pod, ok := tombstone.Obj.(*v1.Pod)
+	if !ok {
+		return nil
+	}
+	return pod
+}
+
+func copyLabels(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }

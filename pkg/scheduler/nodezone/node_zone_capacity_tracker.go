@@ -48,7 +48,7 @@ func (t *ZoneCapacityTracker) ZoneStatus(heading string, m *podMatcher, pod *v1.
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	for zone := range t.distinctZones() {
-		klog.Infof("%v zone_%v count: %v", heading, zone, t.availableInZone(zone, m.Matches, pod))
+		klog.V(5).Infof("%v zone_%v count: %v", heading, zone, t.availableInZone(zone, m.Matches, pod))
 	}
 }
 

@@ -40,8 +40,8 @@ type NodeZone struct {
 	podLister          corelisters.PodLister
 	nodeLister         corelisters.NodeLister
 	trackerGateFactory informers.SharedInformerFactory
-	zoneTracker        *ZoneCapacityTracker
-	serialGate         *SerialGate
+	zoneTrackers       map[string]*ZoneCapacityTracker
+	serialGates        map[string]*SerialGate
 }
 
 var _ framework.PreFilterPlugin = &NodeZone{}
@@ -140,6 +140,7 @@ func getErrorAsStatus(err error) *framework.Status {
 // TODO: upgrade to v1.28.0+
 func (pl *NodeZone) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	heading := fmt.Sprintf("Pod [%v/%v]: ", pod.Namespace, pod.Name)
+	compType := componentType(pod)
 
 	// Skip if a pod has no topology spread constraints.
 	if len(pod.Spec.TopologySpreadConstraints) == 0 {
@@ -164,10 +165,10 @@ func (pl *NodeZone) PreFilter(ctx context.Context, cycleState *framework.CycleSt
 	}
 	cycleState.Write(stateKeyMatcher, &matcherStateData{m: m})
 
-	pl.zoneTracker.ZoneStatus(heading, m, pod)
-	critical := pl.zoneTracker.AnyCriticalForPod(m, pod)
+	pl.zoneTrackers[compType].ZoneStatus(heading, m, pod)
+	critical := pl.zoneTrackers[compType].AnyCriticalForPod(m, pod)
 	cycleState.Write(stateKeySerial, &serialStateData{required: critical})
-	pl.serialGate.SetSerial(critical)
+	pl.serialGates[compType].SetSerial(critical)
 
 	return nil, nil
 }
@@ -253,7 +254,7 @@ func (pl *NodeZone) Filter(ctx context.Context, cycleState *framework.CycleState
 	stateZone := state[pod.Name]
 	if stateZone != "" {
 		if stateZone != nodeZone {
-			klog.Infof("pod [%s/%s] not fit node %s due to zone mapping exists", pod.Namespace, pod.Name, nodeInfo.Node().Name)
+			klog.V(5).Infof("pod [%s/%s] not fit node %s due to zone mapping exists", pod.Namespace, pod.Name, nodeInfo.Node().Name)
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNotMatch)
 		}
 		return nil
@@ -268,7 +269,7 @@ func (pl *NodeZone) Filter(ctx context.Context, cycleState *framework.CycleState
 		zoneIndex[zone] = index
 	}
 
-	klog.Infof("%v Available topology zones: %v", heading, zones)
+	klog.V(5).Infof("%v Available topology zones: %v", heading, zones)
 
 	parentName, ordinal := getParentNameAndOrdinal(pod)
 	remainder := ordinal % AvailableZones
@@ -295,13 +296,13 @@ func (pl *NodeZone) Filter(ctx context.Context, cycleState *framework.CycleState
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNoLabelTopologyZone)
 		}
 		shift := zoneIndex[anchorZone]
-		klog.Infof("%v Anchor pod %s zone %s shift %d", heading, anchorName, anchorZone, shift)
+		klog.V(5).Infof("%v Anchor pod %s zone %s shift %d", heading, anchorName, anchorZone, shift)
 		idealZone := zones[(shift+remainder)%AvailableZones]
 		if idealZone != nodeZone {
-			klog.Infof("%v Pod [%s/%s] fit node %s in zone %s, ideal zone %s", heading, pod.Namespace, pod.Name, nodeInfo.Node().Name, nodeZone, idealZone)
+			klog.V(5).Infof("%v Pod [%s/%s] fit node %s in zone %s, ideal zone %s", heading, pod.Namespace, pod.Name, nodeInfo.Node().Name, nodeZone, idealZone)
 		}
 		if anchorZone == nodeZone {
-			klog.Infof("%v Anchor pod [%s/%s] exists in zone %s", heading, pod.Namespace, anchorPod.Name, anchorZone)
+			klog.V(5).Infof("%v Anchor pod [%s/%s] exists in zone %s", heading, pod.Namespace, anchorPod.Name, anchorZone)
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNotMatch)
 		}
 	}
@@ -329,7 +330,7 @@ func (pl *NodeZone) Filter(ctx context.Context, cycleState *framework.CycleState
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNoLabelTopologyZone)
 		}
 		if siblingZone == nodeZone {
-			klog.Infof("%v Sibling pod [%s/%s] exists in zone %s", heading, pod.Namespace, siblingPod.Name, siblingZone)
+			klog.V(5).Infof("%v Sibling pod [%s/%s] exists in zone %s", heading, pod.Namespace, siblingPod.Name, siblingZone)
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNotMatch)
 		}
 	}
@@ -364,6 +365,8 @@ func (pl *NodeZone) Permit(ctx context.Context, cycleState *framework.CycleState
 		},
 	}
 
+	compType := componentType(pod)
+
 	remainder := ordinal % AvailableZones
 
 	if remainder != 0 {
@@ -379,7 +382,7 @@ func (pl *NodeZone) Permit(ctx context.Context, cycleState *framework.CycleState
 			klog.InfoS(fmt.Sprintf("%v Anchor pod is waiting to be scheduled to node", heading), "pod", anchorName, "namespace", pod.Namespace, "nodeName", nodeName)
 			// Always enqueue — ensures ordering is correct if mode switches
 			// to serial while this pod is waiting on its anchor.
-			pl.serialGate.Enqueue(entry)
+			pl.serialGates[compType].Enqueue(entry)
 			return framework.NewStatus(framework.Wait), WaitTime
 		}
 
@@ -395,7 +398,7 @@ func (pl *NodeZone) Permit(ctx context.Context, cycleState *framework.CycleState
 		}
 		anchorZone := anchorNode.GetLabels()[corev1.LabelTopologyZone]
 		if anchorZone == assumedZone {
-			klog.Infof("%v Zone conflict, anchor pod [%s/%s] exists in zone %s", heading, pod.Namespace, anchorName, anchorZone)
+			klog.V(5).Infof("%v Zone conflict, anchor pod [%s/%s] exists in zone %s", heading, pod.Namespace, anchorName, anchorZone)
 			return framework.NewStatus(framework.Unschedulable, ErrReasonNotMatch), 0
 		}
 
@@ -412,7 +415,7 @@ func (pl *NodeZone) Permit(ctx context.Context, cycleState *framework.CycleState
 				klog.InfoS(fmt.Sprintf("%v Sibling pod is waiting to be scheduled to node", heading), "pod", siblingName, "namespace", pod.Namespace, "nodeName", nodeName)
 				// Always enqueue — ensures ordering is correct if mode switches
 				// to serial while this pod is waiting on its sibling pod.
-				pl.serialGate.Enqueue(entry)
+				pl.serialGates[compType].Enqueue(entry)
 				return framework.NewStatus(framework.Wait), WaitTime
 			}
 			siblingNode, err := pl.getNode(siblingPod.Spec.NodeName)
@@ -424,19 +427,19 @@ func (pl *NodeZone) Permit(ctx context.Context, cycleState *framework.CycleState
 				return framework.NewStatus(framework.UnschedulableAndUnresolvable, ErrReasonNoLabelTopologyZone), 0
 			}
 			if siblingZone == assumedZone {
-				klog.Infof("%v Zone conflict, sibling pod [%s/%s] exists in zone %s", heading, pod.Namespace, siblingName, siblingZone)
+				klog.V(5).Infof("%v Zone conflict, sibling pod [%s/%s] exists in zone %s", heading, pod.Namespace, siblingName, siblingZone)
 				return framework.NewStatus(framework.Unschedulable, ErrReasonNotMatch), 0
 			}
 		}
 	}
 
 	entry.waitingOnZone = true
-	switch pl.serialGate.AcquireOrEnqueue(entry) {
+	switch pl.serialGates[compType].AcquireOrEnqueue(entry) {
 	case AcquiredParallel:
 		klog.InfoS(fmt.Sprintf("%v Permit allows parallel deployment of", heading), "pod", klog.KObj(pod))
 		// Parallel mode — remove from heap in case it was enqueued earlier
 		// during an anchor/sibling wait that has since resolved.
-		pl.serialGate.RemoveFromHeap(pod.UID)
+		pl.serialGates[compType].RemoveFromHeap(pod.UID)
 		return framework.NewStatus(framework.Success), 0
 	case AcquiredSerial:
 		klog.InfoS(fmt.Sprintf("%v Permit allows serial deployment of", heading), "pod", klog.KObj(pod))
@@ -451,26 +454,37 @@ func (pl *NodeZone) Permit(ctx context.Context, cycleState *framework.CycleState
 
 // Reserve is the functions invoked by the framework at "reserve" extension point.
 func (pl *NodeZone) Reserve(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeName string) *framework.Status {
+	if !needSchedule(pod.Name) {
+		return nil
+	}
+
 	nodeInfo, err := pl.handler.SnapshotSharedLister().NodeInfos().Get(nodeName)
 	if err != nil {
 		return framework.AsStatus(fmt.Errorf("getting node %q: %w", nodeName, err))
 	}
 
+	compType := componentType(pod)
+
 	zone := zoneForNode(nodeInfo.Node())
 	state.Write(stateKeyZone, &zoneStateData{zone: zone})
-	pl.zoneTracker.EnsureDecremented(pod, zone)
+	pl.zoneTrackers[compType].EnsureDecremented(pod, zone)
 
 	return nil
 }
 
 // Unreserve rejects all other adjacent Pods times out.
 func (pl *NodeZone) Unreserve(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeName string) {
+	if !needSchedule(pod.Name) {
+		return
+	}
+
 	parentName, ordinal := getParentNameAndOrdinal(pod)
+	compType := componentType(pod)
 
 	// Call unconditionally — EnsureIncremented is idempotent and a no-op
 	// if this pod was never decremented (uid not in decrementedPods).
-	pl.zoneTracker.EnsureIncremented(pod)
-	pl.serialGate.Release(pod, -1)
+	pl.zoneTrackers[compType].EnsureIncremented(pod)
+	pl.serialGates[compType].Release(pod)
 
 	remainder := ordinal % AvailableZones
 	if remainder == 0 {
@@ -501,14 +515,23 @@ func (pl *NodeZone) registerNodeInformer(factory informers.SharedInformerFactory
 	nodeInformer := factory.Core().V1().Nodes().Informer()
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			pl.zoneTracker.AddNode(obj.(*v1.Node))
+			node := obj.(*v1.Node)
+			for _, tracker := range pl.zoneTrackers {
+				tracker.AddNode(node)
+			}
 		},
 		UpdateFunc: func(old, new interface{}) {
-			pl.zoneTracker.RemoveNode(old)
-			pl.zoneTracker.AddNode(new.(*v1.Node))
+			newNode := new.(*v1.Node)
+			for _, tracker := range pl.zoneTrackers {
+				tracker.RemoveNode(old)
+				tracker.AddNode(newNode)
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			pl.zoneTracker.RemoveNode(obj)
+			node := obj.(*v1.Node)
+			for _, tracker := range pl.zoneTrackers {
+				tracker.RemoveNode(node)
+			}
 		},
 	})
 }
@@ -518,35 +541,45 @@ func (pl *NodeZone) registerPodInformer(factory informers.SharedInformerFactory)
 	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*v1.Pod)
+			if !needSchedule(pod.Name) {
+				return
+			}
+
+			compType := componentType(pod)
 			// Covers crash-recovery: scheduler restarted after binding but
 			// before Reserve was replayed.
 			if isPodScheduled(pod) && !isFinished(pod) {
 				zone := pl.zoneForNodeName(pod.Spec.NodeName)
-				pl.zoneTracker.EnsureDecremented(pod, zone)
+				pl.zoneTrackers[compType].EnsureDecremented(pod, zone)
 			}
 		},
 		UpdateFunc: func(old, new interface{}) {
 			oldPod := old.(*v1.Pod)
 			newPod := new.(*v1.Pod)
+			if !needSchedule(newPod.Name) {
+				return
+			}
 
-			_, num := getParentNameAndOrdinal(newPod)
+			compType := componentType(newPod)
 
 			// These are independent — all that apply should fire.
 			if !isFinished(oldPod) && isFinished(newPod) {
-				pl.serialGate.Release(newPod, -1)
-				pl.zoneTracker.EnsureIncremented(newPod)
+				pl.serialGates[compType].Release(newPod)
+				pl.zoneTrackers[compType].EnsureIncremented(newPod)
 			}
 			if oldPod.Status.Phase != v1.PodRunning && newPod.Status.Phase == v1.PodRunning {
-				pl.serialGate.Release(newPod, num)
+				pl.serialGates[compType].Release(newPod)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := podFromTombstone(obj)
-			if pod == nil || !isPodScheduled(pod) {
+			if pod == nil || !needSchedule(pod.Name) || !isPodScheduled(pod) {
 				return
 			}
 
-			pl.serialGate.Release(pod, -1)
+			compType := componentType(pod)
+
+			pl.serialGates[compType].Release(pod)
 		},
 	})
 }
@@ -559,8 +592,12 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 	nodeLister := informerFactory.Core().V1().Nodes().Lister()
 
 	trackerGateFactory := informers.NewSharedInformerFactory(handle.ClientSet(), 0)
-	serialGate := NewSerialGate()
-	zoneTracker := NewZoneCapacityTracker()
+	serialGates := make(map[string]*SerialGate, len(componentTypes))
+	zoneTrackers := make(map[string]*ZoneCapacityTracker, len(componentTypes))
+	for _, compType := range componentTypes {
+		serialGates[compType] = NewSerialGate()
+		zoneTrackers[compType] = NewZoneCapacityTracker()
+	}
 
 	nodeZonePlugin := &NodeZone{
 		handle,
@@ -568,8 +605,8 @@ func New(_ runtime.Object, handle framework.Handle) (framework.Plugin, error) {
 		podLister,
 		nodeLister,
 		trackerGateFactory,
-		zoneTracker,
-		serialGate,
+		zoneTrackers,
+		serialGates,
 	}
 
 	nodeZonePlugin.registerNodeInformer(trackerGateFactory)

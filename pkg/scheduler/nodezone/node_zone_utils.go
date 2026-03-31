@@ -29,7 +29,13 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-var statefulPodRegex = regexp.MustCompile("(.*)-([0-9]+)$")
+var (
+	statefulPodRegex = regexp.MustCompile("(.*)-([0-9]+)$")
+	componentTypes   = []string{
+		v1alpha1.GraphdComponentType.String(),
+		v1alpha1.StoragedComponentType.String(),
+	}
+)
 
 // getParentNameAndOrdinal gets the name of pod's parent StatefulSet and pod's ordinal as extracted from its Name.
 func getParentNameAndOrdinal(pod *corev1.Pod) (string, int) {
@@ -58,8 +64,13 @@ func getConfigMapName(pod *corev1.Pod) string {
 }
 
 func needSchedule(podName string) bool {
-	return strings.Contains(podName, v1alpha1.GraphdComponentType.String()) ||
-		strings.Contains(podName, v1alpha1.StoragedComponentType.String())
+	for _, component := range componentTypes {
+		if strings.Contains(podName, component) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getPodNameByOrdinal(parentName string, ordinal int) string {
@@ -112,4 +123,15 @@ func copyLabels(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
+}
+
+func componentType(pod *corev1.Pod) string {
+	parent, _ := getParentNameAndOrdinal(pod)
+	for _, component := range componentTypes {
+		if strings.Contains(parent, component) {
+			return component
+		}
+	}
+
+	return parent
 }

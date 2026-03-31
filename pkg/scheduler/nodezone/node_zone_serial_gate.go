@@ -39,16 +39,14 @@ const (
 // In parallel mode all calls to AcquireOrEnqueue return AcquiredParallel.
 // In serial mode pods acquire the gate in pod-number order.
 type SerialGate struct {
-	mu       sync.Mutex
-	active   bool              // true = serial mode
-	holder   *PendingPod       // pod currently holding the gate
-	waiting  podHeap           // min-heap ordered by pod number
-	deployed map[int]types.UID // podNumber -> UID, for tracking
+	mu      sync.Mutex
+	active  bool        // true = serial mode
+	holder  *PendingPod // pod currently holding the gate
+	waiting podHeap     // min-heap ordered by pod number
 }
 
 func NewSerialGate() *SerialGate {
 	return &SerialGate{
-		deployed: make(map[int]types.UID),
 		waiting: podHeap{
 			index: make(map[types.UID]int),
 		},
@@ -88,12 +86,12 @@ func (g *SerialGate) AcquireOrEnqueue(pod *PendingPod) AcquireResult {
 		return AcquiredParallel
 	}
 
-	klog.Infof("Pod [%v/%v-%v]: Heap status: %v", pod.namespace, pod.parent, pod.number, g.waiting.PendingPodsToString())
-	klog.Infof("Pod [%v/%v-%v]: Map status: %v", pod.namespace, pod.parent, pod.number, g.waiting.index)
+	klog.V(5).Infof("Pod [%v/%v-%v]: Heap status: %v", pod.namespace, pod.parent, pod.number, g.waiting.PendingPodsToString())
+	klog.V(5).Infof("Pod [%v/%v-%v]: Map status: %v", pod.namespace, pod.parent, pod.number, g.waiting.index)
 
 	if g.holder != nil {
-		klog.Infof("Pod [%v/%v-%v]: in AcquireOrEnqueue current g.holder: %v-%v", pod.namespace, pod.parent, pod.number, g.holder.parent, g.holder.number)
-		klog.Infof("Pod [%v/%v-%v]: Pod uid: %v, g.holder uid: %v", pod.namespace, pod.parent, pod.number, pod.uid, g.holder.uid)
+		klog.V(5).Infof("Pod [%v/%v-%v]: in AcquireOrEnqueue current g.holder: %v-%v", pod.namespace, pod.parent, pod.number, g.holder.parent, g.holder.number)
+		klog.V(5).Infof("Pod [%v/%v-%v]: Pod uid: %v, g.holder uid: %v", pod.namespace, pod.parent, pod.number, pod.uid, g.holder.uid)
 		if g.holder.uid == pod.uid {
 			return AcquiredSerial
 		}
@@ -120,7 +118,7 @@ func (g *SerialGate) AcquireOrEnqueue(pod *PendingPod) AcquireResult {
 
 func (g *SerialGate) TryAdvanceLocked(pod *PendingPod) {
 	if g.holder != nil {
-		klog.Infof("Pod [%v/%v-%v]: in TryAdvanceLocked current g.holder: %v-%v", pod.namespace, pod.parent, pod.number, g.holder.parent, g.holder.number)
+		klog.V(5).Infof("Pod [%v/%v-%v]: in TryAdvanceLocked current g.holder: %v-%v", pod.namespace, pod.parent, pod.number, g.holder.parent, g.holder.number)
 	}
 
 	if g.holder != nil || len(g.waiting.pods) == 0 {
@@ -131,14 +129,9 @@ func (g *SerialGate) TryAdvanceLocked(pod *PendingPod) {
 
 // Release records the pod as deployed and advances the queue.
 // Safe to call in parallel or serial mode; it is a no-op when inactive.
-// -1 for podNum means force release without recording deployment.
-func (g *SerialGate) Release(pod *v1.Pod, podNum int) {
+func (g *SerialGate) Release(pod *v1.Pod) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-
-	if podNum >= 0 {
-		g.deployed[podNum] = pod.UID
-	}
 
 	if !g.active || g.holder == nil || g.holder.uid != pod.UID {
 		var gholder string
@@ -146,7 +139,7 @@ func (g *SerialGate) Release(pod *v1.Pod, podNum int) {
 			gholder = fmt.Sprintf("%v-%v UID: %v", g.holder.parent, g.holder.number, g.holder.uid)
 		}
 
-		klog.Infof("Pod [%v/%v]: Release returned early g.active: %v, g.holder: %v, pod.UID: %v", pod.Namespace, pod.Name, g.active, gholder, pod.UID)
+		klog.V(5).Infof("Pod [%v/%v]: Release returned early g.active: %v, g.holder: %v, pod.UID: %v", pod.Namespace, pod.Name, g.active, gholder, pod.UID)
 		return
 	}
 
@@ -167,17 +160,6 @@ func (g *SerialGate) tryApproveNext(podNamesace string, podName string) {
 	next := heap.Pop(&g.waiting).(*PendingPod)
 	g.holder = next
 	go next.approve() // fires wp.Allow async, which unblocks the Wait in Permit
-}
-
-// Deployed returns a snapshot of all pod numbers that have reached Running.
-func (g *SerialGate) Deployed() map[int]types.UID {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	out := make(map[int]types.UID, len(g.deployed))
-	for k, v := range g.deployed {
-		out[k] = v
-	}
-	return out
 }
 
 func (g *SerialGate) Enqueue(pod *PendingPod) {

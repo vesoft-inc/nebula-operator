@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vesoft-inc/nebula-operator/apis/apps/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -84,6 +85,13 @@ const (
 )
 
 type preFilterState map[string]string
+
+var (
+	componentTypes = []string{
+		v1alpha1.GraphdComponentType.String(),
+		v1alpha1.StoragedComponentType.String(),
+	}
+)
 
 // Clone the prefilter state.
 func (s preFilterState) Clone() framework.StateData {

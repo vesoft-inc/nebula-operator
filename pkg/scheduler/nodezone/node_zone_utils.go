@@ -29,13 +29,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-var (
-	statefulPodRegex = regexp.MustCompile("(.*)-([0-9]+)$")
-	componentTypes   = []string{
-		v1alpha1.GraphdComponentType.String(),
-		v1alpha1.StoragedComponentType.String(),
-	}
-)
+var statefulPodRegex = regexp.MustCompile("(.*)-([0-9]+)$")
 
 // getParentNameAndOrdinal gets the name of pod's parent StatefulSet and pod's ordinal as extracted from its Name.
 func getParentNameAndOrdinal(pod *corev1.Pod) (string, int) {

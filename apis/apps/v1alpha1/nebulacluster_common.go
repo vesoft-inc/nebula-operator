@@ -979,7 +979,7 @@ set -x
 echo "[INFO] Starting post-start script"
 
 echo "[INFO] Checking if flags.json exists and is not empty..."
-if [ ! -s "metadata/flags.json" ]; then
+if [ ! -s "/metadata/flags.json" ]; then
  echo "flags.json is empty"
  exit 0
 fi
